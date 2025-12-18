@@ -1,0 +1,14 @@
+{
+  "extends": "@workspace/typescript-config/base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "noEmit": true,
+    "paths": {
+      "@workspace/ui/*": ["./src/*"]
+    },
+    "module": "ESNext",
+    "moduleResolution": "bundler"
+  },
+  "include": ["."],
+  "exclude": ["node_modules", "dist"]
+}

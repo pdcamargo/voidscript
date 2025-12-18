@@ -1,0 +1,30 @@
+{
+  "name": "reimagine",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 4333",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.9.6",
+    "typescript": "~5.9.3",
+    "vite": "npm:rolldown-vite@7.2.5",
+    "vite-plugin-top-level-await": "^1.6.0",
+    "vite-plugin-wasm": "^3.5.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "vite": "npm:rolldown-vite@7.2.5"
+    }
+  },
+  "dependencies": {
+    "@tauri-apps/plugin-clipboard-manager": "^2.3.2",
+    "@tauri-apps/plugin-dialog": "~2.4.2",
+    "@tauri-apps/plugin-fs": "~2.4.4",
+    "@voidscript/engine": "workspace:*"
+  }
+}

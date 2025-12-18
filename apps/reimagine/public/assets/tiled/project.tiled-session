@@ -1,0 +1,73 @@
+{
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "Tileset.tsj",
+    "expandedProjectPaths": [
+        "."
+    ],
+    "fileStates": {
+        "/Users/pdcamargo/Downloads/Fantasy Swamp Forest 2/Free/BG_1.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/pdcamargo/Downloads/Fantasy Swamp Forest 2/Free/BG_2.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/pdcamargo/Downloads/Fantasy Swamp Forest 2/Free/BG_3.tsx": {
+            "scaleInDock": 1
+        },
+        "/Users/pdcamargo/Downloads/Fantasy Swamp Forest 2/Free/Free.tmx": {
+            "scale": 0.6612,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 117.967332123412,
+                "y": 239.71566848154868
+            }
+        },
+        "/Users/pdcamargo/Downloads/Fantasy Swamp Forest 2/Free/Terrain_and_Props.tsx": {
+            "scaleInDock": 1
+        },
+        "Map.tmx.tmj": {
+            "scale": 0.97,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 695.3608247422682,
+                "y": 226.28865979381445
+            }
+        },
+        "Map2.tmx.tmj": {
+            "scale": 1.5,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 208.33333333333331,
+                "y": 167.33333333333331
+            }
+        },
+        "Tileset.tsj": {
+            "scaleInDock": 1,
+            "scaleInEditor": 4.2552
+        }
+    },
+    "last.imagePath": "/Users/pdcamargo/dev/dreampact/apps/reimagine/public/assets/sprites",
+    "map.lastUsedFormat": "json",
+    "map.tileHeight": 16,
+    "map.tileWidth": 16,
+    "openFiles": [
+        "Tileset.tsj",
+        "Map.tmx.tmj"
+    ],
+    "project": "project.tiled-project",
+    "property.type": "float",
+    "recentFiles": [
+        "/Users/pdcamargo/Downloads/Fantasy Swamp Forest 2/Free/Free.tmx",
+        "Map.tmx.tmj",
+        "Tileset.tsj",
+        "Map2.tmx.tmj"
+    ],
+    "tileset.lastUsedFormat": "json",
+    "tileset.tileSize": {
+        "height": 16,
+        "width": 16
+    }
+}

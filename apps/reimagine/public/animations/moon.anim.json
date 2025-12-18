@@ -1,0 +1,61 @@
+{
+  "id": "moon-phase",
+  "duration": 0.8,
+  "loopMode": "loop",
+  "tracks": [
+    {
+      "propertyPath": "sprite",
+      "propertyType": "sprite",
+      "keyframes": [
+        {
+          "time": 0.0,
+          "value": {
+            "spriteId": "moon-1"
+          }
+        },
+        {
+          "time": 0.1,
+          "value": {
+            "spriteId": "moon-2"
+          }
+        },
+        {
+          "time": 0.2,
+          "value": {
+            "spriteId": "moon-3"
+          }
+        },
+        {
+          "time": 0.3,
+          "value": {
+            "spriteId": "moon-4"
+          }
+        },
+        {
+          "time": 0.4,
+          "value": {
+            "spriteId": "moon-5"
+          }
+        },
+        {
+          "time": 0.5,
+          "value": {
+            "spriteId": "moon-6"
+          }
+        },
+        {
+          "time": 0.6,
+          "value": {
+            "spriteId": "moon-7"
+          }
+        },
+        {
+          "time": 0.7,
+          "value": {
+            "spriteId": "moon-8"
+          }
+        }
+      ]
+    }
+  ]
+}

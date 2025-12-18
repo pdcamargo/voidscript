@@ -1,0 +1,85 @@
+{
+  "id": "fire-calm",
+  "duration": 1,
+  "loopMode": "loop",
+  "tracks": [
+    {
+      "propertyPath": "sprite",
+      "propertyType": "sprite",
+      "keyframes": [
+        {
+          "time": 0.0,
+          "value": {
+            "spriteId": "fire-orange-calm-1"
+          }
+        },
+        {
+          "time": 0.083,
+          "value": {
+            "spriteId": "fire-orange-calm-2"
+          }
+        },
+        {
+          "time": 0.167,
+          "value": {
+            "spriteId": "fire-orange-calm-3"
+          }
+        },
+        {
+          "time": 0.25,
+          "value": {
+            "spriteId": "fire-orange-calm-4"
+          }
+        },
+        {
+          "time": 0.333,
+          "value": {
+            "spriteId": "fire-orange-calm-5"
+          }
+        },
+        {
+          "time": 0.417,
+          "value": {
+            "spriteId": "fire-orange-calm-6"
+          }
+        },
+        {
+          "time": 0.5,
+          "value": {
+            "spriteId": "fire-orange-calm-7"
+          }
+        },
+        {
+          "time": 0.583,
+          "value": {
+            "spriteId": "fire-orange-calm-8"
+          }
+        },
+        {
+          "time": 0.667,
+          "value": {
+            "spriteId": "fire-orange-calm-9"
+          }
+        },
+        {
+          "time": 0.75,
+          "value": {
+            "spriteId": "fire-orange-calm-10"
+          }
+        },
+        {
+          "time": 0.833,
+          "value": {
+            "spriteId": "fire-orange-calm-11"
+          }
+        },
+        {
+          "time": 0.917,
+          "value": {
+            "spriteId": "fire-orange-calm-12"
+          }
+        }
+      ]
+    }
+  ]
+}
