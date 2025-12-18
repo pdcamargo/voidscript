@@ -212,6 +212,8 @@ export { Water2D } from "./ecs/components/rendering/water-2d.js";
 export type { Water2DData } from "./ecs/components/rendering/water-2d.js";
 export { SkyGradient2D } from "./ecs/components/rendering/sky-gradient.js";
 export type { SkyGradient2DData, GradientStop } from "./ecs/components/rendering/sky-gradient.js";
+export { Fog2D, FogType } from "./ecs/components/rendering/fog-2d.js";
+export type { Fog2DData } from "./ecs/components/rendering/fog-2d.js";
 
 // Audio Components
 export { AudioListener } from "./ecs/components/audio/audio-listener.js";
@@ -220,6 +222,10 @@ export { AudioSource } from "./ecs/components/audio/audio-source.js";
 export type { AudioSourceData } from "./ecs/components/audio/audio-source.js";
 export { PositionalAudioSource } from "./ecs/components/audio/positional-audio-source.js";
 export type { PositionalAudioSourceData, DistanceModel } from "./ecs/components/audio/positional-audio-source.js";
+
+// Generator Components
+export { SpriteAreaGenerator } from "./ecs/components/generators/sprite-area-generator.js";
+export type { SpriteAreaGeneratorData } from "./ecs/components/generators/sprite-area-generator.js";
 
 // Post-Processing Component
 export { PostProcessing } from "./ecs/components/rendering/post-processing.js";

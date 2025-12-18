@@ -138,7 +138,8 @@ export type PresetSerializationType =
   | 'runtimeAsset' // RuntimeAsset instances (recommended)
   | 'entity' // Entity ID references (requires entity mapping during deserialization)
   | 'default'
-  | 'set';
+  | 'set'
+  | 'enum'; // Enum types (renders dropdown in editor)
 
 /**
  * How to handle nullish (null or undefined) values during serialization
@@ -220,6 +221,12 @@ export interface PropertySerializerConfig<T = any> {
    * If undefined, shows all asset types
    */
   assetTypes?: string[]; // AssetType enum values
+
+  /**
+   * Enum object for 'enum' type
+   * The editor will render a dropdown with all enum values
+   */
+  enum?: Record<string, string | number>;
 
   /**
    * Custom serializer functions for complex serialization logic

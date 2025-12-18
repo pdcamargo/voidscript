@@ -271,6 +271,11 @@ function renderProperty(
     return renderRuntimeAssetPicker(label, value, uniqueId, componentData, config.assetTypes);
   }
 
+  // Handle enum types
+  if (config.type === 'enum' && config.enum) {
+    return renderEnumProperty(label, value, config.enum, uniqueId);
+  }
+
   // Handle null/undefined for other types
   if (value === null || value === undefined) {
     return renderNullProperty(label, value, config, uniqueId);
@@ -406,6 +411,39 @@ function renderNullProperty(
   }
 
   return undefined;
+}
+
+/**
+ * Render an enum property as a dropdown
+ */
+function renderEnumProperty(
+  label: string,
+  value: any,
+  enumObj: Record<string, string | number>,
+  uniqueId: string,
+): any {
+  // Get enum entries (key-value pairs)
+  const entries = Object.entries(enumObj);
+
+  // Filter to only get the string keys (enum names, not reverse mappings for numeric enums)
+  const enumNames = entries
+    .filter(([_key, val]) => typeof val === 'string' || typeof val === 'number')
+    .map(([key]) => key);
+
+  // Find current selection index
+  const currentValue = typeof value === 'string' ? value : String(value);
+  let currentIndex = enumNames.findIndex(name => enumObj[name] === currentValue || name === currentValue);
+  if (currentIndex === -1) currentIndex = 0;
+
+  // Render combo box - ImGui.Combo expects a single concatenated string with \0 separators
+  const itemsString = enumNames.join('\0') + '\0';
+  const arr: [number] = [currentIndex];
+  if (ImGui.Combo(`${label}##${uniqueId}`, arr, itemsString)) {
+    const selectedName = enumNames[arr[0]];
+    return enumObj[selectedName];
+  }
+
+  return undefined; // No change
 }
 
 /**

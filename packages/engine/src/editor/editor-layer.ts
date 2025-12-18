@@ -39,6 +39,7 @@ import { CameraClearColor } from '../ecs/components/rendering/camera-clear-color
 import { Transform3D } from '../ecs/components/rendering/transform-3d.js';
 import { Collider2D } from '../physics/2d/components/collider-2d.js';
 import { Collider3D } from '../physics/3d/components/collider-3d.js';
+import { SpriteAreaGenerator } from '../ecs/components/generators/sprite-area-generator.js';
 import type { Entity } from '../ecs/entity.js';
 import { Render3DManager } from '../ecs/systems/renderer-sync-system.js';
 import { UIManager } from '../ui/ui-manager.js';
@@ -423,6 +424,57 @@ export class EditorLayer extends Layer {
             entry.helper.setShape(collider.shape);
           }
           entry.helper.update(collider, transform);
+        }
+      } else {
+        // Remove helper if shouldn't show
+        if (this.helperManager!.hasHelper(entity)) {
+          this.helperManager!.removeHelper(entity);
+          this.helperEntities.delete(entity);
+        }
+      }
+    });
+
+    // Sync SpriteAreaGenerator helpers
+    commands.query().all(SpriteAreaGenerator, Transform3D).each((entity, spriteGen, transform) => {
+      seenEntities.add(entity);
+      const shouldShow = showAll || entity === selectedEntity;
+
+      if (shouldShow) {
+        // Create helper if doesn't exist
+        if (!this.helperManager!.hasHelper(entity)) {
+          const box3 = new THREE.Box3(
+            new THREE.Vector3(
+              Math.min(spriteGen.boundsMin.x, spriteGen.boundsMax.x),
+              Math.min(spriteGen.boundsMin.y, spriteGen.boundsMax.y),
+              Math.min(spriteGen.boundsMin.z, spriteGen.boundsMax.z)
+            ),
+            new THREE.Vector3(
+              Math.max(spriteGen.boundsMin.x, spriteGen.boundsMax.x),
+              Math.max(spriteGen.boundsMin.y, spriteGen.boundsMax.y),
+              Math.max(spriteGen.boundsMin.z, spriteGen.boundsMax.z)
+            )
+          );
+          this.helperManager!.createBox3Helper(entity, box3, resolution);
+          this.helperEntities.add(entity);
+        }
+
+        // Update helper (recreate box if bounds changed)
+        const entry = this.helperManager!.getHelperEntry(entity);
+        if (entry && entry.type === 'box3') {
+          const box3 = new THREE.Box3(
+            new THREE.Vector3(
+              Math.min(spriteGen.boundsMin.x, spriteGen.boundsMax.x),
+              Math.min(spriteGen.boundsMin.y, spriteGen.boundsMax.y),
+              Math.min(spriteGen.boundsMin.z, spriteGen.boundsMax.z)
+            ),
+            new THREE.Vector3(
+              Math.max(spriteGen.boundsMin.x, spriteGen.boundsMax.x),
+              Math.max(spriteGen.boundsMin.y, spriteGen.boundsMax.y),
+              Math.max(spriteGen.boundsMin.z, spriteGen.boundsMax.z)
+            )
+          );
+          entry.helper.setBox3(box3);
+          entry.helper.update(spriteGen, transform);
         }
       } else {
         // Remove helper if shouldn't show

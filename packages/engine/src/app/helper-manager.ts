@@ -13,6 +13,7 @@ import type { Entity } from '../ecs/entity.js';
 import { HELPER_LAYER } from '../constants/layers.js';
 import { Collider2DHelper } from '../rendering/helpers/Collider2DHelper.js';
 import { Collider3DHelper } from '../rendering/helpers/Collider3DHelper.js';
+import { Box3Helper } from '../rendering/helpers/Box3Helper.js';
 import type { ColliderShape2D, ColliderShape3D } from '../physics/types.js';
 
 const HELPER_RENDER_ORDER = 999999999;
@@ -35,7 +36,12 @@ interface Collider3DHelperEntry {
   shapeType: string;
 }
 
-type HelperEntry = CameraHelperEntry | Collider2DHelperEntry | Collider3DHelperEntry;
+interface Box3HelperEntry {
+  type: 'box3';
+  helper: Box3Helper;
+}
+
+type HelperEntry = CameraHelperEntry | Collider2DHelperEntry | Collider3DHelperEntry | Box3HelperEntry;
 
 export interface HelperManagerConfig {
   scene: THREE.Scene;
@@ -195,6 +201,29 @@ export class HelperManager {
   }
 
   /**
+   * Create a Box3 helper for the given entity.
+   */
+  createBox3Helper(
+    entity: Entity,
+    box: THREE.Box3,
+    resolution: { width: number; height: number },
+  ): Box3Helper | null {
+    if (!this._showHelpers) return null;
+
+    this.removeHelper(entity);
+
+    const helper = new Box3Helper(box, resolution);
+    this.applyHelperProperties(helper);
+    this.scene.add(helper);
+    this.helpers.set(entity, {
+      type: 'box3',
+      helper,
+    });
+
+    return helper;
+  }
+
+  /**
    * Update a camera helper's transform.
    */
   updateCameraHelper(
@@ -217,7 +246,7 @@ export class HelperManager {
    */
   updateResolution(width: number, height: number): void {
     for (const entry of this.helpers.values()) {
-      if (entry.type === 'collider2d' || entry.type === 'collider3d') {
+      if (entry.type === 'collider2d' || entry.type === 'collider3d' || entry.type === 'box3') {
         entry.helper.setResolution(width, height);
       }
     }

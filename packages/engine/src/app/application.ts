@@ -55,6 +55,10 @@ import {
   SkyGradientRenderManager,
   skyGradient2DSystem,
 } from "../ecs/systems/sky-gradient-system.js";
+import {
+  Fog2DRenderManager,
+  fog2DSyncSystem,
+} from "../ecs/systems/rendering/fog-2d-system.js";
 import { TiledAssetRegistry } from "../tiled/tiled-asset-registry.js";
 import { TilemapRenderManager } from "../tiled/tilemap-render-manager.js";
 import {
@@ -1122,6 +1126,11 @@ export class Application {
     // - render: Create and update gradient backgrounds
     this.insertResource(new SkyGradientRenderManager(this.renderer));
     this.addRenderSystem(skyGradient2DSystem);
+
+    // Fog 2D rendering system
+    // - render: Create and update pixelated fog layers with gradients
+    this.insertResource(new Fog2DRenderManager(this.renderer));
+    this.addRenderSystem(fog2DSyncSystem);
 
     // Tiled map integration
     // - startup: Load maps and spawn layers/objects/collisions
