@@ -33,6 +33,45 @@ const repeatSprite = (
   }));
 };
 
+/**
+ * repeatSpriteEveryN generates a sequence of sprite slices from a sprite sheet.
+ * This is intended for cases where each frame is separated by a constant number of columns.
+ *
+ * For example, columns=5 means frames are at indices 0, 5, 10, etc.
+ * The sprite sheet should be a single row, with (count-1) * columns between each frame.
+ *
+ * @param id        Base ID for sprite
+ * @param name      Base name for sprite
+ * @param tileWidth Width of each frame in pixels
+ * @param tileHeight Height of each frame in pixels
+ * @param count     Number of frames
+ * @param columns   Spacing (interval) between frames
+ * @returns         Array of sprite definitions
+ */
+const repeatSpriteEveryN = (
+  id: string,
+  name: string,
+  tileWidth: number,
+  tileHeight: number,
+  count: number,
+  columns: number,
+) => {
+  // Generate all sprites for all columns (e.g., sprite sheet with 'columns' columns, taking 'count' frames from each)
+  const sprites = [];
+  for (let col = 0; col < columns; col++) {
+    for (let i = 0; i < count; i++) {
+      sprites.push({
+        id: `${id}-col${col + 1}-frame${i + 1}`,
+        name: `${name} Col${col + 1} Frame${i + 1}`,
+        tileIndex: col + i * columns,
+        tileWidth,
+        tileHeight,
+      });
+    }
+  }
+  return sprites;
+};
+
 async function main() {
   const app = new Application({
     window: {
@@ -59,6 +98,60 @@ async function main() {
       gravity2D: { x: 0, y: -9.81 },
     },
     assets: {
+      characterIdle: {
+        type: AssetType.Texture,
+        path: '/assets/sprites/characters and mounts_Idle.png',
+        magFilter: TextureFilter.Nearest,
+        minFilter: TextureFilter.Nearest,
+        wrapS: TextureWrap.ClampToEdge,
+        wrapT: TextureWrap.ClampToEdge,
+        width: 425,
+        height: 84,
+        sprites: repeatSpriteEveryN(
+          'character-idle',
+          'Character Idle',
+          85,
+          84,
+          1,
+          5,
+        ),
+      },
+      characterWalk: {
+        type: AssetType.Texture,
+        path: '/assets/sprites/characters and mounts_Walk.png',
+        magFilter: TextureFilter.Nearest,
+        minFilter: TextureFilter.Nearest,
+        wrapS: TextureWrap.ClampToEdge,
+        wrapT: TextureWrap.ClampToEdge,
+        width: 3400,
+        height: 84,
+        sprites: repeatSpriteEveryN(
+          'character-walk',
+          'Character Walk',
+          85,
+          84,
+          8,
+          5,
+        ),
+      },
+      characterRun: {
+        type: AssetType.Texture,
+        path: '/assets/sprites/characters and mounts_Run.png',
+        magFilter: TextureFilter.Nearest,
+        minFilter: TextureFilter.Nearest,
+        wrapS: TextureWrap.ClampToEdge,
+        wrapT: TextureWrap.ClampToEdge,
+        width: 5100,
+        height: 84,
+        sprites: repeatSpriteEveryN(
+          'character-run',
+          'Character Run',
+          85,
+          84,
+          12,
+          5,
+        ),
+      },
       fireCalmAnim: {
         type: AssetType.Animation,
         path: '/animations/fire-calm.anim.json',
@@ -146,6 +239,27 @@ async function main() {
         minFilter: TextureFilter.Nearest,
         wrapS: TextureWrap.ClampToEdge,
         wrapT: TextureWrap.ClampToEdge,
+        width: 480,
+        height: 384,
+      },
+      bigTree: {
+        type: AssetType.Texture,
+        path: '/assets/sprites/Big Tree.png',
+        magFilter: TextureFilter.Nearest,
+        minFilter: TextureFilter.Nearest,
+        wrapS: TextureWrap.ClampToEdge,
+        wrapT: TextureWrap.ClampToEdge,
+        width: 144,
+        height: 122,
+        sprites: [
+          {
+            id: 'big-tree',
+            name: 'Big Tree',
+            tileIndex: 0,
+            tileWidth: 144,
+            tileHeight: 122,
+          },
+        ],
       },
       map: {
         type: AssetType.Texture,

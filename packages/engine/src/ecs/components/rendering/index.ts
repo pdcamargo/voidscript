@@ -10,6 +10,7 @@ export * from "./camera-clear-color.js";
 export * from "./main-camera.js";
 export * from "./camera-brain.js";
 export * from "./virtual-camera.js";
+export * from "./virtual-camera-bounds.js";
 export * from "./virtual-camera-follow.js";
 export * from "./light-3d.js";
 export * from "./gltf-model.js";

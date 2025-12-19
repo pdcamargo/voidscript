@@ -40,6 +40,9 @@ import { Transform3D } from '../ecs/components/rendering/transform-3d.js';
 import { Collider2D } from '../physics/2d/components/collider-2d.js';
 import { Collider3D } from '../physics/3d/components/collider-3d.js';
 import { SpriteAreaGenerator } from '../ecs/components/generators/sprite-area-generator.js';
+import { VirtualCamera } from '../ecs/components/rendering/virtual-camera.js';
+import { VirtualCameraBounds } from '../ecs/components/rendering/virtual-camera-bounds.js';
+import { VirtualCameraFollow } from '../ecs/components/rendering/virtual-camera-follow.js';
 import type { Entity } from '../ecs/entity.js';
 import { Render3DManager } from '../ecs/systems/renderer-sync-system.js';
 import { UIManager } from '../ui/ui-manager.js';
@@ -616,6 +619,238 @@ export class EditorLayer extends Layer {
         if (this.helperManager!.hasHelper(entity)) {
           this.helperManager!.removeHelper(entity);
           this.helperEntities.delete(entity);
+        }
+      }
+    });
+
+    // Sync VirtualCameraBounds helpers (entity-based bounds system)
+    commands.query().all(VirtualCameraBounds, Transform3D).each((entity, bounds, boundsTransform) => {
+      seenEntities.add(entity);
+
+      // Show bounds helper if showAll or if selected, or if any VirtualCamera references this entity
+      let isReferenced = false;
+      commands.query().all(VirtualCamera).each((vcamEntity, vcam) => {
+        if (vcam.enableCameraBounds && vcam.boundsEntity === entity) {
+          isReferenced = true;
+        }
+      });
+
+      const shouldShow = showAll || entity === selectedEntity || isReferenced;
+
+      if (shouldShow) {
+        // Calculate world-space bounds from entity position and size
+        const halfWidth = bounds.size.x / 2;
+        const halfHeight = bounds.size.y / 2;
+        const minX = boundsTransform.position.x - halfWidth;
+        const minY = boundsTransform.position.y - halfHeight;
+        const maxX = boundsTransform.position.x + halfWidth;
+        const maxY = boundsTransform.position.y + halfHeight;
+
+        // Create helper if doesn't exist
+        if (!this.helperManager!.hasHelper(entity)) {
+          const box3 = new THREE.Box3(
+            new THREE.Vector3(minX, minY, -100),
+            new THREE.Vector3(maxX, maxY, 100)
+          );
+          this.helperManager!.createBox3Helper(entity, box3, resolution);
+          this.helperEntities.add(entity);
+
+          // Set orange color to distinguish from other helpers
+          const entry = this.helperManager!.getHelperEntry(entity);
+          if (entry && entry.type === 'box3') {
+            entry.helper.setColor(0xffaa00);
+          }
+        }
+
+        // Update helper bounds (in case they changed)
+        const entry = this.helperManager!.getHelperEntry(entity);
+        if (entry && entry.type === 'box3') {
+          const box3 = new THREE.Box3(
+            new THREE.Vector3(minX, minY, -100),
+            new THREE.Vector3(maxX, maxY, 100)
+          );
+          entry.helper.setBox3(box3);
+          // Position the helper at the center of the box (geometry is centered at origin)
+          const center = box3.getCenter(new THREE.Vector3());
+          entry.helper.position.copy(center);
+          entry.helper.rotation.set(0, 0, 0);
+          entry.helper.scale.set(1, 1, 1);
+        }
+      } else {
+        // Remove helper if shouldn't show
+        if (this.helperManager!.hasHelper(entity)) {
+          this.helperManager!.removeHelper(entity);
+          this.helperEntities.delete(entity);
+        }
+      }
+    });
+
+    // Sync VirtualCameraFollow dead zone helpers
+    commands.query().all(VirtualCameraFollow, VirtualCamera, Transform3D).each((entity, follow, vcam, transform) => {
+      seenEntities.add(entity);
+
+      // Create pseudo-entities for dead zone and soft zone helpers
+      // We use negative entity IDs to avoid conflicts with real entities
+      const deadZoneHelperEntity = -(entity * 2 + 1) as Entity; // Odd negative
+      const softZoneHelperEntity = -(entity * 2 + 2) as Entity; // Even negative
+
+      seenEntities.add(deadZoneHelperEntity);
+      seenEntities.add(softZoneHelperEntity);
+
+      // Only show dead zone helper when:
+      // 1. Mode is transposer
+      // 2. Dead zone is enabled
+      // 3. Entity is selected or showAll is true
+      const shouldShow =
+        follow.mode === 'transposer' &&
+        follow.enableDeadZone &&
+        (showAll || entity === selectedEntity);
+
+      if (shouldShow) {
+        // Get the render manager for viewport calculations
+        const renderManager = app.getResource(Render3DManager);
+        if (!renderManager) return;
+
+        const threeCamera = renderManager.getRenderer().getCamera();
+        if (!threeCamera) return;
+
+        // Get viewport dimensions from render manager
+        const viewportSize = renderManager.getRenderer().getSize();
+
+        // Initialize missing properties for backward compatibility
+        if (!follow.deadZone || follow.deadZone.width === undefined || follow.deadZone.height === undefined) {
+          follow.deadZone = { width: 0.1, height: 0.1 };
+        }
+        if (!follow.softZone || follow.softZone.width === undefined || follow.softZone.height === undefined) {
+          follow.softZone = { width: 0.3, height: 0.3 };
+        }
+
+        // Calculate world-space dimensions for both camera types
+        let cameraWorldDimensions: { width: number; height: number };
+
+        if (vcam.type === 'orthographic') {
+          const orthoSize = vcam.size / vcam.zoom;
+          const aspect = viewportSize.width / viewportSize.height;
+          cameraWorldDimensions = {
+            width: orthoSize * aspect,
+            height: orthoSize
+          };
+        } else if (vcam.type === 'perspective') {
+          const approximateDistance = Math.abs(transform.position.z);
+          const fovRadians = (vcam.fov * Math.PI) / 180;
+          const visibleHeight = 2 * Math.tan(fovRadians / 2) * approximateDistance;
+          const aspect = viewportSize.width / viewportSize.height;
+          cameraWorldDimensions = {
+            width: visibleHeight * aspect,
+            height: visibleHeight
+          };
+        } else {
+          return; // Unknown camera type
+        }
+
+        // Convert viewport percentages to world units
+        const deadZoneWorldWidth = follow.deadZone.width * cameraWorldDimensions.width;
+        const deadZoneWorldHeight = follow.deadZone.height * cameraWorldDimensions.height;
+        const softZoneWorldWidth = follow.softZone.width * cameraWorldDimensions.width;
+        const softZoneWorldHeight = follow.softZone.height * cameraWorldDimensions.height;
+
+        // Camera is centered at transform.position + offset
+        const centerX = transform.position.x + follow.offset.x;
+        const centerY = transform.position.y + follow.offset.y;
+
+        // Create dead zone box (centered at origin, will be positioned via helper.position)
+        const deadZoneBox = new THREE.Box3(
+          new THREE.Vector3(
+            -deadZoneWorldWidth / 2,
+            -deadZoneWorldHeight / 2,
+            -100
+          ),
+          new THREE.Vector3(
+            deadZoneWorldWidth / 2,
+            deadZoneWorldHeight / 2,
+            100
+          )
+        );
+
+        // Create soft zone box (centered at origin, will be positioned via helper.position)
+        const softZoneBox = new THREE.Box3(
+          new THREE.Vector3(
+            -softZoneWorldWidth / 2,
+            -softZoneWorldHeight / 2,
+            -100
+          ),
+          new THREE.Vector3(
+            softZoneWorldWidth / 2,
+            softZoneWorldHeight / 2,
+            100
+          )
+        );
+
+        // Create/update soft zone helper first (semi-transparent yellow, renders behind)
+        if (!this.helperManager!.hasHelper(softZoneHelperEntity)) {
+          this.helperManager!.createBox3Helper(softZoneHelperEntity, softZoneBox, resolution);
+          this.helperEntities.add(softZoneHelperEntity);
+
+          const entry = this.helperManager!.getHelperEntry(softZoneHelperEntity);
+          if (entry && entry.type === 'box3') {
+            entry.helper.setColor(0xffff00); // Yellow
+            entry.helper.setOpacity(0.3); // Lower opacity
+            entry.helper.renderOrder = 999999998; // Render behind dead zone
+          }
+        } else {
+          const entry = this.helperManager!.getHelperEntry(softZoneHelperEntity);
+          if (entry && entry.type === 'box3') {
+            entry.helper.setBox3(softZoneBox);
+            entry.helper.setColor(0xffff00); // Yellow
+            entry.helper.setOpacity(0.3); // Lower opacity
+            entry.helper.renderOrder = 999999998; // Render behind dead zone
+            // Position at camera center (box is already centered at origin)
+            entry.helper.position.set(centerX, centerY, 0);
+            entry.helper.rotation.set(0, 0, 0);
+            entry.helper.scale.set(1, 1, 1);
+          }
+        }
+
+        // Create/update dead zone helper second (cyan, renders on top)
+        if (!this.helperManager!.hasHelper(deadZoneHelperEntity)) {
+          this.helperManager!.createBox3Helper(deadZoneHelperEntity, deadZoneBox, resolution);
+          this.helperEntities.add(deadZoneHelperEntity);
+
+          const entry = this.helperManager!.getHelperEntry(deadZoneHelperEntity);
+          if (entry && entry.type === 'box3') {
+            entry.helper.setColor(0x00ffff); // Cyan (to distinguish from soft zone)
+            entry.helper.setOpacity(1.0); // Full opacity
+            entry.helper.renderOrder = 999999999; // Render on top of soft zone
+            // Position at camera center (box is already centered at origin)
+            entry.helper.position.set(centerX, centerY, 0);
+            entry.helper.rotation.set(0, 0, 0);
+            entry.helper.scale.set(1, 1, 1);
+          }
+        } else {
+          const entry = this.helperManager!.getHelperEntry(deadZoneHelperEntity);
+          if (entry && entry.type === 'box3') {
+            entry.helper.setBox3(deadZoneBox);
+            entry.helper.setColor(0x00ffff); // Cyan (to distinguish from soft zone)
+            entry.helper.setOpacity(1.0); // Full opacity
+            entry.helper.renderOrder = 999999999; // Render on top of soft zone
+            // Position at camera center (box is already centered at origin)
+            entry.helper.position.set(centerX, centerY, 0);
+            entry.helper.rotation.set(0, 0, 0);
+            entry.helper.scale.set(1, 1, 1);
+          }
+        }
+      } else {
+        // Remove both dead zone and soft zone helpers if shouldn't show
+        const deadZoneHelperEntity = -(entity * 2 + 1) as Entity;
+        const softZoneHelperEntity = -(entity * 2 + 2) as Entity;
+
+        if (this.helperManager!.hasHelper(deadZoneHelperEntity)) {
+          this.helperManager!.removeHelper(deadZoneHelperEntity);
+          this.helperEntities.delete(deadZoneHelperEntity);
+        }
+        if (this.helperManager!.hasHelper(softZoneHelperEntity)) {
+          this.helperManager!.removeHelper(softZoneHelperEntity);
+          this.helperEntities.delete(softZoneHelperEntity);
         }
       }
     });

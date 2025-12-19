@@ -15,9 +15,22 @@ import {
   type VirtualCameraData,
 } from "../components/rendering/virtual-camera.js";
 import {
+  VirtualCameraBounds,
+  type VirtualCameraBoundsData,
+} from "../components/rendering/virtual-camera-bounds.js";
+import {
   VirtualCameraFollow,
   type VirtualCameraFollowData,
 } from "../components/rendering/virtual-camera-follow.js";
+import { Render3DManager } from "./renderer-sync-system.js";
+
+/**
+ * Resolved world-space bounds (min/max) from a VirtualCameraBounds entity
+ */
+interface ResolvedBounds {
+  min: { x: number; y: number };
+  max: { x: number; y: number };
+}
 
 /**
  * System that updates virtual camera positions based on follow settings.
@@ -27,6 +40,16 @@ import {
  */
 export const virtualCameraFollowSystem = system(({ commands }) => {
   const deltaTime = commands.getDeltaTime();
+
+  // Get aspect ratio from Render3DManager for bounds calculation
+  const render3DManager = commands.tryGetResource(Render3DManager);
+  let aspect = 16 / 9; // Fallback aspect ratio
+  if (render3DManager) {
+    const size = render3DManager.getRenderer().getSize();
+    if (size.width > 0 && size.height > 0) {
+      aspect = size.width / size.height;
+    }
+  }
 
   // Process all virtual cameras with follow components
   commands
@@ -65,6 +88,17 @@ export const virtualCameraFollowSystem = system(({ commands }) => {
           y: targetTransform.position.y,
           z: targetTransform.position.z,
         };
+
+        // Apply camera bounds after first frame snap
+        if (vcam.enableCameraBounds && vcam.boundsEntity != null) {
+          const resolvedBounds = resolveBoundsFromEntity(
+            vcam.boundsEntity,
+            commands
+          );
+          if (resolvedBounds) {
+            clampToBounds(transform.position, resolvedBounds, vcam, aspect);
+          }
+        }
         return;
       }
 
@@ -78,6 +112,29 @@ export const virtualCameraFollowSystem = system(({ commands }) => {
         z: follow._targetVelocity.z * follow.lookaheadTime,
       };
 
+      // Get camera visible dimensions for dead zone calculations
+      let cameraVisibleDimensions: { width: number; height: number } | undefined;
+      if (follow.mode === 'transposer' && follow.enableDeadZone) {
+        const viewportSize = render3DManager?.getRenderer().getSize();
+        if (viewportSize) {
+          const aspect = viewportSize.width / viewportSize.height;
+
+          if (vcam.type === 'perspective') {
+            // For perspective, calculate visible dimensions at camera's Z distance
+            const approximateDistance = Math.abs(transform.position.z);
+            const fovRadians = (vcam.fov * Math.PI) / 180;
+            const visibleHeight = 2 * Math.tan(fovRadians / 2) * approximateDistance;
+            const visibleWidth = visibleHeight * aspect;
+            cameraVisibleDimensions = { width: visibleWidth, height: visibleHeight };
+          } else {
+            // For orthographic, use camera size
+            const orthoHeight = vcam.size / vcam.zoom;
+            const orthoWidth = orthoHeight * aspect;
+            cameraVisibleDimensions = { width: orthoWidth, height: orthoHeight };
+          }
+        }
+      }
+
       // Apply mode-specific behavior
       switch (follow.mode) {
         case "hardLock":
@@ -85,13 +142,23 @@ export const virtualCameraFollowSystem = system(({ commands }) => {
           break;
 
         case "transposer":
-          applyTransposer(
-            transform,
-            targetTransform,
-            follow,
-            lookahead,
-            deltaTime
-          );
+          if (follow.enableDeadZone && cameraVisibleDimensions) {
+            applyTransposerWithDeadZone(
+              transform,
+              targetTransform,
+              follow,
+              cameraVisibleDimensions,
+              deltaTime
+            );
+          } else {
+            applyTransposer(
+              transform,
+              targetTransform,
+              follow,
+              lookahead,
+              deltaTime
+            );
+          }
           break;
 
         case "2dFollow":
@@ -112,20 +179,60 @@ export const virtualCameraFollowSystem = system(({ commands }) => {
             deltaTime
           );
           break;
+      }
 
-        case "framedTransposer":
-          // TODO: Implement screen-space framing
-          applyTransposer(
-            transform,
-            targetTransform,
-            follow,
-            lookahead,
-            deltaTime
-          );
-          break;
+      // Apply camera bounds AFTER follow mode calculation
+      if (vcam.enableCameraBounds && vcam.boundsEntity != null) {
+        const resolvedBounds = resolveBoundsFromEntity(
+          vcam.boundsEntity,
+          commands
+        );
+        if (resolvedBounds) {
+          clampToBounds(transform.position, resolvedBounds, vcam, aspect);
+        }
       }
     });
 });
+
+/**
+ * Resolves world-space bounds from a VirtualCameraBounds entity.
+ * The bounds are centered on the entity's Transform3D position with the specified size.
+ *
+ * @param boundsEntity - Entity with VirtualCameraBounds and Transform3D components
+ * @param commands - Commands instance for querying components
+ * @returns Resolved bounds in world space, or null if entity is invalid
+ */
+function resolveBoundsFromEntity(
+  boundsEntity: number,
+  commands: {
+    tryGetComponent: <T>(
+      entity: number,
+      type: import("../component.js").ComponentType<T>
+    ) => T | undefined;
+  }
+): ResolvedBounds | null {
+  const boundsComp = commands.tryGetComponent(boundsEntity, VirtualCameraBounds);
+  const boundsTransform = commands.tryGetComponent(boundsEntity, Transform3D);
+
+  if (!boundsComp || !boundsTransform) {
+    return null;
+  }
+
+  // Calculate world-space bounds from entity position and size
+  const halfWidth = boundsComp.size.x / 2;
+  const halfHeight = boundsComp.size.y / 2;
+
+  return {
+    min: {
+      x: boundsTransform.position.x - halfWidth,
+      y: boundsTransform.position.y - halfHeight,
+    },
+    max: {
+      x: boundsTransform.position.x + halfWidth,
+      y: boundsTransform.position.y + halfHeight,
+    },
+  };
+}
 
 /**
  * Snap camera to target position immediately (no interpolation)
@@ -313,4 +420,160 @@ function applyOrbitalTransposer(
   transform.rotation.x += (pitch - transform.rotation.x) * rotT;
   transform.rotation.y += (yaw - transform.rotation.y) * rotT;
   transform.rotation.z = 0; // No roll for orbital
+}
+
+/**
+ * Clamp camera position to bounds, accounting for visible area
+ *
+ * For orthographic cameras, the visible area is calculated from size/zoom and aspect ratio.
+ * For perspective cameras, only position clamping is applied (visible area varies with distance).
+ *
+ * @param position - Camera position to clamp (modified in place)
+ * @param bounds - 2D bounds in world space (resolved from VirtualCameraBounds entity)
+ * @param vcamData - VirtualCamera data for projection info
+ * @param aspect - Viewport aspect ratio (width/height)
+ */
+function clampToBounds(
+  position: { x: number; y: number; z: number },
+  bounds: ResolvedBounds,
+  vcamData: VirtualCameraData,
+  aspect: number
+): void {
+  // Calculate visible half-extents for orthographic cameras
+  let halfWidth = 0;
+  let halfHeight = 0;
+
+  if (vcamData.type === "orthographic") {
+    halfHeight = vcamData.size / vcamData.zoom;
+    halfWidth = halfHeight * aspect;
+  }
+  // For perspective, halfWidth/halfHeight remain 0 (position-only clamping)
+
+  // Calculate effective bounds (shrunk by visible area)
+  const effectiveMinX = bounds.min.x + halfWidth;
+  const effectiveMaxX = bounds.max.x - halfWidth;
+  const effectiveMinY = bounds.min.y + halfHeight;
+  const effectiveMaxY = bounds.max.y - halfHeight;
+
+  // Handle case where visible area is larger than bounds (center the camera)
+  if (effectiveMinX >= effectiveMaxX) {
+    // Visible width >= bounds width, center on X
+    position.x = (bounds.min.x + bounds.max.x) / 2;
+  } else {
+    position.x = Math.max(effectiveMinX, Math.min(effectiveMaxX, position.x));
+  }
+
+  if (effectiveMinY >= effectiveMaxY) {
+    // Visible height >= bounds height, center on Y
+    position.y = (bounds.min.y + bounds.max.y) / 2;
+  } else {
+    position.y = Math.max(effectiveMinY, Math.min(effectiveMaxY, position.y));
+  }
+}
+
+/**
+ * Computes axis correction based on dead zone and soft zone.
+ * Based on user's DeadZoneCamera2D implementation.
+ *
+ * @param value - Relative position on this axis
+ * @param deadHalf - Half-width of dead zone
+ * @param softHalf - Half-width of soft zone
+ * @returns Correction amount to apply
+ */
+function computeAxisCorrection(value: number, deadHalf: number, softHalf: number): number {
+  const abs = Math.abs(value);
+  const sign = Math.sign(value);
+
+  // Dead zone → no movement
+  if (abs <= deadHalf) return 0;
+
+  // Outside soft zone → hard correction
+  if (abs >= softHalf) {
+    return value - sign * softHalf;
+  }
+
+  // Inside soft zone → damped correction with quadratic easing
+  const softRange = softHalf - deadHalf;
+  const excess = abs - deadHalf;
+  const t = excess / softRange;
+
+  // Quadratic ease (Cinemachine-like)
+  const eased = t * t;
+
+  return sign * eased * softRange;
+}
+
+/**
+ * Transposer with dead zone - world-space dead zone follow.
+ * The target can move within the dead zone without the camera moving.
+ * When outside the dead zone, the camera smoothly moves to keep the target
+ * within the soft zone, with interpolation based on distance from dead zone edge.
+ *
+ * @param transform - Camera transform (modified in place)
+ * @param targetTransform - Target entity's transform
+ * @param follow - VirtualCameraFollow component data
+ * @param cameraVisibleDimensions - Camera's visible width/height in world units
+ * @param deltaTime - Time since last frame
+ */
+function applyTransposerWithDeadZone(
+  transform: { position: { x: number; y: number; z: number } },
+  targetTransform: { position: { x: number; y: number; z: number } },
+  follow: VirtualCameraFollowData,
+  cameraVisibleDimensions: { width: number; height: number },
+  deltaTime: number
+): void {
+  // Initialize missing properties for backward compatibility
+  if (!follow.deadZone || follow.deadZone.width === undefined || follow.deadZone.height === undefined) {
+    follow.deadZone = { width: 0.1, height: 0.1 };
+  }
+  if (!follow.softZone || follow.softZone.width === undefined || follow.softZone.height === undefined) {
+    follow.softZone = { width: 0.3, height: 0.3 };
+  }
+
+  // Convert viewport units (0-1) to world units
+  // Dead zone and soft zone are defined as viewport percentages
+  const deadZoneWorldWidth = follow.deadZone.width * cameraVisibleDimensions.width;
+  const deadZoneWorldHeight = follow.deadZone.height * cameraVisibleDimensions.height;
+  const softZoneWorldWidth = follow.softZone.width * cameraVisibleDimensions.width;
+  const softZoneWorldHeight = follow.softZone.height * cameraVisibleDimensions.height;
+
+  // Calculate relative position (target - dead zone center)
+  // The dead zone center is at camera position + offset
+  const deadZoneCenter = {
+    x: transform.position.x + follow.offset.x,
+    y: transform.position.y + follow.offset.y,
+  };
+  const relative = {
+    x: targetTransform.position.x - deadZoneCenter.x,
+    y: targetTransform.position.y - deadZoneCenter.y,
+  };
+
+  // Compute correction for each axis using dead zone logic
+  const correctionX = computeAxisCorrection(
+    relative.x,
+    deadZoneWorldWidth * 0.5,
+    softZoneWorldWidth * 0.5
+  );
+  const correctionY = computeAxisCorrection(
+    relative.y,
+    deadZoneWorldHeight * 0.5,
+    softZoneWorldHeight * 0.5
+  );
+
+  // Get damping values
+  const dampX = follow.dampingPerAxis?.x ?? follow.damping;
+  const dampY = follow.dampingPerAxis?.y ?? follow.damping;
+
+  // Apply correction with damping
+  const followStrength = 5;
+  transform.position.x += correctionX * followStrength * dampX * deltaTime;
+  transform.position.y += correctionY * followStrength * dampY * deltaTime;
+
+  // Handle Z axis
+  if (!follow.ignoreZ) {
+    const dampZ = follow.dampingPerAxis?.z ?? follow.damping;
+    const targetZ = targetTransform.position.z + follow.offset.z;
+    const tZ = dampZ > 0 ? 1 - Math.exp(-dampZ * deltaTime) : 1;
+    transform.position.z += (targetZ - transform.position.z) * tZ;
+  }
 }

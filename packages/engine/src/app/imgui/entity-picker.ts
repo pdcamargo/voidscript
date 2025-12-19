@@ -24,6 +24,7 @@
 import { ImGui } from "@mori2003/jsimgui";
 import type { Command } from "../../ecs/command.js";
 import type { Entity } from "../../ecs/entity.js";
+import type { ComponentType } from "../../ecs/component.js";
 import { Name } from "../../ecs/components/name.js";
 
 export interface EntityPickerOptions {
@@ -37,6 +38,11 @@ export interface EntityPickerOptions {
   allowNone?: boolean;
   /** Optional filter function to limit which entities appear in the list */
   filter?: (entity: Entity) => boolean;
+  /**
+   * Only show entities that have ALL of these components.
+   * This is applied before the custom filter function.
+   */
+  requiredComponents?: ComponentType<unknown>[];
   /** Width of the combo box (default: uses ImGui default) */
   width?: number;
 }
@@ -61,6 +67,7 @@ export function entityPicker(options: EntityPickerOptions): EntityPickerResult {
     commands,
     allowNone = true,
     filter,
+    requiredComponents,
     width,
   } = options;
 
@@ -70,7 +77,16 @@ export function entityPicker(options: EntityPickerOptions): EntityPickerResult {
   // Build list of all entities with names for the picker
   const entities: Array<{ id: Entity; label: string }> = [];
   commands.query().all().each((entity) => {
-    // Apply filter if provided
+    // Check required components first
+    if (requiredComponents && requiredComponents.length > 0) {
+      for (const componentType of requiredComponents) {
+        if (!commands.hasComponent(entity, componentType)) {
+          return; // Entity doesn't have this required component
+        }
+      }
+    }
+
+    // Apply custom filter if provided
     if (filter && !filter(entity)) {
       return;
     }

@@ -166,6 +166,14 @@ export { CameraClearColor } from "./ecs/components/rendering/camera-clear-color.
 export type { CameraClearColorData } from "./ecs/components/rendering/camera-clear-color.js";
 export { MainCamera } from "./ecs/components/rendering/main-camera.js";
 export type { MainCameraData } from "./ecs/components/rendering/main-camera.js";
+export { VirtualCamera } from "./ecs/components/rendering/virtual-camera.js";
+export type { VirtualCameraData } from "./ecs/components/rendering/virtual-camera.js";
+export { VirtualCameraBounds } from "./ecs/components/rendering/virtual-camera-bounds.js";
+export type { VirtualCameraBoundsData } from "./ecs/components/rendering/virtual-camera-bounds.js";
+export { VirtualCameraFollow } from "./ecs/components/rendering/virtual-camera-follow.js";
+export type { VirtualCameraFollowData, FollowMode } from "./ecs/components/rendering/virtual-camera-follow.js";
+export { CameraBrain } from "./ecs/components/rendering/camera-brain.js";
+export type { CameraBrainData, BlendCurve } from "./ecs/components/rendering/camera-brain.js";
 export {
   Light3D,
   createDirectionalLight,

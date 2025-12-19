@@ -40,8 +40,7 @@ import { entityPicker } from "../../../app/imgui/entity-picker.js";
 export type FollowMode =
   | "none" // No following
   | "hardLock" // Instant position sync
-  | "transposer" // Position offset with damping
-  | "framedTransposer" // Transposer with screen-space framing
+  | "transposer" // Position offset with damping (supports optional dead zone)
   | "orbitalTransposer" // Orbit around target
   | "2dFollow"; // Optimized for 2D (XY only)
 
@@ -108,6 +107,12 @@ export interface VirtualCameraFollowData {
    * @default false
    */
   ignoreZ: boolean;
+
+  /**
+   * Enable dead zone framing (only applies to transposer mode)
+   * @default false
+   */
+  enableDeadZone: boolean;
 
   // --- Screen-space framing (for framedTransposer) ---
   /**
@@ -194,6 +199,7 @@ export const VirtualCameraFollow = component<VirtualCameraFollowData>(
     lookaheadTime: { serializable: true },
     lookaheadSmoothing: { serializable: true },
     ignoreZ: { serializable: true },
+    enableDeadZone: { serializable: true },
     screenPosition: {
       serializable: true,
       customSerializer: {
@@ -234,9 +240,10 @@ export const VirtualCameraFollow = component<VirtualCameraFollowData>(
       lookaheadTime: 0,
       lookaheadSmoothing: 10,
       ignoreZ: false,
+      enableDeadZone: false,
       screenPosition: { x: 0.5, y: 0.5 },
       deadZone: { width: 0.1, height: 0.1 },
-      softZone: { width: 0.8, height: 0.8 },
+      softZone: { width: 0.3, height: 0.3 },
       orbitalRadius: 10,
       orbitalAngleX: 0,
       orbitalAngleY: 15,
@@ -248,6 +255,7 @@ export const VirtualCameraFollow = component<VirtualCameraFollowData>(
     displayName: "Virtual Camera Follow",
     description: "Controls how a virtual camera follows a target entity",
     path: "rendering/camera",
+    showHelper: true,
     customEditor: ({ componentData, commands }) => {
       // Target entity picker
       ImGui.Text("Target Entity:");
@@ -269,7 +277,6 @@ export const VirtualCameraFollow = component<VirtualCameraFollowData>(
         "none",
         "hardLock",
         "transposer",
-        "framedTransposer",
         "orbitalTransposer",
         "2dFollow",
       ];
@@ -379,45 +386,58 @@ export const VirtualCameraFollow = component<VirtualCameraFollowData>(
           }
         }
 
-        // Framed transposer specific
-        if (componentData.mode === "framedTransposer") {
+        // Transposer dead zone
+        if (componentData.mode === "transposer") {
           ImGui.Separator();
           ImGui.TextColored(
             { x: 0.6, y: 0.8, z: 1, w: 1 },
-            "Screen Framing:"
+            "Dead Zone:"
           );
 
-          ImGui.Text("Screen Position (0-1):");
-          const screenPos = [
-            componentData.screenPosition.x,
-            componentData.screenPosition.y,
-          ] as [number, number];
-          if (ImGui.SliderFloat2("##screenPos", screenPos, 0, 1)) {
-            componentData.screenPosition = { x: screenPos[0], y: screenPos[1] };
+          // Initialize missing properties for backward compatibility
+          if (componentData.enableDeadZone === undefined) {
+            componentData.enableDeadZone = false;
+          }
+          if (!componentData.deadZone) {
+            componentData.deadZone = { width: 0.1, height: 0.1 };
+          }
+          if (!componentData.softZone) {
+            componentData.softZone = { width: 0.3, height: 0.3 };
           }
 
-          ImGui.Text("Dead Zone:");
-          const deadZone = [
-            componentData.deadZone.width,
-            componentData.deadZone.height,
-          ] as [number, number];
-          if (ImGui.SliderFloat2("##deadZone", deadZone, 0, 1)) {
-            componentData.deadZone = {
-              width: deadZone[0],
-              height: deadZone[1],
-            };
+          const enableDeadZone: [boolean] = [componentData.enableDeadZone];
+          if (ImGui.Checkbox("Enable Dead Zone##enableDeadZone", enableDeadZone)) {
+            componentData.enableDeadZone = enableDeadZone[0];
           }
 
-          ImGui.Text("Soft Zone:");
-          const softZone = [
-            componentData.softZone.width,
-            componentData.softZone.height,
-          ] as [number, number];
-          if (ImGui.SliderFloat2("##softZone", softZone, 0, 1)) {
-            componentData.softZone = {
-              width: softZone[0],
-              height: softZone[1],
-            };
+          // Only show dead zone settings if enabled
+          if (componentData.enableDeadZone) {
+            ImGui.Text("Dead Zone (viewport %):");
+            const deadZone = [
+              componentData.deadZone.width,
+              componentData.deadZone.height,
+            ] as [number, number];
+            if (ImGui.SliderFloat2("##deadZone", deadZone, 0, 1)) {
+              componentData.deadZone = {
+                width: deadZone[0],
+                height: deadZone[1],
+              };
+            }
+
+            ImGui.Text("Soft Zone (viewport %):");
+            const softZone = [
+              componentData.softZone.width,
+              componentData.softZone.height,
+            ] as [number, number];
+            if (ImGui.SliderFloat2("##softZone", softZone, 0, 1)) {
+              componentData.softZone = {
+                width: softZone[0],
+                height: softZone[1],
+              };
+            }
+          } else {
+            // Show disabled state
+            ImGui.TextDisabled("(Dead zone disabled - smooth follow without dead zone)");
           }
         }
 

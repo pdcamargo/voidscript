@@ -207,6 +207,17 @@ export class Box3Helper extends LineSegments2 {
   }
 
   /**
+   * Sets the line opacity.
+   *
+   * @param opacity - Opacity value (0-1)
+   */
+  setOpacity(opacity: number): void {
+    this._material.opacity = opacity;
+    // Always keep transparent true for proper render order sorting
+    this._material.transparent = true;
+  }
+
+  /**
    * Cleans up geometry and material resources.
    */
   dispose(): void {

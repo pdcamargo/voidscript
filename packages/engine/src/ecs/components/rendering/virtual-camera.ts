@@ -22,11 +22,26 @@
  *   .with(Transform3D, { position: new Vector3(0, 2, -5) })
  *   .with(VirtualCamera, { priority: 20, type: 'perspective', fov: 45, enabled: false })
  *   .build();
+ *
+ * // Create a virtual camera with bounds constraint
+ * const boundsEntity = commands.spawn()
+ *   .with(Transform3D, { position: new Vector3(0, 0, 0) })
+ *   .with(VirtualCameraBounds, { size: { x: 20, y: 15 } })
+ *   .build();
+ *
+ * commands.spawn()
+ *   .with(Transform3D, { position: new Vector3(0, 0, 10) })
+ *   .with(VirtualCamera, { enableCameraBounds: true, boundsEntity: boundsEntity })
+ *   .build();
  * ```
  */
 
 import { component } from "../../component.js";
 import { ImGui } from "@mori2003/jsimgui";
+import type { Entity } from "../../entity.js";
+import { entityPicker } from "../../../app/imgui/entity-picker.js";
+import { VirtualCameraBounds } from "./virtual-camera-bounds.js";
+import { Name } from "../name.js";
 
 export interface VirtualCameraData {
   /**
@@ -86,6 +101,24 @@ export interface VirtualCameraData {
    * @default 0
    */
   dutch: number;
+
+  // --- Camera bounds properties ---
+  /**
+   * Enable camera bounds clamping
+   * When enabled, camera position will be constrained within the bounds
+   * defined by the referenced boundsEntity.
+   * @default false
+   */
+  enableCameraBounds: boolean;
+
+  /**
+   * Reference to an entity with VirtualCameraBounds component.
+   * The camera's visible area will be constrained to stay within those bounds.
+   * For orthographic cameras, this accounts for the camera's size/zoom.
+   * For perspective cameras, only position clamping is applied.
+   * @default null
+   */
+  boundsEntity: Entity | null;
 }
 
 export const VirtualCamera = component<VirtualCameraData>(
@@ -100,6 +133,8 @@ export const VirtualCamera = component<VirtualCameraData>(
     near: { serializable: true },
     far: { serializable: true },
     dutch: { serializable: true },
+    enableCameraBounds: { serializable: true },
+    boundsEntity: { serializable: true, type: "entity", whenNullish: "keep" },
   },
   {
     defaultValue: () => ({
@@ -112,12 +147,14 @@ export const VirtualCamera = component<VirtualCameraData>(
       near: 0.1,
       far: 1000,
       dutch: 0,
+      enableCameraBounds: false,
+      boundsEntity: null,
     }),
     displayName: "Virtual Camera",
     description:
       "A virtual camera viewpoint with priority-based selection for the CameraBrain",
     path: "rendering/camera",
-    customEditor: ({ componentData }) => {
+    customEditor: ({ componentData, commands }) => {
       // Priority (prominent at top)
       ImGui.TextColored(
         { x: 0.2, y: 0.8, z: 0.4, w: 1 },
@@ -213,6 +250,73 @@ export const VirtualCamera = component<VirtualCameraData>(
       const dutch: [number] = [componentData.dutch];
       if (ImGui.SliderFloat("Dutch Angle##dutch", dutch, -45, 45)) {
         componentData.dutch = dutch[0];
+      }
+
+      ImGui.Separator();
+
+      // Camera Bounds
+      ImGui.TextColored(
+        { x: 0.2, y: 0.8, z: 0.4, w: 1 },
+        "Camera Bounds"
+      );
+
+      // Handle undefined for components that were serialized before bounds existed
+      if (componentData.enableCameraBounds === undefined) {
+        componentData.enableCameraBounds = false;
+      }
+      // Migration: handle old cameraBounds property
+      if ("cameraBounds" in componentData) {
+        delete (componentData as Record<string, unknown>)["cameraBounds"];
+      }
+      if (componentData.boundsEntity === undefined) {
+        componentData.boundsEntity = null;
+      }
+
+      const enableBounds: [boolean] = [componentData.enableCameraBounds];
+      if (ImGui.Checkbox("Enable Bounds##enableBounds", enableBounds)) {
+        componentData.enableCameraBounds = enableBounds[0];
+      }
+
+      if (componentData.enableCameraBounds) {
+        ImGui.Indent();
+
+        // Entity picker for bounds entity
+        ImGui.Text("Bounds Entity:");
+
+        const result = entityPicker({
+          label: "boundsEntity",
+          currentEntity: componentData.boundsEntity,
+          commands,
+          allowNone: true,
+          requiredComponents: [VirtualCameraBounds as unknown as import("../../component.js").ComponentType<unknown>],
+        });
+
+        if (result.changed) {
+          componentData.boundsEntity = result.entity;
+        }
+
+        // Show info about selected bounds entity
+        if (componentData.boundsEntity !== null) {
+          const boundsComp = commands.tryGetComponent(
+            componentData.boundsEntity,
+            VirtualCameraBounds
+          );
+          if (boundsComp) {
+            ImGui.Spacing();
+            ImGui.TextColored(
+              { x: 0.6, y: 0.6, z: 0.6, w: 1 },
+              `Size: ${boundsComp.size.x.toFixed(1)} x ${boundsComp.size.y.toFixed(1)}`
+            );
+          }
+        } else {
+          ImGui.Spacing();
+          ImGui.TextColored(
+            { x: 1, y: 0.6, z: 0, w: 1 },
+            "No bounds entity selected"
+          );
+        }
+
+        ImGui.Unindent();
       }
     },
   }

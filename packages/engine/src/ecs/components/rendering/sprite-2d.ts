@@ -16,7 +16,10 @@
 import { component } from '../../component.js';
 import { RuntimeAsset } from '../../runtime-asset.js';
 import { AssetDatabase } from '../../asset-database.js';
-import { isTextureMetadata, type TextureMetadata } from '../../asset-metadata.js';
+import {
+  isTextureMetadata,
+  type TextureMetadata,
+} from '../../asset-metadata.js';
 import { ImGui } from '@mori2003/jsimgui';
 
 export interface Sprite2DData {
@@ -146,7 +149,9 @@ export const Sprite2D = component<Sprite2DData>(
           ImGui.SameLine();
 
           // Display current sprite name if found
-          const currentSprite = metadata.sprites?.find((s) => s.tileIndex === value);
+          const currentSprite = metadata.sprites?.find(
+            (s) => s.tileIndex === value,
+          );
           if (currentSprite) {
             ImGui.Text(currentSprite.name);
           } else if (value !== null) {
@@ -174,7 +179,11 @@ export const Sprite2D = component<Sprite2DData>(
             const itemsPerRow = 4;
             const buttonSize = 128;
 
-            ImGui.BeginChild('SpriteGrid', { x: 0, y: -40 }, ImGui.WindowFlags.None);
+            ImGui.BeginChild(
+              'SpriteGrid',
+              { x: 0, y: -40 },
+              ImGui.WindowFlags.None,
+            );
 
             for (let i = 0; i < sprites.length; i++) {
               const sprite = sprites[i];
@@ -196,10 +205,18 @@ export const Sprite2D = component<Sprite2DData>(
                 });
               }
 
-              if (ImGui.Button(`##sprite_${sprite.id}`, { x: buttonSize, y: buttonSize })) {
+              if (
+                ImGui.Button(`##sprite_${sprite.id}`, {
+                  x: buttonSize,
+                  y: buttonSize,
+                })
+              ) {
                 // Update all sprite properties atomically
                 onChange(sprite.tileIndex);
-                componentData.tileSize = { x: sprite.tileWidth, y: sprite.tileHeight };
+                componentData.tileSize = {
+                  x: sprite.tileWidth,
+                  y: sprite.tileHeight,
+                };
 
                 // Update tilesetSize from texture if loaded, or metadata
                 if (texture.isLoaded && texture.data?.image) {
@@ -238,12 +255,19 @@ export const Sprite2D = component<Sprite2DData>(
 
             ImGui.EndPopup();
           }
-        } else {
-          // No sprites defined - show default number input
-          const valueArr: [number] = [value ?? 0];
-          if (ImGui.InputInt(`${label}##tileIndex`, valueArr)) {
-            onChange(valueArr[0]);
-          }
+        }
+
+        // No sprites defined - show default number input
+        const valueArr: [number] = [value ?? 0];
+        ImGui.Text(`${label}:`);
+        ImGui.SameLine();
+        let valueChanged = false;
+        valueChanged = ImGui.DragFloat(`##${label}-slider`, valueArr, 0.01);
+        ImGui.SameLine();
+        valueChanged =
+          ImGui.InputFloat(`##${label}-input`, valueArr) || valueChanged;
+        if (valueChanged) {
+          onChange(valueArr[0]);
         }
       },
     },
@@ -332,7 +356,8 @@ export const Sprite2D = component<Sprite2DData>(
       isLit: false,
     }),
     displayName: 'Sprite 2D',
-    description: '2D sprite rendered in world space with optional tiling support',
+    description:
+      '2D sprite rendered in world space with optional tiling support',
   },
 );
 
