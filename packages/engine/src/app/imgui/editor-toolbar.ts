@@ -63,6 +63,14 @@ export function renderEditorToolbar(state: EditorToolbarState): void {
     // === Helpers Section ===
     renderHelpersSection(state);
 
+    // === Camera Type Section (2D mode only) ===
+    if (state.editorCameraManager.mode === '2d') {
+      ImGui.SameLine();
+      ImGui.Text('|');
+      ImGui.SameLine();
+      renderCameraTypeSection(state.editorCameraManager);
+    }
+
     // === FPS Counter (Right-aligned) ===
     if (state.currentFPS !== undefined) {
       // Calculate position for right-aligned FPS
@@ -170,6 +178,40 @@ function renderHelpersSection(state: EditorToolbarState): void {
     if (helpersEnabled) {
       ImGui.PopStyleColor();
     }
+  }
+}
+
+/**
+ * Render camera type toggle section (2D mode only)
+ */
+function renderCameraTypeSection(cameraManager: EditorCameraManager): void {
+  ImGui.Text('Camera:');
+  ImGui.SameLine();
+
+  const isPerspective = cameraManager.cameraType2D === 'perspective';
+
+  // Orthographic button
+  if (!isPerspective) {
+    ImGui.PushStyleColorImVec4(ImGui.Col.Button, { x: 0.4, y: 0.6, z: 0.7, w: 1.0 });
+  }
+  if (ImGui.Button('Ortho')) {
+    cameraManager.setCameraType2D('orthographic');
+  }
+  if (!isPerspective) {
+    ImGui.PopStyleColor();
+  }
+
+  ImGui.SameLine();
+
+  // Perspective button
+  if (isPerspective) {
+    ImGui.PushStyleColorImVec4(ImGui.Col.Button, { x: 0.4, y: 0.6, z: 0.7, w: 1.0 });
+  }
+  if (ImGui.Button('Persp')) {
+    cameraManager.setCameraType2D('perspective');
+  }
+  if (isPerspective) {
+    ImGui.PopStyleColor();
   }
 }
 

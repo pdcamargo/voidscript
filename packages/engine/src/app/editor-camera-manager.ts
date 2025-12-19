@@ -26,6 +26,7 @@ export class EditorCameraManager {
   // State
   private _isEditorCameraActive = true;
   private _mode: EditorCameraMode = '2d';
+  private editorCameraType2D: 'perspective' | 'orthographic' = 'orthographic';
 
   // Camera movement settings
   private moveSpeed2D = 300;
@@ -133,7 +134,14 @@ export class EditorCameraManager {
    * Get the current editor camera (based on mode)
    */
   getEditorCamera(): THREE.Camera {
-    return this._mode === '2d' ? this.orthoCamera : this.perspectiveCamera;
+    if (this._mode === '3d') {
+      return this.perspectiveCamera;
+    }
+
+    // 2D mode: return camera based on type
+    return this.editorCameraType2D === 'perspective'
+      ? this.perspectiveCamera
+      : this.orthoCamera;
   }
 
   /**
@@ -171,13 +179,14 @@ export class EditorCameraManager {
   }
 
   /**
-   * Update 2D orthographic camera
+   * Update 2D camera (orthographic or perspective)
    * - Middle mouse drag OR right click drag to pan
    * - Scroll wheel to zoom
    * - Arrow keys for fine movement
    */
   private update2DCamera(deltaTime: number): void {
     const mousePos = Input.getMousePosition();
+    const camera = this.getEditorCamera();
 
     // Middle mouse or right click drag to pan
     const isPanningInput = Input.isMouseButtonPressed(MouseButton.Middle) || Input.isMouseButtonPressed(MouseButton.Right);
@@ -188,24 +197,36 @@ export class EditorCameraManager {
         this.isPanning2D = true;
         this.panStartX = mousePos.x;
         this.panStartY = mousePos.y;
-        this.panStartCamX = this.orthoCamera.position.x;
-        this.panStartCamY = this.orthoCamera.position.y;
+        this.panStartCamX = camera.position.x;
+        this.panStartCamY = camera.position.y;
       } else {
         // Continue panning - calculate delta and move camera
         const deltaX = mousePos.x - this.panStartX;
         const deltaY = mousePos.y - this.panStartY;
 
-        // Convert screen delta to world delta (accounting for zoom)
+        // Convert screen delta to world delta
         const { width, height } = this.renderer.getSize();
-        const worldWidth = (this.orthoSize * 2) / this.zoom2D * (width / height);
-        const worldHeight = (this.orthoSize * 2) / this.zoom2D;
+        let worldWidth: number;
+        let worldHeight: number;
+
+        if (this.editorCameraType2D === 'orthographic') {
+          // Orthographic: fixed world size based on zoom
+          worldWidth = (this.orthoSize * 2) / this.zoom2D * (width / height);
+          worldHeight = (this.orthoSize * 2) / this.zoom2D;
+        } else {
+          // Perspective: world size depends on distance from camera
+          const distance = Math.abs(this.perspectiveCamera.position.z);
+          const fovRad = (this.perspectiveCamera.fov * Math.PI) / 180;
+          worldHeight = 2 * distance * Math.tan(fovRad / 2);
+          worldWidth = worldHeight * (width / height);
+        }
 
         const worldDeltaX = (deltaX / width) * worldWidth;
         const worldDeltaY = (deltaY / height) * worldHeight;
 
         // Move camera (inverted so dragging moves the view, not the camera position in world)
-        this.orthoCamera.position.x = this.panStartCamX - worldDeltaX;
-        this.orthoCamera.position.y = this.panStartCamY + worldDeltaY;
+        camera.position.x = this.panStartCamX - worldDeltaX;
+        camera.position.y = this.panStartCamY + worldDeltaY;
       }
     } else {
       this.isPanning2D = false;
@@ -220,18 +241,38 @@ export class EditorCameraManager {
     if (Input.isKeyPressed(KeyCode.ArrowRight)) moveX += 1;
 
     if (moveX !== 0 || moveY !== 0) {
-      const speed = this.moveSpeed2D / this.zoom2D;
-      this.orthoCamera.position.x += moveX * speed * deltaTime;
-      this.orthoCamera.position.y += moveY * speed * deltaTime;
+      let speed: number;
+      if (this.editorCameraType2D === 'orthographic') {
+        speed = this.moveSpeed2D / this.zoom2D;
+      } else {
+        // Perspective: scale speed by distance
+        const distance = Math.abs(this.perspectiveCamera.position.z);
+        speed = distance * 0.5;
+      }
+      camera.position.x += moveX * speed * deltaTime;
+      camera.position.y += moveY * speed * deltaTime;
     }
 
     // Scroll zoom
     const scrollDelta = Input.getScrollDeltaY();
     if (scrollDelta !== 0) {
-      // Scroll up (negative deltaY) = zoom in, scroll down (positive deltaY) = zoom out
-      this.zoom2D *= 1 - scrollDelta * this.zoomSpeed * 0.01;
-      this.zoom2D = Math.max(this.MIN_ZOOM, Math.min(this.MAX_ZOOM, this.zoom2D));
-      this.updateOrthoZoom();
+      if (this.editorCameraType2D === 'orthographic') {
+        // Orthographic zoom: adjust zoom factor
+        // Scroll up (negative deltaY) = zoom in, scroll down (positive deltaY) = zoom out
+        this.zoom2D *= 1 - scrollDelta * this.zoomSpeed * 0.01;
+        this.zoom2D = Math.max(this.MIN_ZOOM, Math.min(this.MAX_ZOOM, this.zoom2D));
+        this.updateOrthoZoom();
+      } else {
+        // Perspective zoom: move camera Z position
+        const zoomSpeed = 20;
+        const zDelta = scrollDelta > 0 ? zoomSpeed : -zoomSpeed;
+        this.perspectiveCamera.position.z += zDelta;
+
+        // Clamp Z distance (equivalent to zoom limits)
+        const minZ = 50;  // Close limit
+        const maxZ = 1000; // Far limit
+        this.perspectiveCamera.position.z = Math.max(minZ, Math.min(maxZ, this.perspectiveCamera.position.z));
+      }
     }
   }
 
@@ -356,5 +397,86 @@ export class EditorCameraManager {
   setZoom2D(zoom: number): void {
     this.zoom2D = Math.max(this.MIN_ZOOM, Math.min(this.MAX_ZOOM, zoom));
     this.updateOrthoZoom();
+  }
+
+  /**
+   * Get current 2D camera type (perspective or orthographic)
+   */
+  get cameraType2D(): 'perspective' | 'orthographic' {
+    return this.editorCameraType2D;
+  }
+
+  /**
+   * Set 2D camera type (perspective or orthographic)
+   * Only affects 2D mode
+   */
+  setCameraType2D(type: 'perspective' | 'orthographic'): void {
+    // Only affects 2D mode
+    if (this._mode !== '2d') return;
+
+    // Only update if type changed
+    if (this.editorCameraType2D === type) return;
+
+    const oldType = this.editorCameraType2D;
+    this.editorCameraType2D = type;
+
+    // Transfer camera state between ortho <-> perspective
+    this.transferCameraState(oldType, type);
+  }
+
+  /**
+   * Toggle 2D camera type between perspective and orthographic
+   * Only affects 2D mode
+   */
+  toggleCameraType2D(): void {
+    const newType = this.editorCameraType2D === 'perspective' ? 'orthographic' : 'perspective';
+    this.setCameraType2D(newType);
+  }
+
+  /**
+   * Transfer camera state between orthographic and perspective cameras
+   */
+  private transferCameraState(
+    from: 'perspective' | 'orthographic',
+    to: 'perspective' | 'orthographic'
+  ): void {
+    const fromCam = from === 'perspective' ? this.perspectiveCamera : this.orthoCamera;
+    const toCam = to === 'perspective' ? this.perspectiveCamera : this.orthoCamera;
+
+    // Copy position and rotation
+    toCam.position.copy(fromCam.position);
+    toCam.rotation.copy(fromCam.rotation);
+    toCam.quaternion.copy(fromCam.quaternion);
+
+    // Sync near/far planes
+    toCam.near = fromCam.near;
+    toCam.far = fromCam.far;
+
+    // Handle zoom equivalence (ortho size <-> perspective distance)
+    if (to === 'perspective') {
+      // Converting from ortho to perspective
+      // Keep same visual field: match frustum height at z=0 plane
+      // For ortho: height = orthoSize * 2 / zoom
+      // For persp: height = 2 * distance * tan(fov/2)
+      const orthoHeight = (this.orthoSize * 2) / this.zoom2D;
+      const fovRad = (this.perspectiveCamera.fov * Math.PI) / 180;
+      const distance = orthoHeight / (2 * Math.tan(fovRad / 2));
+
+      // Adjust Z position to maintain view
+      this.perspectiveCamera.position.z = distance;
+    } else {
+      // Converting from perspective to ortho
+      // Match frustum height at current Z distance
+      const distance = Math.abs(this.perspectiveCamera.position.z);
+      const fovRad = (this.perspectiveCamera.fov * Math.PI) / 180;
+      const perspHeight = 2 * distance * Math.tan(fovRad / 2);
+
+      // Adjust ortho size/zoom to match
+      this.zoom2D = (this.orthoSize * 2) / perspHeight;
+      this.zoom2D = Math.max(this.MIN_ZOOM, Math.min(this.MAX_ZOOM, this.zoom2D));
+      this.updateOrthoZoom();
+    }
+
+    toCam.updateProjectionMatrix();
   }
 }
