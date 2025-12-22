@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import type { Entity } from '../ecs/entity.js';
 import type { UIManager } from './ui-manager.js';
 import type { UIButtonData, UIButtonState } from './components/ui-button.js';
+import type { UIViewportBounds } from './ui-viewport-bounds.js';
 
 /**
  * UI interaction event types
@@ -39,7 +40,10 @@ export class UIInteractionManager {
   private readonly uiManager: UIManager;
   private readonly raycaster: THREE.Raycaster;
 
-  // Current mouse position in screen coordinates
+  // Canvas element for coordinate transformation
+  private canvas: HTMLCanvasElement | null = null;
+
+  // Current mouse position in viewport-relative coordinates
   private mouseX = 0;
   private mouseY = 0;
 
@@ -64,12 +68,77 @@ export class UIInteractionManager {
   // Click events consumed this frame
   private clickedEntities: Entity[] = [];
 
+  // Viewport bounds for coordinate transformation (set by EditorLayer in editor mode)
+  private viewportBounds: UIViewportBounds | null = null;
+
   constructor(uiManager: UIManager) {
     this.uiManager = uiManager;
     this.raycaster = new THREE.Raycaster();
 
     // Setup event listeners
     this.setupEventListeners();
+  }
+
+  /**
+   * Set the canvas element for coordinate transformation.
+   * Must be called before mouse events will work correctly.
+   */
+  setCanvas(canvas: HTMLCanvasElement): void {
+    this.canvas = canvas;
+  }
+
+  /**
+   * Set the viewport bounds for coordinate transformation.
+   * Called by EditorLayer when in editor mode, or by Application for fullscreen mode.
+   */
+  setViewportBounds(bounds: UIViewportBounds): void {
+    this.viewportBounds = bounds;
+  }
+
+  /**
+   * Transform browser viewport coordinates to canvas-relative coordinates.
+   * This is necessary because DOM events use browser viewport coordinates,
+   * but ImGui and UIViewportBounds use canvas-relative coordinates.
+   */
+  private toCanvasCoordinates(
+    clientX: number,
+    clientY: number,
+  ): { x: number; y: number } {
+    if (!this.canvas) {
+      // No canvas set - assume coordinates are already correct
+      return { x: clientX, y: clientY };
+    }
+    const rect = this.canvas.getBoundingClientRect();
+    return {
+      x: clientX - rect.left,
+      y: clientY - rect.top,
+    };
+  }
+
+  /**
+   * Transform browser viewport coordinates to game viewport-relative coordinates.
+   * First transforms to canvas-relative, then applies viewport bounds offset.
+   * Returns the transformed coordinates and whether the point is inside the viewport.
+   */
+  private getViewportCoordinates(
+    clientX: number,
+    clientY: number,
+  ): { x: number; y: number; isInside: boolean } {
+    // First transform from browser viewport to canvas-relative coordinates
+    const canvasCoords = this.toCanvasCoordinates(clientX, clientY);
+
+    if (!this.viewportBounds) {
+      // No viewport bounds set - assume fullscreen, canvas coords are the viewport coords
+      return { x: canvasCoords.x, y: canvasCoords.y, isInside: true };
+    }
+
+    // Check if the point is inside the viewport bounds (in canvas coordinates)
+    const isInside = this.viewportBounds.isInsideBounds(canvasCoords.x, canvasCoords.y);
+
+    // Transform from canvas coordinates to viewport-relative coordinates
+    const viewportCoords = this.viewportBounds.toViewportCoordinates(canvasCoords.x, canvasCoords.y);
+
+    return { x: viewportCoords.x, y: viewportCoords.y, isInside };
   }
 
   /**
@@ -253,8 +322,14 @@ export class UIInteractionManager {
    * Mouse move handler
    */
   private onMouseMove(event: MouseEvent): void {
-    this.mouseX = event.clientX;
-    this.mouseY = event.clientY;
+    const { x, y, isInside } = this.getViewportCoordinates(
+      event.clientX,
+      event.clientY,
+    );
+    if (isInside) {
+      this.mouseX = x;
+      this.mouseY = y;
+    }
   }
 
   /**
@@ -317,8 +392,14 @@ export class UIInteractionManager {
     const touch = event.touches[0];
     if (!touch) return;
 
-    this.mouseX = touch.clientX;
-    this.mouseY = touch.clientY;
+    const { x, y, isInside } = this.getViewportCoordinates(
+      touch.clientX,
+      touch.clientY,
+    );
+    if (!isInside) return;
+
+    this.mouseX = x;
+    this.mouseY = y;
 
     // Update hover first
     this.update();
@@ -346,8 +427,14 @@ export class UIInteractionManager {
     const touch = event.touches[0];
     if (!touch) return;
 
-    this.mouseX = touch.clientX;
-    this.mouseY = touch.clientY;
+    const { x, y, isInside } = this.getViewportCoordinates(
+      touch.clientX,
+      touch.clientY,
+    );
+    if (isInside) {
+      this.mouseX = x;
+      this.mouseY = y;
+    }
   }
 
   /**

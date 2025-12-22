@@ -23,10 +23,13 @@ import { SpriteRenderManager } from './sprite-sync-system.js';
 import { Water2DRenderManager } from './water-2d-system.js';
 import { SkyGradientRenderManager } from './sky-gradient-system.js';
 import { Fog2DRenderManager } from './rendering/fog-2d-system.js';
+import { Rain2DRenderManager } from './rain-2d-system.js';
 import { PostProcessingManager } from '../../post-processing/managers/post-processing-manager.js';
 import { AudioManager } from './audio-manager.js';
 import { Physics2DContext } from '../../physics/2d/physics-2d-context.js';
 import { Physics3DContext } from '../../physics/3d/physics-3d-context.js';
+import { UIManager } from '../../ui/ui-manager.js';
+import { clearUITracking } from '../../ui/ui-systems.js';
 
 /**
  * Dispose all render managers
@@ -63,6 +66,12 @@ function disposeAllRenderManagers(commands: Command): void {
     fogManager.dispose();
   }
 
+  // Rain2DRenderManager - Rain effects
+  const rainManager = commands.tryGetResource(Rain2DRenderManager);
+  if (rainManager) {
+    rainManager.dispose();
+  }
+
   // PostProcessingManager - Post-processing effects
   const postProcessingManager = commands.tryGetResource(PostProcessingManager);
   if (postProcessingManager) {
@@ -87,7 +96,16 @@ function disposeAllRenderManagers(commands: Command): void {
     physics3D.dispose();
   }
 
-  console.log('[PlayModeCleanup] Disposed all render managers and physics contexts');
+  // UIManager - UI elements (canvases, blocks, buttons, text)
+  const uiManager = commands.tryGetResource(UIManager);
+  if (uiManager) {
+    uiManager.dispose();
+  }
+
+  // Clear UI tracking maps (separate from UIManager as they track entity -> Three.js object mappings)
+  clearUITracking();
+
+  console.log('[PlayModeCleanup] Disposed all render managers, physics contexts, and UI');
 }
 
 /**

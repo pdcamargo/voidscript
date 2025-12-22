@@ -59,6 +59,10 @@ import {
   Fog2DRenderManager,
   fog2DSyncSystem,
 } from "../ecs/systems/rendering/fog-2d-system.js";
+import {
+  Rain2DRenderManager,
+  rain2DSyncSystem,
+} from "../ecs/systems/rain-2d-system.js";
 import { TiledAssetRegistry } from "../tiled/tiled-asset-registry.js";
 import { TilemapRenderManager } from "../tiled/tilemap-render-manager.js";
 import {
@@ -81,16 +85,38 @@ import {
   physics2DSyncSystem,
   physics2DCleanupSystem,
   Physics2DContext,
+  physics2DCollisionEventSystem,
 } from "../physics/2d/index.js";
 import {
   physics3DComponentSyncSystem,
   physics3DSyncSystem,
   physics3DCleanupSystem,
   Physics3DContext,
+  physics3DCollisionEventSystem,
 } from "../physics/3d/index.js";
+import {
+  CollisionStarted2D,
+  CollisionEnded2D,
+  CollisionStarted3D,
+  CollisionEnded3D,
+  ContactForce2D,
+  ContactForce3D,
+  TriggerZoneEnter2D,
+  TriggerZoneLeave2D,
+  TriggerZoneEnter3D,
+  TriggerZoneLeave3D,
+} from "../physics/collision/index.js";
+
+// Trigger zone systems
+import {
+  triggerZone2DSystem,
+  triggerZone3DSystem,
+} from "../ecs/systems/trigger/index.js";
 
 // UI systems
 import { UIManager } from "../ui/ui-manager.js";
+import { UIViewportBounds } from "../ui/ui-viewport-bounds.js";
+import { UIInteractionManager } from "../ui/ui-interaction.js";
 import {
   uiCanvasSyncSystem,
   uiBlockSyncSystem,
@@ -99,6 +125,11 @@ import {
   uiUpdateSystem,
   uiRenderSystem,
 } from "../ui/ui-systems.js";
+import {
+  setupUIInteractionEvents,
+  uiInteractionUpdateSystem,
+} from "../ui/ui-interaction-event-system.js";
+import { UIInteraction } from "../ui/components/ui-interaction.js";
 
 // Post-processing system
 import { postProcessingSystem } from "../ecs/systems/post-processing-system.js";
@@ -426,6 +457,14 @@ export class Application {
       this.imguiLayer._setApplication(this);
       await this.imguiLayer.onAttach();
       this.layerStack.pushOverlay(this.imguiLayer);
+
+      // Set initial display size with pixel ratio for Retina/HiDPI support
+      const pixelRatio = this.window.getPixelRatio();
+      this.imguiLayer.updateDisplaySize(
+        this.window.getWidth(),
+        this.window.getHeight(),
+        pixelRatio
+      );
     }
 
     // Setup editor if enabled (must happen before user layers are attached)
@@ -584,6 +623,9 @@ export class Application {
     // Reset WebGL state after Three.js (required before ImGui)
     this.renderer.resetState();
 
+    // Ensure viewport is reset to full canvas size before ImGui renders
+    this.renderer.resetViewport();
+
     // === IMGUI RENDER PHASE (after Three.js, renders on top) ===
     if (this.imguiLayer?.isInitialized()) {
       this.imguiLayer.beginFrame();
@@ -625,7 +667,15 @@ export class Application {
 
     // Handle window resize
     dispatcher.dispatch<WindowResizeEvent>(EventType.WindowResize, (e) => {
+      // NOTE: We intentionally do NOT update pixel ratio on resize.
+      // We keep pixelRatio at 1 to avoid conflicts between Three.js and jsimgui.
+      // See renderer.ts constructor comment for details.
       this.renderer.onResize(e.width, e.height);
+
+      // Update ImGui display size (pixelRatio=1 since we disabled Retina scaling)
+      if (this.imguiLayer) {
+        this.imguiLayer.updateDisplaySize(e.width, e.height, 1);
+      }
 
       // Also resize editor camera
       const editorCameraManager = this.getResource(EditorCameraManager);
@@ -1132,6 +1182,11 @@ export class Application {
     this.insertResource(new Fog2DRenderManager(this.renderer));
     this.addRenderSystem(fog2DSyncSystem);
 
+    // Rain 2D rendering system
+    // - render: Create and update pixel-art rain droplets with weather effects
+    this.insertResource(new Rain2DRenderManager(this.renderer));
+    this.addRenderSystem(rain2DSyncSystem);
+
     // Tiled map integration
     // - startup: Load maps and spawn layers/objects/collisions
     // - update: Auto-start animations
@@ -1166,17 +1221,60 @@ export class Application {
       const gravity = this.config.physics.gravity3D ?? { x: 0, y: -9.81, z: 0 };
       this.insertResource(new Physics3DContext(gravity));
     }
+    // Register collision events (for ECS event readers/writers)
+    this.addEvent(CollisionStarted2D);
+    this.addEvent(CollisionEnded2D);
+    this.addEvent(ContactForce2D);
+    this.addEvent(CollisionStarted3D);
+    this.addEvent(CollisionEnded3D);
+    this.addEvent(ContactForce3D);
+
     this.addUpdateSystem(physics2DComponentSyncSystem);
     this.addUpdateSystem(physics3DComponentSyncSystem);
     this.addFixedUpdateSystem(physics2DSyncSystem);
     this.addFixedUpdateSystem(physics3DSyncSystem);
+    // Collision event systems drain Rapier event queue after physics sync
+    this.addFixedUpdateSystem(physics2DCollisionEventSystem);
+    this.addFixedUpdateSystem(physics3DCollisionEventSystem);
+    // Trigger zone systems dispatch user-configured events when entities enter/leave zones
+    this.addEvent(TriggerZoneEnter2D);
+    this.addEvent(TriggerZoneLeave2D);
+    this.addEvent(TriggerZoneEnter3D);
+    this.addEvent(TriggerZoneLeave3D);
+    this.addFixedUpdateSystem(triggerZone2DSystem);
+    this.addFixedUpdateSystem(triggerZone3DSystem);
     this.addLateUpdateSystem(physics2DCleanupSystem);
     this.addLateUpdateSystem(physics3DCleanupSystem);
 
     // UI system (three-mesh-ui based)
     // - Dedicated orthographic camera for screen-space UI
     // - Renders after main scene, before ImGui
-    this.insertResource(new UIManager(this.renderer));
+    const uiManager = new UIManager(this.renderer);
+    this.insertResource(uiManager);
+
+    // UI viewport bounds for coordinate transformation (editor Game View support)
+    const viewportBounds = new UIViewportBounds();
+    viewportBounds.setFromFullscreen(this.window.getWidth(), this.window.getHeight());
+    this.insertResource(viewportBounds);
+
+    // UI interaction manager for hover/click detection
+    const uiInteractionManager = new UIInteractionManager(uiManager);
+    uiInteractionManager.setCanvas(this.window.getCanvas());
+    uiInteractionManager.setViewportBounds(viewportBounds);
+    this.insertResource(uiInteractionManager);
+
+    // Setup UI interaction event dispatching
+    // This bridges UIInteractionManager callbacks to ECS events
+    const events = this.getResource(Events);
+    if (events) {
+      setupUIInteractionEvents(uiInteractionManager, events, (entity) => {
+        return this.world.getComponent(entity, UIInteraction);
+      });
+    }
+
+    // UI interaction update system (only runs during play mode)
+    this.addUpdateSystem(uiInteractionUpdateSystem);
+
     this.addRenderSystem(uiCanvasSyncSystem);
     this.addRenderSystem(uiBlockSyncSystem);
     this.addRenderSystem(uiTextSyncSystem);

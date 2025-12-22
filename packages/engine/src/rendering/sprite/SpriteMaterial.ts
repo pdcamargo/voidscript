@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { calculateTileUVs, spriteShader } from './shaders.js';
+import { calculateTileUVs, calculateRectUVs, spriteShader } from './shaders.js';
 
 // THREE.js shader types
 type Shader = {
@@ -26,6 +26,21 @@ export interface ISpriteTilingOptions {
    * Total size of the tileset texture in pixels
    */
   tilesetSize: { x: number; y: number };
+}
+
+/**
+ * Options for SpriteMaterial.rect()
+ */
+export interface ISpriteRectOptions {
+  /**
+   * Pixel rectangle in the texture (x, y from top-left corner)
+   */
+  rect: { x: number; y: number; width: number; height: number };
+
+  /**
+   * Total size of the texture in pixels
+   */
+  textureSize: { x: number; y: number };
 }
 
 /**
@@ -241,6 +256,29 @@ export abstract class SpriteMaterial<
       }
 
       /**
+       * Set rect coordinates for arbitrary sprite region rendering.
+       *
+       * @param options - Rect options
+       *
+       * @example
+       * ```typescript
+       * material.rect({
+       *   rect: { x: 128, y: 64, width: 32, height: 48 },
+       *   textureSize: { x: 512, y: 512 },
+       * });
+       * ```
+       */
+      rect(options: ISpriteRectOptions): void {
+        const { offset, repeat } = calculateRectUVs(
+          options.rect,
+          options.textureSize
+        );
+
+        this.uniforms.tileOffset.value.set(offset.x, offset.y);
+        this.uniforms.tileRepeat.value.set(repeat.x, repeat.y);
+      }
+
+      /**
        * Inject shader fragments for sprite tiling.
        * Override this method to customize shader injection.
        *
@@ -289,7 +327,7 @@ uniform vec2 tileRepeat;
    */
   static extendMaterial<TMaterial extends THREE.Material>(
     material: TMaterial
-  ): TMaterial & { tile(options: ISpriteTilingOptions): void; uniforms: ISpriteUniforms } {
+  ): TMaterial & { tile(options: ISpriteTilingOptions): void; rect(options: ISpriteRectOptions): void; uniforms: ISpriteUniforms } {
     const extended = material as any;
 
     // Initialize sprite uniforms
@@ -301,6 +339,17 @@ uniform vec2 tileRepeat;
         options.tile,
         options.tileSize,
         options.tilesetSize
+      );
+
+      this.uniforms.tileOffset.value.set(offset.x, offset.y);
+      this.uniforms.tileRepeat.value.set(repeat.x, repeat.y);
+    };
+
+    // Add rect method
+    extended.rect = function(options: ISpriteRectOptions) {
+      const { offset, repeat } = calculateRectUVs(
+        options.rect,
+        options.textureSize
       );
 
       this.uniforms.tileOffset.value.set(offset.x, offset.y);
@@ -353,6 +402,11 @@ uniform vec2 tileRepeat;
    * Set tile coordinates for sprite sheet rendering.
    */
   abstract tile(options: ISpriteTilingOptions): void;
+
+  /**
+   * Set rect coordinates for arbitrary sprite region rendering.
+   */
+  abstract rect(options: ISpriteRectOptions): void;
 
   /**
    * Inject shader fragments (implemented by subclasses)

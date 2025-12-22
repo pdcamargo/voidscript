@@ -7,7 +7,8 @@
 
 import type { Application } from '../application.js';
 import type { Entity } from '../../ecs/entity.js';
-import { Parent, Children, Name } from '../../ecs/components/index.js';
+import { Parent, Children, Name, Transform3D, LocalTransform3D } from '../../ecs/components/index.js';
+import { Vector3 } from '../../math/index.js';
 import { ImGui } from '@mori2003/jsimgui';
 import { setSelectedEntity, getSelectedEntity } from './inspector.js';
 import { duplicateEntity } from '../../ecs/entity-utils.js';
@@ -24,6 +25,61 @@ let entityContextMenuOpened = false;
 // Track entities that should auto-expand (when first child is added)
 const autoExpandEntities = new Set<Entity>();
 
+// Search filter state
+let searchFilter = '';
+
+/**
+ * Check if an entity name matches the search filter (case-insensitive)
+ */
+function entityMatchesFilter(
+  entity: Entity,
+  world: Application['world'],
+  filter: string,
+): boolean {
+  if (!filter) return true;
+
+  const nameComp = world.getComponent(entity, Name);
+  const displayName = nameComp?.name || `Entity #${entity}`;
+  return displayName.toLowerCase().includes(filter.toLowerCase());
+}
+
+/**
+ * Recursively check if an entity or any of its descendants match the filter.
+ * Returns a Set of entities that should be visible (matches + their ancestors).
+ */
+function collectVisibleEntities(
+  entity: Entity,
+  world: Application['world'],
+  filter: string,
+): Set<Entity> {
+  const visible = new Set<Entity>();
+
+  const selfMatches = entityMatchesFilter(entity, world, filter);
+
+  // Check children
+  const childrenComp = world.getComponent(entity, Children);
+  let childMatches = false;
+
+  if (childrenComp && childrenComp.ids.size > 0) {
+    for (const childId of childrenComp.ids) {
+      const childVisible = collectVisibleEntities(childId, world, filter);
+      if (childVisible.size > 0) {
+        childMatches = true;
+        for (const e of childVisible) {
+          visible.add(e);
+        }
+      }
+    }
+  }
+
+  // Include this entity if it matches or has matching descendants
+  if (selfMatches || childMatches) {
+    visible.add(entity);
+  }
+
+  return visible;
+}
+
 export function renderImGuiHierarchy(app: Application): void {
   // Setup window position and size (only on first use)
   ImGui.SetNextWindowPos({ x: 10, y: 10 }, ImGui.Cond.FirstUseEver);
@@ -35,6 +91,14 @@ export function renderImGuiHierarchy(app: Application): void {
     // Reset flag at start of frame
     entityContextMenuOpened = false;
 
+    // Search input
+    ImGui.SetNextItemWidth(-1); // Full width
+    const filterBuffer: [string] = [searchFilter];
+    ImGui.InputTextWithHint('##HierarchySearch', 'Search...', filterBuffer, 256);
+    searchFilter = filterBuffer[0];
+
+    ImGui.Separator();
+
     // Find ALL root entities (entities without Parent component)
     const roots: Entity[] = [];
     world
@@ -44,12 +108,28 @@ export function renderImGuiHierarchy(app: Application): void {
         roots.push(entity);
       });
 
+    // Build set of visible entities based on filter
+    let visibleEntities: Set<Entity> | null = null;
+    if (searchFilter) {
+      visibleEntities = new Set<Entity>();
+      for (const root of roots) {
+        const visible = collectVisibleEntities(root, world, searchFilter);
+        for (const e of visible) {
+          visibleEntities.add(e);
+        }
+      }
+    }
+
     if (roots.length === 0) {
       ImGui.Text('No entities in scene');
     } else {
       // Render each root entity (with or without children)
       for (const root of roots) {
-        renderEntityNode(app, root);
+        // Skip roots that aren't visible when filtering
+        if (visibleEntities && !visibleEntities.has(root)) {
+          continue;
+        }
+        renderEntityNode(app, root, visibleEntities);
       }
     }
 
@@ -61,9 +141,18 @@ export function renderImGuiHierarchy(app: Application): void {
 
     if (ImGui.BeginPopup('HierarchyContextMenu')) {
       if (ImGui.MenuItem('Spawn Entity')) {
-        // Spawn a new empty entity
-        world.spawn().build();
-        console.log('[Hierarchy] Spawned new empty entity');
+        // Spawn a new entity with Name and Transform3D
+        const newEntity = world
+          .spawn()
+          .with(Name, { name: 'New Entity' })
+          .with(Transform3D, {
+            position: new Vector3(0, 0, 0),
+            rotation: new Vector3(0, 0, 0),
+            scale: new Vector3(1, 1, 1),
+          })
+          .build();
+        setSelectedEntity(newEntity);
+        console.log('[Hierarchy] Spawned new entity with Name and Transform3D');
       }
 
       // Spawn Bundle submenu
@@ -100,8 +189,13 @@ export function renderImGuiHierarchy(app: Application): void {
  * Recursively render an entity node in the hierarchy tree
  * @param app Application instance
  * @param entity Entity to render
+ * @param visibleEntities Set of entities that should be visible (null = show all)
  */
-function renderEntityNode(app: Application, entity: Entity): void {
+function renderEntityNode(
+  app: Application,
+  entity: Entity,
+  visibleEntities: Set<Entity> | null,
+): void {
   const world = app.world;
   const commands = app.getCommands();
 
@@ -159,10 +253,25 @@ function renderEntityNode(app: Application, entity: Entity): void {
       }
 
       if (ImGui.MenuItem('Add Child')) {
-        // Spawn a new child entity
-        const childId = world.spawn().build();
+        // Spawn a new child entity with Name, Transform3D, and LocalTransform3D
+        const childId = world
+          .spawn()
+          .with(Name, { name: 'New Entity' })
+          .with(Transform3D, {
+            position: new Vector3(0, 0, 0),
+            rotation: new Vector3(0, 0, 0),
+            scale: new Vector3(1, 1, 1),
+          })
+          .with(LocalTransform3D, {
+            position: new Vector3(0, 0, 0),
+            rotation: new Vector3(0, 0, 0),
+            scale: new Vector3(1, 1, 1),
+          })
+          .build();
         if (childId !== undefined) {
           commands.entity(entity).addChild(childId);
+          autoExpandEntities.add(entity);
+          setSelectedEntity(childId);
           console.log(`[Hierarchy] Added child entity #${childId} to entity #${entity}`);
         }
       }
@@ -204,9 +313,12 @@ function renderEntityNode(app: Application, entity: Entity): void {
     }
 
     if (nodeOpen) {
-      // Recursively render children
+      // Recursively render children (filtered if searching)
       for (const childId of childrenComp.ids) {
-        renderEntityNode(app, childId);
+        if (visibleEntities && !visibleEntities.has(childId)) {
+          continue;
+        }
+        renderEntityNode(app, childId, visibleEntities);
       }
       ImGui.TreePop();
     }
@@ -244,12 +356,26 @@ function renderEntityNode(app: Application, entity: Entity): void {
       }
 
       if (ImGui.MenuItem('Add Child')) {
-        // Spawn a new child entity
-        const childId = world.spawn().build();
+        // Spawn a new child entity with Name, Transform3D, and LocalTransform3D
+        const childId = world
+          .spawn()
+          .with(Name, { name: 'New Entity' })
+          .with(Transform3D, {
+            position: new Vector3(0, 0, 0),
+            rotation: new Vector3(0, 0, 0),
+            scale: new Vector3(1, 1, 1),
+          })
+          .with(LocalTransform3D, {
+            position: new Vector3(0, 0, 0),
+            rotation: new Vector3(0, 0, 0),
+            scale: new Vector3(1, 1, 1),
+          })
+          .build();
         if (childId !== undefined) {
           commands.entity(entity).addChild(childId);
           // Mark entity for auto-expansion (since it's getting its first child)
           autoExpandEntities.add(entity);
+          setSelectedEntity(childId);
           console.log(`[Hierarchy] Added child entity #${childId} to entity #${entity}`);
         }
       }

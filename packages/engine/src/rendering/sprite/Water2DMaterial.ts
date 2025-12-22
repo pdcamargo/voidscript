@@ -92,11 +92,13 @@ export class Water2DMaterial extends THREE.ShaderMaterial {
       foamTurbulence: number;
       foamAnimationSpeed: number;
       foamLayerCount: number;
+      tileSize: number;
     },
     time: number,
     resolution: { width: number; height: number },
+    meshWorldScale?: { x: number; y: number },
   ): void {
-    updateWaterUniforms(this.uniforms, data, time, resolution);
+    updateWaterUniforms(this.uniforms, data, time, resolution, meshWorldScale);
   }
 
   /**

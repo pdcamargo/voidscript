@@ -564,7 +564,7 @@ export class SceneManager {
 }
 
 // Add assetMetadataResolver to InstantiateSceneOptions
-declare module "./scene-asset" {
+declare module "./scene-asset.js" {
   interface InstantiateSceneOptions {
     /** Optional resolver for asset metadata during deserialization */
     assetMetadataResolver?: (guid: string) => any | null;

@@ -68,6 +68,7 @@ export class Window {
 
   private eventCallback: ((event: AppEvent) => void) | null = null;
   private cleanupFunctions: (() => void)[] = [];
+  private pixelRatioMediaQuery: MediaQueryList | null = null;
 
   constructor(config: WindowConfig) {
     // Resolve canvas element
@@ -112,10 +113,20 @@ export class Window {
 
   /**
    * Update canvas size based on current dimensions
+   *
+   * NOTE: We intentionally set canvas.width/height to CSS pixel dimensions (not device pixels)
+   * because jsimgui reads canvas.clientWidth/clientHeight and expects them to match the
+   * WebGL framebuffer size. Three.js handles DPI scaling internally via setPixelRatio().
+   *
+   * If we set canvas.width = cssWidth * pixelRatio, then:
+   * - jsimgui thinks DisplaySize is cssWidth (from clientWidth)
+   * - But the WebGL framebuffer is cssWidth * pixelRatio
+   * - ImGui renders to only 1/4 of the screen on 2x Retina displays
    */
   private updateCanvasSize(): void {
-    this.canvas.width = this.width * this.pixelRatio;
-    this.canvas.height = this.height * this.pixelRatio;
+    // Set canvas buffer to CSS pixel dimensions for jsimgui compatibility
+    this.canvas.width = this.width;
+    this.canvas.height = this.height;
     this.canvas.style.width = `${this.width}px`;
     this.canvas.style.height = `${this.height}px`;
   }
@@ -148,6 +159,9 @@ export class Window {
       window.removeEventListener("resize", onResize)
     );
 
+    // Device pixel ratio change (for moving between monitors with different DPI)
+    this.setupPixelRatioListener();
+
     // Focus/blur events
     const onFocus = () => {
       this.dispatchEvent(createWindowFocusEvent());
@@ -179,6 +193,40 @@ export class Window {
     this.cleanupFunctions.push(() =>
       document.removeEventListener("visibilitychange", onVisibilityChange)
     );
+  }
+
+  /**
+   * Setup listener for device pixel ratio changes (moving between monitors)
+   */
+  private setupPixelRatioListener(): void {
+    const updatePixelRatio = () => {
+      const newPixelRatio = window.devicePixelRatio ?? 1;
+      if (newPixelRatio !== this.pixelRatio) {
+        this.pixelRatio = newPixelRatio;
+        this.updateCanvasSize();
+        this.dispatchEvent(createWindowResizeEvent(this.width, this.height));
+      }
+      // Re-register listener for new pixel ratio value
+      this.setupPixelRatioListener();
+    };
+
+    // Clean up old listener if exists
+    if (this.pixelRatioMediaQuery) {
+      this.pixelRatioMediaQuery.removeEventListener("change", updatePixelRatio);
+    }
+
+    // Create a media query that matches the current pixel ratio
+    // When the pixel ratio changes, the match will change, triggering the listener
+    this.pixelRatioMediaQuery = window.matchMedia(
+      `(resolution: ${this.pixelRatio}dppx)`
+    );
+    this.pixelRatioMediaQuery.addEventListener("change", updatePixelRatio);
+
+    this.cleanupFunctions.push(() => {
+      if (this.pixelRatioMediaQuery) {
+        this.pixelRatioMediaQuery.removeEventListener("change", updatePixelRatio);
+      }
+    });
   }
 
   /**

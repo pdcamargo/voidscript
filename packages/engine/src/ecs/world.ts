@@ -5,26 +5,26 @@
  * for loop-safe modifications.
  */
 
-import { Entity, EntityManager, entityId } from "./entity.js";
-import { ComponentType, globalComponentRegistry } from "./component.js";
-import { Archetype, ArchetypeGraph } from "./archetype.js";
-import { Query } from "./query.js";
-import { EventEmitter } from "./event-emitter.js";
+import { Entity, EntityManager, entityId } from './entity.js';
+import { ComponentType, globalComponentRegistry } from './component.js';
+import { Archetype, ArchetypeGraph } from './archetype.js';
+import { Query } from './query.js';
+import { EventEmitter } from './event-emitter.js';
 
 /**
  * World event types
  */
 export type WorldEvent =
-  | { type: "entity:created"; entity: Entity }
-  | { type: "entity:destroyed"; entity: Entity }
+  | { type: 'entity:created'; entity: Entity }
+  | { type: 'entity:destroyed'; entity: Entity }
   | {
-      type: "component:added";
+      type: 'component:added';
       entity: Entity;
       componentId: number;
       component: ComponentType<any>;
     }
   | {
-      type: "component:removed";
+      type: 'component:removed';
       entity: Entity;
       componentId: number;
       component: ComponentType<any>;
@@ -35,14 +35,14 @@ export type WorldEvent =
  */
 type DeferredCommand =
   | {
-      type: "spawn";
+      type: 'spawn';
       components: Map<number, any>;
       callback?: (entity: Entity) => void;
       reservedEntity?: Entity;
     }
-  | { type: "destroy"; entity: Entity }
-  | { type: "addComponent"; entity: Entity; componentId: number; data: any }
-  | { type: "removeComponent"; entity: Entity; componentId: number };
+  | { type: 'destroy'; entity: Entity }
+  | { type: 'addComponent'; entity: Entity; componentId: number; data: any }
+  | { type: 'removeComponent'; entity: Entity; componentId: number };
 
 /**
  * Query cache entry
@@ -104,11 +104,16 @@ export class World {
   private spawnInternal(
     components: Map<number, any>,
     callback?: (entity: Entity) => void,
-    reservedEntity?: Entity
+    reservedEntity?: Entity,
   ): Entity | undefined {
     if (this.isIterating) {
       // Defer spawn until iteration completes
-      this.commandBuffer.push({ type: "spawn", components, callback, reservedEntity });
+      this.commandBuffer.push({
+        type: 'spawn',
+        components,
+        callback,
+        reservedEntity,
+      });
       return undefined;
     }
 
@@ -126,18 +131,13 @@ export class World {
     this.entityManager.setLocation(entity, archetype.id, row);
 
     // Queue entity creation event
-    this.queueEvent({ type: "entity:created", entity });
+    this.queueEvent({ type: 'entity:created', entity });
 
-    // Queue component:added events for all components added during spawn
-    console.log('[spawnInternal] Queuing component events for', components.size, 'components');
-    for (const [componentId, _data] of components) {
-      console.log('[spawnInternal] Looking up component ID:', componentId);
+    for (const [componentId] of components) {
       const componentType = globalComponentRegistry.get(componentId);
-      console.log('[spawnInternal] Component type:', componentType?.name);
       if (componentType) {
-        console.log('[spawnInternal] Queuing component:added event for', componentType.name);
         this.queueEvent({
-          type: "component:added",
+          type: 'component:added',
           entity,
           componentId,
           component: componentType,
@@ -160,7 +160,7 @@ export class World {
   destroy(entity: Entity): void {
     if (this.isIterating) {
       // Defer destroy until iteration completes
-      this.commandBuffer.push({ type: "destroy", entity });
+      this.commandBuffer.push({ type: 'destroy', entity });
       return;
     }
 
@@ -186,14 +186,14 @@ export class World {
           this.entityManager.setLocation(
             swappedEntity,
             meta.archetypeId,
-            meta.row
+            meta.row,
           );
         }
       }
     }
 
     // Queue entity destruction event
-    this.queueEvent({ type: "entity:destroyed", entity });
+    this.queueEvent({ type: 'entity:destroyed', entity });
 
     // Mark entity as destroyed
     this.entityManager.destroy(entity);
@@ -216,7 +216,7 @@ export class World {
     if (this.isIterating) {
       // Defer add until iteration completes
       this.commandBuffer.push({
-        type: "addComponent",
+        type: 'addComponent',
         entity,
         componentId: type.id,
         data,
@@ -249,7 +249,7 @@ export class World {
     // Get destination archetype
     const newArchetype = this.archetypeGraph.getArchetypeAdd(
       currentArchetype,
-      type.id
+      type.id,
     );
     if (!newArchetype) {
       return;
@@ -277,14 +277,14 @@ export class World {
         this.entityManager.setLocation(
           swappedEntity,
           currentArchetype.id,
-          meta.row
+          meta.row,
         );
       }
     }
 
     // Queue component added event
     this.queueEvent({
-      type: "component:added",
+      type: 'component:added',
       entity,
       componentId: type.id,
       component: type,
@@ -300,7 +300,7 @@ export class World {
     if (this.isIterating) {
       // Defer remove until iteration completes
       this.commandBuffer.push({
-        type: "removeComponent",
+        type: 'removeComponent',
         entity,
         componentId: type.id,
       });
@@ -330,7 +330,7 @@ export class World {
     // Get destination archetype
     const newArchetype = this.archetypeGraph.getArchetypeRemove(
       currentArchetype,
-      type.id
+      type.id,
     );
     if (!newArchetype) {
       return;
@@ -358,14 +358,14 @@ export class World {
         this.entityManager.setLocation(
           swappedEntity,
           currentArchetype.id,
-          meta.row
+          meta.row,
         );
       }
     }
 
     // Queue component removed event
     this.queueEvent({
-      type: "component:removed",
+      type: 'component:removed',
       entity,
       componentId: type.id,
       component: type,
@@ -475,7 +475,7 @@ export class World {
     anyTypes: ComponentType[],
     noneTypes: ComponentType[],
     exclusiveTypes: ComponentType[],
-    callback: (entity: Entity, ...components: any[]) => void
+    callback: (entity: Entity, ...components: any[]) => void,
   ): void {
     // Mark as iterating to defer modifications
     this.isIterating = true;
@@ -486,7 +486,7 @@ export class World {
         allTypes,
         anyTypes,
         noneTypes,
-        exclusiveTypes
+        exclusiveTypes,
       );
 
       // Reuse arrays across archetypes to avoid allocations
@@ -531,7 +531,7 @@ export class World {
               callback(
                 entity,
                 componentArrays[0]![row],
-                componentArrays[1]![row]
+                componentArrays[1]![row],
               );
               break;
             case 3:
@@ -539,7 +539,7 @@ export class World {
                 entity,
                 componentArrays[0]![row],
                 componentArrays[1]![row],
-                componentArrays[2]![row]
+                componentArrays[2]![row],
               );
               break;
             case 4:
@@ -548,7 +548,7 @@ export class World {
                 componentArrays[0]![row],
                 componentArrays[1]![row],
                 componentArrays[2]![row],
-                componentArrays[3]![row]
+                componentArrays[3]![row],
               );
               break;
             case 5:
@@ -558,7 +558,7 @@ export class World {
                 componentArrays[1]![row],
                 componentArrays[2]![row],
                 componentArrays[3]![row],
-                componentArrays[4]![row]
+                componentArrays[4]![row],
               );
               break;
             case 6:
@@ -569,7 +569,7 @@ export class World {
                 componentArrays[2]![row],
                 componentArrays[3]![row],
                 componentArrays[4]![row],
-                componentArrays[5]![row]
+                componentArrays[5]![row],
               );
               break;
             case 7:
@@ -581,7 +581,7 @@ export class World {
                 componentArrays[3]![row],
                 componentArrays[4]![row],
                 componentArrays[5]![row],
-                componentArrays[6]![row]
+                componentArrays[6]![row],
               );
               break;
             case 8:
@@ -594,7 +594,7 @@ export class World {
                 componentArrays[4]![row],
                 componentArrays[5]![row],
                 componentArrays[6]![row],
-                componentArrays[7]![row]
+                componentArrays[7]![row],
               );
               break;
             default:
@@ -621,14 +621,14 @@ export class World {
     allTypes: ComponentType[],
     anyTypes: ComponentType[],
     noneTypes: ComponentType[],
-    exclusiveTypes: ComponentType[]
+    exclusiveTypes: ComponentType[],
   ): Archetype[] {
     // Create cache key
     const allIds = allTypes.map((t) => t.id).sort((a, b) => a - b);
     const anyIds = anyTypes.map((t) => t.id).sort((a, b) => a - b);
     const noneIds = noneTypes.map((t) => t.id).sort((a, b) => a - b);
     const exclusiveIds = exclusiveTypes.map((t) => t.id).sort((a, b) => a - b);
-    const cacheKey = `${allIds.join(",")}_${anyIds.join(",")}_${noneIds.join(",")}_${exclusiveIds.join(",")}`;
+    const cacheKey = `${allIds.join(',')}_${anyIds.join(',')}_${noneIds.join(',')}_${exclusiveIds.join(',')}`;
 
     // Check cache
     const cached = this.queryCache.get(cacheKey);
@@ -644,8 +644,8 @@ export class World {
         allTypes,
         anyTypes,
         noneTypes,
-        exclusiveTypes
-      )
+        exclusiveTypes,
+      ),
     );
 
     // Update cache
@@ -669,7 +669,7 @@ export class World {
     allTypes: ComponentType[],
     anyTypes: ComponentType[],
     noneTypes: ComponentType[],
-    exclusiveTypes: ComponentType[]
+    exclusiveTypes: ComponentType[],
   ): boolean {
     // Exclusive: must have exactly these components
     if (exclusiveTypes.length > 0) {
@@ -714,20 +714,24 @@ export class World {
       const command = this.commandBuffer.shift()!;
 
       switch (command.type) {
-        case "spawn":
-          this.spawnInternal(command.components, command.callback, command.reservedEntity);
+        case 'spawn':
+          this.spawnInternal(
+            command.components,
+            command.callback,
+            command.reservedEntity,
+          );
           break;
-        case "destroy":
+        case 'destroy':
           this.destroy(command.entity);
           break;
-        case "addComponent":
+        case 'addComponent':
           this.addComponent(
             command.entity,
             { id: command.componentId } as ComponentType,
-            command.data
+            command.data,
           );
           break;
-        case "removeComponent":
+        case 'removeComponent':
           this.removeComponent(command.entity, {
             id: command.componentId,
           } as ComponentType);

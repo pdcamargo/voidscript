@@ -25,9 +25,17 @@ import {
   renderComponentPicker,
   isComponentPickerOpen,
 } from './component-picker.js';
+import {
+  renderAssetPickerModal,
+  openAssetPicker,
+} from './asset-picker.js';
+import { setSpritePickerRenderer } from '../../ecs/components/rendering/sprite-2d.js';
 
 // Selection state
 let selectedEntity: Entity | undefined = undefined;
+
+// Current renderer (set during renderImGuiInspector for use by nested functions)
+let currentRenderer: THREE.WebGLRenderer | null = null;
 
 export function setSelectedEntity(entity: Entity | undefined): void {
   selectedEntity = entity;
@@ -40,6 +48,10 @@ export function getSelectedEntity(): Entity | undefined {
 export function renderImGuiInspector(app: Application, entity?: Entity): void {
   // Use parameter or module state
   const targetEntity = entity ?? selectedEntity;
+
+  // Store renderer for nested functions (asset picker and sprite picker)
+  currentRenderer = app.getRenderer().getThreeRenderer();
+  setSpritePickerRenderer(currentRenderer);
 
   // Setup window
   ImGui.SetNextWindowPos({ x: 320, y: 10 }, ImGui.Cond.FirstUseEver);
@@ -414,6 +426,19 @@ function renderNullProperty(
 }
 
 /**
+ * Format enum key to human-readable label
+ * e.g., "COLLISION_EVENTS" -> "Collision Events"
+ *       "ALL" -> "All"
+ *       "NONE" -> "None"
+ */
+function formatEnumLabel(key: string): string {
+  return key
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
+/**
  * Render an enum property as a dropdown
  */
 function renderEnumProperty(
@@ -422,29 +447,39 @@ function renderEnumProperty(
   enumObj: Record<string, string | number>,
   uniqueId: string,
 ): any {
-  // Get enum entries (key-value pairs)
-  const entries = Object.entries(enumObj);
+  // Get enum entries - for numeric enums, filter out reverse mappings (where key is a number)
+  // TypeScript numeric enums create: { A: 0, B: 1, 0: "A", 1: "B" }
+  // We only want the string keys that map to numbers
+  const entries = Object.entries(enumObj).filter(([key, val]) => {
+    // For numeric enums: keep only entries where key is NOT a number and value IS a number
+    // For string enums: keep only entries where value is a string
+    const keyIsNumeric = !isNaN(Number(key));
+    return !keyIsNumeric && typeof val === 'number';
+  });
 
-  // Filter to only get the string keys (enum names, not reverse mappings for numeric enums)
-  const enumNames = entries
-    .filter(([_key, val]) => typeof val === 'string' || typeof val === 'number')
-    .map(([key]) => key);
+  // Extract keys and create formatted labels
+  const enumKeys = entries.map(([key]) => key);
+  const enumLabels = enumKeys.map(formatEnumLabel);
 
-  // Find current selection index
-  const currentValue = typeof value === 'string' ? value : String(value);
-  let currentIndex = enumNames.findIndex(name => enumObj[name] === currentValue || name === currentValue);
+  // Find current selection index by matching the current value
+  let currentIndex = entries.findIndex(([_key, val]) => val === value);
   if (currentIndex === -1) currentIndex = 0;
 
   // Render combo box - ImGui.Combo expects a single concatenated string with \0 separators
-  const itemsString = enumNames.join('\0') + '\0';
+  const itemsString = enumLabels.join('\0') + '\0';
   const arr: [number] = [currentIndex];
   if (ImGui.Combo(`${label}##${uniqueId}`, arr, itemsString)) {
-    const selectedName = enumNames[arr[0]];
-    return enumObj[selectedName];
+    const selectedKey = enumKeys[arr[0]];
+    if (selectedKey !== undefined) {
+      return enumObj[selectedKey]; // Return the numeric value
+    }
   }
 
   return undefined; // No change
 }
+
+// Track pending asset array additions
+const pendingAssetArrayAdditions = new Map<string, RuntimeAsset<any> | null>();
 
 /**
  * Render an array of RuntimeAssets with add/remove functionality
@@ -459,93 +494,42 @@ function renderRuntimeAssetArray(
   const array = Array.isArray(value) ? value : [];
   let changed = false;
   let newArray = [...array];
+  const addPopupId = `AddAsset##${uniqueId}`;
+
+  // Check for pending addition from callback
+  const pendingAddition = pendingAssetArrayAdditions.get(addPopupId);
+  if (pendingAddition) {
+    newArray.push(pendingAddition);
+    changed = true;
+    pendingAssetArrayAdditions.delete(addPopupId);
+  }
 
   ImGui.Text(`${label}: [${array.length} items]`);
 
   // Add button
   ImGui.SameLine();
-  const addPopupId = `AddAsset##${uniqueId}`;
   if (ImGui.SmallButton(`+##${uniqueId}`)) {
-    ImGui.OpenPopup(addPopupId);
+    openAssetPicker(addPopupId);
   }
 
-  // Add asset popup
-  ImGui.SetNextWindowSize({ x: 600, y: 400 }, ImGui.Cond.FirstUseEver);
-  if (ImGui.BeginPopupModal(addPopupId, null, ImGui.WindowFlags.None)) {
-    ImGui.Text('Select an asset to add:');
-    ImGui.Separator();
+  // Create exclude set from current array
+  const excludeGuids = new Set(array.map(a => a.guid).filter((g): g is string => !!g));
 
-    // Get all assets from AssetDatabase
-    const allAssets = AssetDatabase.getAllAssets();
-    const filteredAssets: Array<{ guid: string; path: string; name: string; type: string }> = [];
-
-    for (const [guid, metadata] of allAssets) {
-      // Filter by assetTypes if specified
-      if (!assetTypes || assetTypes.includes(metadata.type)) {
-        // Exclude already added assets
-        if (!array.some(a => a.guid === guid)) {
-          const name = metadata.path.split('/').pop() || metadata.path;
-          filteredAssets.push({ guid, path: metadata.path, name, type: metadata.type });
-        }
-      }
-    }
-
-    // Render assets in a grid
-    const itemsPerRow = 4;
-    const buttonSize = 128;
-
-    ImGui.BeginChild('AssetGrid', { x: 0, y: -40 }, ImGui.WindowFlags.None);
-
-    for (let i = 0; i < filteredAssets.length; i++) {
-      const asset = filteredAssets[i];
-      if (!asset) continue;
-
-      if (i > 0 && i % itemsPerRow !== 0) {
-        ImGui.SameLine();
-      }
-
-      ImGui.BeginGroup();
-
-      if (ImGui.Button(`##add_asset_${asset.guid}`, { x: buttonSize, y: buttonSize })) {
-        const metadata = AssetDatabase.getMetadata(asset.guid);
-        if (metadata) {
-          const runtimeAsset = RuntimeAssetManager.get().getOrCreate(asset.guid, metadata);
-          newArray.push(runtimeAsset);
-          changed = true;
-          ImGui.CloseCurrentPopup();
-          ImGui.EndGroup();
-          ImGui.EndChild();
-          ImGui.EndPopup();
-          return newArray;
-        }
-      }
-
-      ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + buttonSize);
-      ImGui.TextWrapped(asset.name);
-      ImGui.PopTextWrapPos();
-
-      ImGui.EndGroup();
-    }
-
-    if (filteredAssets.length === 0) {
-      if (array.length > 0) {
-        ImGui.Text('All available assets are already added.');
-      } else if (assetTypes && assetTypes.length > 0) {
-        ImGui.Text(`No ${assetTypes.join(', ')} assets found in AssetDatabase.`);
-      } else {
-        ImGui.Text('No assets found in AssetDatabase.');
-      }
-    }
-
-    ImGui.EndChild();
-
-    ImGui.Separator();
-    if (ImGui.Button('Cancel', { x: 120, y: 0 })) {
-      ImGui.CloseCurrentPopup();
-    }
-
-    ImGui.EndPopup();
-  }
+  // Render the asset picker modal
+  renderAssetPickerModal({
+    popupId: addPopupId,
+    title: `Add ${label}`,
+    assetTypes,
+    excludeGuids,
+    renderer: currentRenderer,
+    onSelect: (runtimeAsset) => {
+      // Store for next frame
+      pendingAssetArrayAdditions.set(addPopupId, runtimeAsset);
+    },
+    onCancel: () => {
+      pendingAssetArrayAdditions.delete(addPopupId);
+    },
+  });
 
   // Render each item in the array
   ImGui.Indent();
@@ -569,6 +553,12 @@ function renderRuntimeAssetArray(
   return changed ? newArray : undefined;
 }
 
+// Track pending asset picker selections
+const pendingAssetSelections = new Map<string, {
+  result: RuntimeAsset<any> | null | undefined;
+  componentData?: any;
+}>();
+
 function renderRuntimeAssetPicker(
   label: string,
   value: RuntimeAsset<any> | null,
@@ -577,6 +567,20 @@ function renderRuntimeAssetPicker(
   assetTypes?: string[],
 ): RuntimeAsset<any> | null | undefined {
   const popupId = `AssetPicker##${uniqueId}`;
+
+  // Check for pending result from callback
+  const pending = pendingAssetSelections.get(popupId);
+  if (pending && pending.result !== undefined) {
+    const result = pending.result;
+    pendingAssetSelections.delete(popupId);
+
+    // Update tile properties if componentData is provided (for Sprite2D)
+    if (result && pending.componentData) {
+      updateSpritePropertiesForTexture(pending.componentData, result);
+    }
+
+    return result;
+  }
 
   // Display current asset
   ImGui.Text(`${label}:`);
@@ -587,14 +591,16 @@ function renderRuntimeAssetPicker(
     const assetName = value.path.split('/').pop() || value.path;
     ImGui.Text(assetName);
   } else {
-    ImGui.Text('None');
+    ImGui.TextDisabled('None');
   }
 
   ImGui.SameLine();
 
   // Button to open asset picker
   if (ImGui.Button(`Pick##${uniqueId}`)) {
-    ImGui.OpenPopup(popupId);
+    openAssetPicker(popupId);
+    // Store componentData for when selection is made
+    pendingAssetSelections.set(popupId, { result: undefined, componentData });
   }
 
   // Clear button
@@ -605,110 +611,27 @@ function renderRuntimeAssetPicker(
     }
   }
 
-  // Asset picker popup
-  ImGui.SetNextWindowSize({ x: 600, y: 400 }, ImGui.Cond.FirstUseEver);
-  if (ImGui.BeginPopupModal(popupId, null, ImGui.WindowFlags.None)) {
-    ImGui.Text('Select an asset:');
-    ImGui.Separator();
+  // Render the asset picker modal
+  renderAssetPickerModal({
+    popupId,
+    title: `Select ${label}`,
+    assetTypes,
+    selectedGuid: value?.guid ?? null,
+    renderer: currentRenderer,
+    onSelect: (runtimeAsset) => {
+      // Store the result for next frame
+      const existingPending = pendingAssetSelections.get(popupId);
+      pendingAssetSelections.set(popupId, {
+        result: runtimeAsset,
+        componentData: existingPending?.componentData ?? componentData,
+      });
+    },
+    onCancel: () => {
+      pendingAssetSelections.delete(popupId);
+    },
+  });
 
-    // Get all assets from AssetDatabase
-    const allAssets = AssetDatabase.getAllAssets();
-    const filteredAssets: Array<{ guid: string; path: string; name: string; type: string }> =
-      [];
-
-    for (const [guid, metadata] of allAssets) {
-      // Filter by assetTypes if specified, otherwise show all assets
-      if (!assetTypes || assetTypes.includes(metadata.type)) {
-        const name = metadata.path.split('/').pop() || metadata.path;
-        filteredAssets.push({ guid, path: metadata.path, name, type: metadata.type });
-      }
-    }
-
-    // Render assets in a grid
-    const itemsPerRow = 4;
-    const buttonSize = 128;
-
-    ImGui.BeginChild('AssetGrid', { x: 0, y: -40 }, ImGui.WindowFlags.None);
-
-    for (let i = 0; i < filteredAssets.length; i++) {
-      const asset = filteredAssets[i];
-      if (!asset) continue;
-
-      // Start new row if needed
-      if (i > 0 && i % itemsPerRow !== 0) {
-        ImGui.SameLine();
-      }
-
-      // Asset button (grid item)
-      ImGui.BeginGroup();
-
-      // Thumbnail placeholder (colored box)
-      const isSelected = value?.guid === asset.guid;
-      if (isSelected) {
-        ImGui.PushStyleColorImVec4(ImGui.Col.Button, {
-          x: 0.2,
-          y: 0.5,
-          z: 0.8,
-          w: 1.0,
-        });
-      }
-
-      if (
-        ImGui.Button(`##asset_${asset.guid}`, { x: buttonSize, y: buttonSize })
-      ) {
-        // Get or create the RuntimeAsset
-        const metadata = AssetDatabase.getMetadata(asset.guid);
-        if (metadata) {
-          const runtimeAsset = RuntimeAssetManager.get().getOrCreate(
-            asset.guid,
-            metadata,
-          );
-
-          // Update tile properties if componentData is provided (for Sprite2D)
-          if (componentData) {
-            updateSpritePropertiesForTexture(componentData, runtimeAsset);
-          }
-
-          ImGui.CloseCurrentPopup();
-          ImGui.EndGroup();
-          ImGui.EndChild();
-          ImGui.EndPopup();
-          return runtimeAsset; // Return the selected asset
-        }
-      }
-
-      if (isSelected) {
-        ImGui.PopStyleColor();
-      }
-
-      // Asset name below thumbnail
-      ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + buttonSize);
-      ImGui.TextWrapped(asset.name);
-      ImGui.PopTextWrapPos();
-
-      ImGui.EndGroup();
-    }
-
-    if (filteredAssets.length === 0) {
-      if (assetTypes && assetTypes.length > 0) {
-        ImGui.Text(`No ${assetTypes.join(', ')} assets found in AssetDatabase.`);
-      } else {
-        ImGui.Text('No assets found in AssetDatabase.');
-      }
-      ImGui.Text('Add assets via ApplicationConfig.assets');
-    }
-
-    ImGui.EndChild();
-
-    ImGui.Separator();
-    if (ImGui.Button('Cancel', { x: 120, y: 0 })) {
-      ImGui.CloseCurrentPopup();
-    }
-
-    ImGui.EndPopup();
-  }
-
-  return undefined; // No change
+  return undefined; // No change this frame
 }
 
 /**

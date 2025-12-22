@@ -17,3 +17,21 @@ export {
   DesiredMovement2D,
   type DesiredMovement2DData,
 } from './desired-movement-2d.js';
+export {
+  ActiveCollisionEvents2D,
+  ActiveCollisionEventsFlags2D,
+  type ActiveCollisionEvents2DData,
+} from './active-collision-events-2d.js';
+export {
+  ContactForceEventThreshold2D,
+  type ContactForceEventThreshold2DData,
+} from './contact-force-threshold-2d.js';
+export {
+  CollisionGroups2D,
+  CollisionGroup,
+  type CollisionGroups2DData,
+} from './collision-groups-2d.js';
+export {
+  ActiveHooks2D,
+  type ActiveHooks2DData,
+} from './active-hooks-2d.js';

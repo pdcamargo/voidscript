@@ -284,7 +284,12 @@ export class Water2DRenderManager {
 
     // Update shader uniforms
     const { width, height } = this.renderer.getSize();
-    material.updateFromData(waterData, this.elapsedTime, { width, height });
+    // Calculate world scale for texture tiling (baseSize * transform.scale)
+    const worldScale = {
+      x: waterData.baseSize.x * transform.scale.x,
+      y: waterData.baseSize.y * transform.scale.y,
+    };
+    material.updateFromData(waterData, this.elapsedTime, { width, height }, worldScale);
 
     // Note: Screen texture is set in onBeforeRender callback (right before render)
 

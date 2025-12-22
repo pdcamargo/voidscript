@@ -17,10 +17,30 @@ import { Parent } from '../ecs/components/parent.js';
 import { Transform3D, type Transform3DData } from '../ecs/components/rendering/transform-3d.js';
 import type { Entity } from '../ecs/entity.js';
 import { Application } from '../app/application.js';
+import { UIInteractionManager } from './ui-interaction.js';
+import { UIInteraction } from './components/ui-interaction.js';
 
 // Default MSDF font paths (Roboto)
 const DEFAULT_FONT_JSON = '/fonts/Roboto-msdf.json';
 const DEFAULT_FONT_TEXTURE = '/fonts/Roboto-msdf.png';
+
+// Track entities with UI components for cleanup on deletion
+const trackedUIBlocks = new Map<Entity, ThreeMeshUI.Block>();
+const trackedUIButtons = new Map<Entity, ThreeMeshUI.Block>();
+const trackedUITexts = new Map<Entity, ThreeMeshUI.Text>();
+const trackedUICanvases = new Set<Entity>();
+
+/**
+ * Clear all UI tracking maps.
+ * Called when exiting play mode to prevent stale entity references.
+ * The actual Three.js objects are disposed by UIManager.dispose().
+ */
+export function clearUITracking(): void {
+  trackedUIBlocks.clear();
+  trackedUIButtons.clear();
+  trackedUITexts.clear();
+  trackedUICanvases.clear();
+}
 
 /**
  * UI Canvas Sync System
@@ -44,6 +64,7 @@ export const uiCanvasSyncSystem = system(({ commands }) => {
         if (canvas._root) {
           uiManager.removeUIRoot(entity);
           canvas._root = undefined;
+          trackedUICanvases.delete(entity);
         }
         return;
       }
@@ -55,11 +76,17 @@ export const uiCanvasSyncSystem = system(({ commands }) => {
         }
         canvas._root = uiManager.createUIRoot(entity);
         canvas._dirty = false;
+        trackedUICanvases.add(entity);
       }
     });
 
-  // Cleanup canvases that no longer exist
-  // This would require tracking previous entities - simplified for now
+  // Cleanup canvases for entities that were destroyed
+  for (const entity of trackedUICanvases) {
+    if (!commands.isAlive(entity)) {
+      uiManager.removeUIRoot(entity);
+      trackedUICanvases.delete(entity);
+    }
+  }
 });
 
 /**
@@ -104,6 +131,9 @@ export const uiBlockSyncSystem = system(({ commands }) => {
         const options = uiBlockDataToOptions(block);
         block._block = new ThreeMeshUI.Block(options as ThreeMeshUI.BlockOptions);
         block._dirty = false;
+
+        // Track for cleanup
+        trackedUIBlocks.set(entity, block._block);
       } else {
         // Update existing block properties
         (block._block as any).set(uiBlockDataToOptions(block));
@@ -192,6 +222,35 @@ export const uiBlockSyncSystem = system(({ commands }) => {
       block._block.position.x = anchorX + pivotX + offsetX;
       block._block.position.y = anchorY + pivotY + offsetY;
     });
+
+  // Register blocks that have UIInteraction with the interaction manager
+  const interactionManager = app.getResource(UIInteractionManager);
+  if (interactionManager) {
+    commands
+      .query()
+      .all(UIBlock, UIInteraction)
+      .each((entity, block: UIBlockData, _interaction) => {
+        if (block._block) {
+          interactionManager.registerBlock(entity, block._block);
+        }
+      });
+  }
+
+  // Cleanup blocks for entities that were destroyed
+  for (const [entity, block] of trackedUIBlocks) {
+    if (!commands.isAlive(entity)) {
+      // Remove from parent
+      if (block.parent) {
+        block.parent.remove(block);
+      }
+      // Unregister from interaction manager
+      if (interactionManager) {
+        interactionManager.unregisterBlock(entity);
+      }
+      // Remove from tracking
+      trackedUIBlocks.delete(entity);
+    }
+  }
 });
 
 /**
@@ -266,6 +325,9 @@ export const uiTextSyncSystem = system(({ commands }) => {
 
         text._text = new ThreeMeshUI.Text(options as ThreeMeshUI.TextOptions);
         text._dirty = false;
+
+        // Track for cleanup
+        trackedUITexts.set(entity, text._text);
       } else {
         // Update existing text
         const options = uiTextDataToOptions(text);
@@ -282,6 +344,18 @@ export const uiTextSyncSystem = system(({ commands }) => {
         parentBlock.add(text._text);
       }
     });
+
+  // Cleanup texts for entities that were destroyed
+  for (const [entity, textObj] of trackedUITexts) {
+    if (!commands.isAlive(entity)) {
+      // Remove from parent
+      if (textObj.parent) {
+        textObj.parent.remove(textObj);
+      }
+      // Remove from tracking
+      trackedUITexts.delete(entity);
+    }
+  }
 });
 
 /**
@@ -351,6 +425,9 @@ export const uiButtonSyncSystem = system(({ commands }) => {
         }
 
         button._dirty = false;
+
+        // Track for cleanup
+        trackedUIButtons.set(entity, button._block);
       } else {
         // Update existing button
         (button._block as any).set(uiButtonDataToOptions(button));
@@ -454,6 +531,35 @@ export const uiButtonSyncSystem = system(({ commands }) => {
       button._block.position.x = anchorX + pivotX + offsetX;
       button._block.position.y = anchorY + pivotY + offsetY;
     });
+
+  // Register buttons that have UIInteraction with the interaction manager
+  const interactionManager = app.getResource(UIInteractionManager);
+  if (interactionManager) {
+    commands
+      .query()
+      .all(UIButton, UIInteraction)
+      .each((entity, button: UIButtonData, _interaction) => {
+        if (button._block) {
+          interactionManager.registerBlock(entity, button._block);
+        }
+      });
+  }
+
+  // Cleanup buttons for entities that were destroyed
+  for (const [entity, block] of trackedUIButtons) {
+    if (!commands.isAlive(entity)) {
+      // Remove from parent
+      if (block.parent) {
+        block.parent.remove(block);
+      }
+      // Unregister from interaction manager
+      if (interactionManager) {
+        interactionManager.unregisterBlock(entity);
+      }
+      // Remove from tracking
+      trackedUIButtons.delete(entity);
+    }
+  }
 });
 
 /**
@@ -498,11 +604,13 @@ export const uiRenderSystem = system(({ commands }) => {
 /**
  * UI Cleanup System
  *
- * Removes UI elements for destroyed entities.
- * Runs in lateUpdate phase.
+ * Note: Cleanup for destroyed entities is now handled directly in each sync system
+ * (uiCanvasSyncSystem, uiBlockSyncSystem, uiTextSyncSystem, uiButtonSyncSystem).
+ * Each system tracks its entities and removes Three.js objects when entities are destroyed.
+ *
+ * This system is kept for backwards compatibility but is currently a no-op.
  */
 export const uiCleanupSystem = system(({ commands }) => {
-  // This would require tracking destroyed entities
-  // For now, cleanup happens when components are removed
-  // A more robust solution would use ECS events for entity destruction
+  // Cleanup is now handled in individual sync systems via tracking maps
+  // and commands.isAlive() checks
 });

@@ -28,13 +28,19 @@ export interface LocalTransform3DData {
   scale: Vector3;
 }
 
+// Helper to serialize Vector3 or plain object (handles deep-copied data)
+const serializeVector3 = (val: Vector3 | { x: number; y: number; z: number }) =>
+  'toJSON' in val && typeof val.toJSON === 'function'
+    ? val.toJSON()
+    : { x: val.x, y: val.y, z: val.z };
+
 export const LocalTransform3D = component<LocalTransform3DData>(
   'LocalTransform3D',
   {
     position: {
       serializable: true,
       customSerializer: {
-        serialize: (val) => val.toJSON(),
+        serialize: serializeVector3,
         deserialize: (val) =>
           Vector3.fromJSON(val as { x: number; y: number; z: number }),
       },
@@ -42,7 +48,7 @@ export const LocalTransform3D = component<LocalTransform3DData>(
     rotation: {
       serializable: true,
       customSerializer: {
-        serialize: (val) => val.toJSON(),
+        serialize: serializeVector3,
         deserialize: (val) =>
           Vector3.fromJSON(val as { x: number; y: number; z: number }),
       },
@@ -50,7 +56,7 @@ export const LocalTransform3D = component<LocalTransform3DData>(
     scale: {
       serializable: true,
       customSerializer: {
-        serialize: (val) => val.toJSON(),
+        serialize: serializeVector3,
         deserialize: (val) =>
           Vector3.fromJSON(val as { x: number; y: number; z: number }),
       },

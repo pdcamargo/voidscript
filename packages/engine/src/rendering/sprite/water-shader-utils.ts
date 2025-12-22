@@ -26,12 +26,18 @@ export interface WaterUniforms {
   foamThreshold: THREE.IUniform<number>;
   reflectionOffsetX: THREE.IUniform<number>;
   reflectionOffsetY: THREE.IUniform<number>;
+  reflectionSkewX: THREE.IUniform<number>;
+  reflectionSkewY: THREE.IUniform<number>;
   noiseTexture: THREE.IUniform<THREE.Texture | null>;
   noiseTexture2: THREE.IUniform<THREE.Texture | null>;
   screenTexture: THREE.IUniform<THREE.Texture | null>;
   resolution: THREE.IUniform<THREE.Vector2>;
   // Screen-space bounds of the water mesh (set in onBeforeRender)
   waterScreenBounds: THREE.IUniform<THREE.Vector4>; // minX, minY, maxX, maxY in screen UV space
+  // Mesh world scale for tiling (baseSize * transform.scale)
+  meshWorldScale: THREE.IUniform<THREE.Vector2>;
+  // Size of one texture tile in world units (default 50)
+  tileSize: THREE.IUniform<number>;
   // Wetness system uniforms
   wetnessIntensity: THREE.IUniform<number>;
   wetnessOpacity: THREE.IUniform<number>;
@@ -68,6 +74,8 @@ export interface WaterMaterialOptions {
   foamThreshold?: number;
   reflectionOffsetX?: number;
   reflectionOffsetY?: number;
+  reflectionSkewX?: number;
+  reflectionSkewY?: number;
   wetnessIntensity?: number;
   wetnessOpacity?: number;
   wetnessScale?: THREE.Vector2;
@@ -86,11 +94,15 @@ export interface WaterMaterialOptions {
 /**
  * Create water uniforms with default values
  */
-export function createWaterUniforms(options: WaterMaterialOptions = {}): WaterUniforms {
+export function createWaterUniforms(
+  options: WaterMaterialOptions = {},
+): WaterUniforms {
   return {
     time: { value: 0 },
     surfacePosition: { value: options.surfacePosition ?? 0.0 },
-    waterColor: { value: options.waterColor ?? new THREE.Vector4(0.26, 0.23, 0.73, 1.0) },
+    waterColor: {
+      value: options.waterColor ?? new THREE.Vector4(0.26, 0.23, 0.73, 1.0),
+    },
     waterOpacity: { value: options.waterOpacity ?? 0.25 },
     waveSpeed: { value: options.waveSpeed ?? 0.05 },
     waveDistortion: { value: options.waveDistortion ?? 0.2 },
@@ -102,20 +114,28 @@ export function createWaterUniforms(options: WaterMaterialOptions = {}): WaterUn
     foamThreshold: { value: options.foamThreshold ?? 0.25 },
     reflectionOffsetX: { value: options.reflectionOffsetX ?? 0.0 },
     reflectionOffsetY: { value: options.reflectionOffsetY ?? 0.0 },
+    reflectionSkewX: { value: options.reflectionSkewX ?? 0.0 },
+    reflectionSkewY: { value: options.reflectionSkewY ?? 0.0 },
     noiseTexture: { value: options.noiseTexture ?? null },
     noiseTexture2: { value: options.noiseTexture2 ?? null },
     screenTexture: { value: options.screenTexture ?? null },
     resolution: { value: new THREE.Vector2(1, 1) },
     waterScreenBounds: { value: new THREE.Vector4(0, 0, 1, 1) },
+    meshWorldScale: { value: new THREE.Vector2(1, 1) },
+    tileSize: { value: 50 },
     wetnessIntensity: { value: options.wetnessIntensity ?? 0.45 },
     wetnessOpacity: { value: options.wetnessOpacity ?? 1.0 },
     wetnessScale: { value: options.wetnessScale ?? new THREE.Vector2(8, 12) },
     wetnessSpeed: { value: options.wetnessSpeed ?? 0.03 },
-    wetnessDetailScale: { value: options.wetnessDetailScale ?? new THREE.Vector2(20, 30) },
+    wetnessDetailScale: {
+      value: options.wetnessDetailScale ?? new THREE.Vector2(20, 30),
+    },
     wetnessDetailSpeed: { value: options.wetnessDetailSpeed ?? 0.015 },
     wetnessContrast: { value: options.wetnessContrast ?? 1.2 },
     wetnessBrightness: { value: options.wetnessBrightness ?? 0.1 },
-    wetnessColorTint: { value: options.wetnessColorTint ?? new THREE.Vector3(0.9, 0.95, 1.0) },
+    wetnessColorTint: {
+      value: options.wetnessColorTint ?? new THREE.Vector3(0.9, 0.95, 1.0),
+    },
     foamSoftness: { value: options.foamSoftness ?? 1.0 },
     foamTurbulence: { value: options.foamTurbulence ?? 0.3 },
     foamAnimationSpeed: { value: options.foamAnimationSpeed ?? 0.5 },
@@ -131,10 +151,18 @@ export function createWaterUniforms(options: WaterMaterialOptions = {}): WaterUn
  */
 export const waterVertexShader = /* glsl */ `
 varying vec2 vUv;
+varying vec2 vTiledUv;
 varying vec4 vClipPos;
+
+uniform vec2 meshWorldScale;
+uniform float tileSize;
 
 void main() {
   vUv = uv;
+  // Pre-multiply UVs by normalized world scale for tiling
+  // Divide by tileSize so textures tile once per that many world units
+  // The foamScale/wetnessScale will then control pattern density on top of this
+  vTiledUv = uv * (meshWorldScale / tileSize);
 
   vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
   gl_Position = projectionMatrix * mvPosition;
@@ -155,6 +183,7 @@ void main() {
  */
 export const waterFragmentCommon = /* glsl */ `
 varying vec2 vUv;
+varying vec2 vTiledUv;
 varying vec4 vClipPos;
 
 uniform float time;
@@ -171,6 +200,8 @@ uniform float foamIntensity;
 uniform float foamThreshold;
 uniform float reflectionOffsetX;
 uniform float reflectionOffsetY;
+uniform float reflectionSkewX;
+uniform float reflectionSkewY;
 uniform sampler2D noiseTexture;
 uniform sampler2D noiseTexture2;
 uniform sampler2D screenTexture;
@@ -219,8 +250,29 @@ void main() {
   float waterHeight = waterMaxY - waterMinY;
 
   // Calculate where this pixel is within the water (0-1)
-  // uv.x goes left to right, uv.y goes bottom to top
-  float pixelX = waterMinX + uv.x * waterWidth;
+  // Apply Mode 7 style perspective by DIVIDING by depth
+  float depthFactor = 1.0 - uv.y; // 0 at top (surface), 1 at bottom (far)
+
+  // Mode 7 technique: divide coordinates by depth factor
+  // Smaller depth = divide by smaller number = wider sampling range
+  float waterCenterX = waterMinX + waterWidth * 0.5;
+  float depth = 1.0 - depthFactor * reflectionSkewX;
+
+  // -1 on left, +1 on right
+  float signedX = (uv.x - 0.5) * 2.0;
+
+  float skew = signedX * depthFactor * reflectionSkewX;
+
+  skew += sin(time * 0.8 + uv.y * 6.0) * 0.005;
+
+  // Prevent division by zero/negative
+  depth = max(depth, 0.01);
+
+  // Calculate offset from center and divide by depth for perspective
+  float offsetFromCenter = (uv.x - 0.5) * waterWidth;
+  float pixelX =
+  waterCenterX +
+  (uv.x - 0.5) * waterWidth * (1.0 + skew);
 
   // For reflection: sample from ABOVE the water surface
   // The water surface is at waterMaxY (top of water mesh)
@@ -240,6 +292,15 @@ void main() {
     reflectedY + edgeAdjustedNoise * 0.02 + reflectionOffsetY
   );
 
+  // Apply vertical scaling if needed (typically keep reflectionSkewY at 0)
+  if (reflectionSkewY != 0.0) {
+    float waterCenterY = waterMinY + waterHeight * 0.5;
+    float centeredUvY = uv.y - 0.5;
+    float verticalScale = 1.0 + depthFactor * reflectionSkewY;
+    float offsetY = (reflectedScreenUv.y - waterCenterY) * (verticalScale - 1.0);
+    reflectedScreenUv.y += offsetY;
+  }
+
   // Clamp to screen bounds
   reflectedScreenUv = clamp(reflectedScreenUv, 0.001, 0.999);
 
@@ -251,15 +312,17 @@ void main() {
 
   // === WETNESS TEXTURE SYSTEM ===
   // Calculate multi-layer wetness effect for visible water surface texture
+  // Use uv * wetnessScale for pattern, but offset by vTiledUv for world-space continuity
   float wetnessValue = 0.0;
   if (wetnessIntensity > 0.0) {
     // BASE WETNESS LAYER - Large-scale flowing patterns
-    vec2 wetnessUv = uv * wetnessScale;
+    // wetnessScale controls pattern size, vTiledUv provides world-space offset
+    vec2 wetnessUv = uv * wetnessScale + vTiledUv;
     wetnessUv.x += time * wetnessSpeed;
     float wetnessBase = texture2D(noiseTexture2, wetnessUv).r;
 
     // DETAIL WETNESS LAYER - Fine-scale variation
-    vec2 detailUv = uv * wetnessDetailScale;
+    vec2 detailUv = uv * wetnessDetailScale + vTiledUv * 0.5;
     detailUv.x += time * wetnessDetailSpeed;
     detailUv.y += sin(time * 0.5 + uv.x * 3.0) * 0.02; // Subtle vertical distortion
     float wetnessDetail = texture2D(noiseTexture, detailUv).r;
@@ -273,13 +336,14 @@ void main() {
 
   // === FOAM CALCULATION (multi-layer animated) ===
   // Calculate foam/water texture value (used by both lit and unlit variants)
+  // Use uv * foamScale for pattern size, vTiledUv as offset for world-space seamless tiling
   float waterTextureValue = 0.0;
   float foamValue = 0.0;
   if (enableWaterTexture) {
     float softEdge = foamSoftness * 0.01;
 
     // Layer 1: Static base foam (always visible, provides baseline)
-    vec2 foamUv1 = uv * foamScale;
+    vec2 foamUv1 = uv * foamScale + vTiledUv;
     foamUv1.x += time * foamSpeed;
     foamUv1.y += sin(time * foamSpeed * 2.0 + uv.x * 3.0) * foamTurbulence * 0.1;
     float foam1 = texture2D(noiseTexture2, foamUv1).r;
@@ -290,7 +354,7 @@ void main() {
 
     // Layer 2: Primary animated foam (pulsing at base speed)
     if (foamLayerCount >= 2.0) {
-      vec2 foamUv2 = uv * (foamScale * 0.7);
+      vec2 foamUv2 = uv * (foamScale * 0.7) + vTiledUv * 0.8;
       foamUv2.x += time * foamSpeed * 0.8;
       foamUv2.y += time * foamSpeed * foamTurbulence * 0.25;
       float foam2 = texture2D(noiseTexture2, foamUv2).r;
@@ -303,7 +367,7 @@ void main() {
 
     // Layer 3: Secondary animated foam (pulsing at different phase)
     if (foamLayerCount >= 3.0) {
-      vec2 foamUv3 = uv * (foamScale * 1.5);
+      vec2 foamUv3 = uv * (foamScale * 1.5) + vTiledUv * 1.2;
       foamUv3.x += time * foamSpeed * 0.4;
       foamUv3.y += sin(time * foamSpeed * 1.5 + uv.x * 5.0) * foamTurbulence * 0.15;
       float foam3 = texture2D(noiseTexture2, foamUv3).r;
@@ -387,6 +451,8 @@ export function updateWaterUniforms(
     foamThreshold: number;
     reflectionOffsetX: number;
     reflectionOffsetY: number;
+    reflectionSkewX?: number;
+    reflectionSkewY?: number;
     wetnessIntensity: number;
     wetnessOpacity: number;
     wetnessScale: { x: number; y: number };
@@ -400,9 +466,11 @@ export function updateWaterUniforms(
     foamTurbulence: number;
     foamAnimationSpeed: number;
     foamLayerCount: number;
+    tileSize: number;
   },
   time: number,
   resolution: { width: number; height: number },
+  meshWorldScale?: { x: number; y: number },
 ): void {
   uniforms.time.value = time;
   uniforms.surfacePosition.value = data.surfacePosition;
@@ -423,12 +491,17 @@ export function updateWaterUniforms(
   uniforms.foamThreshold.value = data.foamThreshold;
   uniforms.reflectionOffsetX.value = data.reflectionOffsetX;
   uniforms.reflectionOffsetY.value = data.reflectionOffsetY;
+  uniforms.reflectionSkewX.value = data.reflectionSkewX ?? 0.0;
+  uniforms.reflectionSkewY.value = data.reflectionSkewY ?? 0.0;
   uniforms.resolution.value.set(resolution.width, resolution.height);
   uniforms.wetnessIntensity.value = data.wetnessIntensity;
   uniforms.wetnessOpacity.value = data.wetnessOpacity;
   uniforms.wetnessScale.value.set(data.wetnessScale.x, data.wetnessScale.y);
   uniforms.wetnessSpeed.value = data.wetnessSpeed;
-  uniforms.wetnessDetailScale.value.set(data.wetnessDetailScale.x, data.wetnessDetailScale.y);
+  uniforms.wetnessDetailScale.value.set(
+    data.wetnessDetailScale.x,
+    data.wetnessDetailScale.y,
+  );
   uniforms.wetnessDetailSpeed.value = data.wetnessDetailSpeed;
   uniforms.wetnessContrast.value = data.wetnessContrast;
   uniforms.wetnessBrightness.value = data.wetnessBrightness;
@@ -441,4 +514,9 @@ export function updateWaterUniforms(
   uniforms.foamTurbulence.value = data.foamTurbulence ?? 0.3;
   uniforms.foamAnimationSpeed.value = data.foamAnimationSpeed ?? 0.5;
   uniforms.foamLayerCount.value = data.foamLayerCount ?? 2;
+  uniforms.tileSize.value = data.tileSize ?? 50;
+  // Set mesh world scale for texture tiling (defaults to 1,1 if not provided)
+  if (meshWorldScale) {
+    uniforms.meshWorldScale.value.set(meshWorldScale.x, meshWorldScale.y);
+  }
 }

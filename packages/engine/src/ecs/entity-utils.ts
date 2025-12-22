@@ -97,6 +97,21 @@ export function duplicateEntity(
 
   // Build the new entity
   const newEntity = builder.build();
+  const newEntityId = newEntity.id();
+
+  // Fix parent-child relationship: if duplicate has a Parent component,
+  // register it in the parent's Children set so the hierarchy is consistent
+  const parentComp = world.getComponent(newEntityId, Parent);
+  if (parentComp && world.isAlive(parentComp.id)) {
+    const parentChildren = world.getComponent(parentComp.id, Children);
+    if (parentChildren) {
+      parentChildren.ids.add(newEntityId);
+    } else {
+      world.addComponent(parentComp.id, Children, {
+        ids: new Set([newEntityId]),
+      });
+    }
+  }
 
   // TODO: Implement recursive child duplication if requested
   if (duplicateChildren) {
@@ -105,7 +120,7 @@ export function duplicateEntity(
     );
   }
 
-  return newEntity.id();
+  return newEntityId;
 }
 
 /**

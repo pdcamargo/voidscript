@@ -82,6 +82,7 @@ export class ImGuiLayer extends Layer {
   private config: Required<ImGuiLayerConfig>;
   private blockEvents: boolean;
   private themeApplied = false;
+  private currentPixelRatio = 1;
 
   constructor(config: ImGuiLayerConfig = {}) {
     super('ImGuiLayer');
@@ -172,6 +173,9 @@ export class ImGuiLayer extends Layer {
       io.ConfigFlags |= ImGui.ConfigFlags.NavEnableKeyboard;
     }
 
+    // Initialize pixel ratio from window.devicePixelRatio
+    this.currentPixelRatio = window.devicePixelRatio ?? 1;
+
     this.initialized = true;
 
     // Theme will be applied in beginFrame() on first render
@@ -193,6 +197,29 @@ export class ImGuiLayer extends Layer {
       }
       this.initialized = false;
     }
+  }
+
+  /**
+   * Update ImGui display size when canvas/window resizes
+   * This ensures ImGui knows the correct display dimensions after DPI changes
+   * @internal
+   */
+  updateDisplaySize(width: number, height: number, pixelRatio: number = 1): void {
+    // Store pixel ratio for use in beginFrame()
+    // We must set DisplayFramebufferScale AFTER BeginRender() because
+    // jsimgui's BeginRender() overwrites DisplaySize but not DisplayFramebufferScale
+    this.currentPixelRatio = pixelRatio;
+
+    if (!this.initialized) return;
+
+    const io = ImGui.GetIO();
+    io.DisplaySize.x = width;
+    io.DisplaySize.y = height;
+
+    // Set framebuffer scale for Retina/HiDPI displays
+    // This tells ImGui the relationship between CSS pixels and device pixels
+    io.DisplayFramebufferScale.x = pixelRatio;
+    io.DisplayFramebufferScale.y = pixelRatio;
   }
 
   /**

@@ -68,13 +68,12 @@ export interface TextureAssetConfig extends BaseAssetConfig {
   generateMipmaps?: boolean;
   width?: number;
   height?: number;
-  sprites?: Array<{
-    id: string;
-    name: string;
-    tileIndex: number;
-    tileWidth: number;
-    tileHeight: number;
-  }>;
+  /**
+   * Named sprite definitions for sprite sheet atlases.
+   * Supports both tile-based (tileIndex, tileWidth, tileHeight)
+   * and rect-based (x, y, width, height) definitions.
+   */
+  sprites?: SpriteDefinition[];
 }
 
 /**

@@ -40,12 +40,15 @@ import { Transform3D } from '../ecs/components/rendering/transform-3d.js';
 import { Collider2D } from '../physics/2d/components/collider-2d.js';
 import { Collider3D } from '../physics/3d/components/collider-3d.js';
 import { SpriteAreaGenerator } from '../ecs/components/generators/sprite-area-generator.js';
+import { Rain2D } from '../ecs/components/rendering/rain-2d.js';
 import { VirtualCamera } from '../ecs/components/rendering/virtual-camera.js';
 import { VirtualCameraBounds } from '../ecs/components/rendering/virtual-camera-bounds.js';
 import { VirtualCameraFollow } from '../ecs/components/rendering/virtual-camera-follow.js';
 import type { Entity } from '../ecs/entity.js';
 import { Render3DManager } from '../ecs/systems/renderer-sync-system.js';
 import { UIManager } from '../ui/ui-manager.js';
+import { UIViewportBounds } from '../ui/ui-viewport-bounds.js';
+import { UIInteractionManager } from '../ui/ui-interaction.js';
 import { PostProcessingManager } from '../post-processing/managers/post-processing-manager.js';
 import { PostProcessing, type PostProcessingData } from '../ecs/components/rendering/post-processing.js';
 
@@ -149,6 +152,18 @@ export class EditorLayer extends Layer {
 
   // Track if Scene View panel is hovered (to allow camera input)
   private isSceneViewHovered = false;
+
+  // Track Game View image position for UI interaction
+  // We need to find the image's screen position for coordinate transformation.
+  // Since GetWindowPos() and GetItemRectMin() don't work in jsimgui bindings,
+  // we track the minimum mouse position observed while hovering the image.
+  // When the mouse is at the top-left corner of the image, mouseScreen ~= imageScreen.
+  private gameViewImageScreenX = 0;
+  private gameViewImageScreenY = 0;
+  private gameViewCalibrated = false;
+  // Track last content size to detect when window was resized/moved
+  private gameViewLastContentWidth = 0;
+  private gameViewLastContentHeight = 0;
 
   // Cached game camera for Game View rendering (separate from editor camera)
   private gameCamera: THREE.Camera | null = null;
@@ -478,6 +493,69 @@ export class EditorLayer extends Layer {
           );
           entry.helper.setBox3(box3);
           entry.helper.update(spriteGen, transform);
+        }
+      } else {
+        // Remove helper if shouldn't show
+        if (this.helperManager!.hasHelper(entity)) {
+          this.helperManager!.removeHelper(entity);
+          this.helperEntities.delete(entity);
+        }
+      }
+    });
+
+    // Sync Rain2D helpers (shows the rain area boundary)
+    commands.query().all(Rain2D, Transform3D).each((entity, rain, transform) => {
+      seenEntities.add(entity);
+      const shouldShow = showAll || entity === selectedEntity;
+
+      if (shouldShow) {
+        // Create helper if doesn't exist
+        if (!this.helperManager!.hasHelper(entity)) {
+          // Create box based on baseSize (centered at origin, will be positioned by transform)
+          const halfWidth = rain.baseSize.x / 2;
+          const halfHeight = rain.baseSize.y / 2;
+          const box3 = new THREE.Box3(
+            new THREE.Vector3(-halfWidth, -halfHeight, -0.1),
+            new THREE.Vector3(halfWidth, halfHeight, 0.1)
+          );
+          this.helperManager!.createBox3Helper(entity, box3, resolution);
+          this.helperEntities.add(entity);
+
+          // Set cyan color to distinguish rain bounds from other helpers
+          const entry = this.helperManager!.getHelperEntry(entity);
+          if (entry && entry.type === 'box3') {
+            entry.helper.setColor(0x00bfff); // Deep sky blue
+          }
+        }
+
+        // Update helper (recreate box if baseSize changed, update transform)
+        const entry = this.helperManager!.getHelperEntry(entity);
+        if (entry && entry.type === 'box3') {
+          // Update box size based on baseSize
+          const halfWidth = rain.baseSize.x / 2;
+          const halfHeight = rain.baseSize.y / 2;
+          const box3 = new THREE.Box3(
+            new THREE.Vector3(-halfWidth, -halfHeight, -0.1),
+            new THREE.Vector3(halfWidth, halfHeight, 0.1)
+          );
+          entry.helper.setBox3(box3);
+
+          // Update helper transform (position, rotation, scale)
+          entry.helper.position.set(
+            transform.position.x,
+            transform.position.y,
+            transform.position.z
+          );
+          entry.helper.rotation.set(
+            transform.rotation.x,
+            transform.rotation.y,
+            transform.rotation.z
+          );
+          entry.helper.scale.set(
+            transform.scale.x,
+            transform.scale.y,
+            1
+          );
         }
       } else {
         // Remove helper if shouldn't show
@@ -874,6 +952,10 @@ export class EditorLayer extends Layer {
     const renderer = app.getRenderer();
     const threeRenderer = renderer.getThreeRenderer();
 
+    // Reset viewport to full canvas size before clearing
+    // This is critical when moving between monitors with different DPI
+    renderer.resetViewport();
+
     // Clear to a dark color matching ImGui's dark theme
     threeRenderer.setClearColor(0x1a1a2e, 1);
     threeRenderer.clear();
@@ -886,6 +968,7 @@ export class EditorLayer extends Layer {
 
     // Render main menu bar
     const menuCallbacks: MenuBarCallbacks = {
+      onNewWorld: this.config.menuCallbacks?.onNewWorld ?? (() => this.handleNewWorld()),
       onSaveWorld: this.config.menuCallbacks?.onSaveWorld ?? (() => this.handleSaveWorld()),
       onSaveWorldAs: this.config.menuCallbacks?.onSaveWorldAs ?? (() => this.handleSaveWorldAs()),
       onLoadWorld: this.config.menuCallbacks?.onLoadWorld ?? (() => this.handleLoadWorld()),
@@ -1385,6 +1468,59 @@ export class EditorLayer extends Layer {
             { x: 0, y: 1 }, // UV min (flipped)
             { x: 1, y: 0 }  // UV max (flipped)
           );
+
+          // Update UIViewportBounds for UI interaction coordinate transformation
+          // This allows UIInteractionManager to correctly transform mouse coordinates
+          const isImageHovered = ImGui.IsItemHovered();
+
+          // Get the viewport bounds resource
+          const viewportBounds = app.getResource(UIViewportBounds);
+          if (viewportBounds) {
+            // Always update the content dimensions
+            viewportBounds.width = contentWidth;
+            viewportBounds.height = contentHeight;
+
+            // Reset calibration if content size changed (window was resized/moved)
+            if (
+              contentWidth !== this.gameViewLastContentWidth ||
+              contentHeight !== this.gameViewLastContentHeight
+            ) {
+              this.gameViewCalibrated = false;
+              this.gameViewImageScreenX = Infinity;
+              this.gameViewImageScreenY = Infinity;
+              this.gameViewLastContentWidth = contentWidth;
+              this.gameViewLastContentHeight = contentHeight;
+            }
+
+            if (isImageHovered) {
+              const io = ImGui.GetIO();
+              const mouseScreenPos = io.MousePos;
+
+              // Calculate image screen position using edge tracking.
+              // Since GetWindowPos() and GetItemRectMin() don't work in jsimgui bindings,
+              // we track the minimum mouse position observed while hovering the image.
+              //
+              // Key insight: When hovering the image, the mouse is at some offset O within
+              // the image. The image's screen position = mouseScreen - O.
+              // When the mouse is at the top-left corner (O approaches 0), mouseScreen ~= imageScreen.
+              //
+              // We continuously update with the minimum observed position, which converges
+              // to the actual top-left as the user moves the mouse.
+
+              // Track the minimum mouse position as an estimate of the image's top-left corner
+              if (mouseScreenPos.x < this.gameViewImageScreenX) {
+                this.gameViewImageScreenX = mouseScreenPos.x;
+              }
+              if (mouseScreenPos.y < this.gameViewImageScreenY) {
+                this.gameViewImageScreenY = mouseScreenPos.y;
+              }
+              this.gameViewCalibrated = true;
+
+              // Use the tracked minimum positions as the image screen position
+              viewportBounds.x = this.gameViewImageScreenX;
+              viewportBounds.y = this.gameViewImageScreenY;
+            }
+          }
         }
       }
 
@@ -1461,6 +1597,30 @@ export class EditorLayer extends Layer {
       })
       .finally(() => {
         this.loadInProgress = false;
+      });
+  }
+
+  /**
+   * Handle New World (creates a new empty world and saves it)
+   */
+  private handleNewWorld(): void {
+    if (this.saveInProgress || this.loadInProgress) return;
+
+    // Prevent creating new world while the game is playing
+    const editorManager = this.getApplication().getResource(EditorManager);
+    if (editorManager?.mode === 'play') {
+      console.warn('[EditorLayer] Cannot create new world while game is playing');
+      return;
+    }
+
+    this.saveInProgress = true;
+
+    this.performNewWorld()
+      .catch((err) => {
+        console.error('[EditorLayer] New World failed:', err);
+      })
+      .finally(() => {
+        this.saveInProgress = false;
       });
   }
 
@@ -1542,6 +1702,53 @@ export class EditorLayer extends Layer {
     if (!success) {
       throw new Error('Failed to load world');
     }
+  }
+
+  /**
+   * Create a new empty world and save it to a selected path
+   */
+  private async performNewWorld(): Promise<void> {
+    const platform = this.config.platform;
+    if (!platform) {
+      console.warn('[EditorLayer] No platform configured for file operations');
+      return;
+    }
+
+    // Show save dialog to pick location for new world
+    const filePath = await platform.showSaveDialog({
+      title: 'New World',
+      filters: [{ name: 'World Files', extensions: ['json'] }],
+    });
+
+    if (!filePath) {
+      console.log('[EditorLayer] New World cancelled');
+      return;
+    }
+
+    const app = this.getApplication();
+
+    // Clear UI state
+    setSelectedEntity(undefined);
+    this.gameCamera = null;
+    this.gameCameraEntity = null;
+    this.lastPostProcessingEntity = null;
+
+    // Clear the world
+    app.world.clear();
+
+    // Serialize and save the empty world
+    const json = this.worldSerializer.serializeToString(
+      app.world,
+      app.getCommands(),
+      true
+    );
+    await platform.writeTextFile(filePath, json);
+
+    // Update path and cache
+    this.currentScenePath = filePath;
+    this.cacheScenePath(filePath);
+
+    console.log(`[EditorLayer] New world created at: ${filePath}`);
   }
 
   // ============================================================================

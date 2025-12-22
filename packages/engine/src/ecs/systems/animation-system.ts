@@ -24,7 +24,11 @@ import type { Entity } from '../entity.js';
 import type { Command } from '../command.js';
 import { isGameplayActive } from '../../editor/system-conditions.js';
 import { AssetDatabase } from '../asset-database.js';
-import { isTextureMetadata } from '../asset-metadata.js';
+import {
+  isTextureMetadata,
+  isTiledSpriteDefinition,
+  isRectSpriteDefinition,
+} from '../asset-metadata.js';
 
 // ============================================================================
 // Animation Update System
@@ -227,22 +231,37 @@ function applyPropertyValue(
           if (metadata && isTextureMetadata(metadata)) {
             const spriteDef = metadata.sprites?.find((s) => s.id === value.spriteId);
             if (spriteDef) {
-              // Atomically update all sprite properties
-              sprite.tileIndex = spriteDef.tileIndex;
-              sprite.tileSize = { x: spriteDef.tileWidth, y: spriteDef.tileHeight };
+              // Handle based on sprite type (tile vs rect)
+              if (isTiledSpriteDefinition(spriteDef)) {
+                // Tile-based sprite
+                sprite.tileIndex = spriteDef.tileIndex;
+                sprite.tileSize = { x: spriteDef.tileWidth, y: spriteDef.tileHeight };
+                sprite.spriteRect = null;
 
-              // Update tilesetSize from texture if loaded, or metadata
-              if (sprite.texture.isLoaded && sprite.texture.data?.image) {
-                const image = sprite.texture.data.image;
-                sprite.tilesetSize = {
-                  x: image.width || image.videoWidth || spriteDef.tileWidth,
-                  y: image.height || image.videoHeight || spriteDef.tileHeight,
+                // Update tilesetSize from texture if loaded, or metadata
+                if (sprite.texture.isLoaded && sprite.texture.data?.image) {
+                  const image = sprite.texture.data.image;
+                  sprite.tilesetSize = {
+                    x: image.width || image.videoWidth || spriteDef.tileWidth,
+                    y: image.height || image.videoHeight || spriteDef.tileHeight,
+                  };
+                } else {
+                  sprite.tilesetSize = {
+                    x: metadata.width || spriteDef.tileWidth,
+                    y: metadata.height || spriteDef.tileHeight,
+                  };
+                }
+              } else if (isRectSpriteDefinition(spriteDef)) {
+                // Rect-based sprite
+                sprite.spriteRect = {
+                  x: spriteDef.x,
+                  y: spriteDef.y,
+                  width: spriteDef.width,
+                  height: spriteDef.height,
                 };
-              } else {
-                sprite.tilesetSize = {
-                  x: metadata.width || spriteDef.tileWidth,
-                  y: metadata.height || spriteDef.tileHeight,
-                };
+                sprite.tileIndex = null;
+                sprite.tileSize = null;
+                sprite.tilesetSize = null;
               }
             }
           }

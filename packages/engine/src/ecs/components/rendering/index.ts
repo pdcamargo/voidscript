@@ -24,6 +24,7 @@ export * from "./sprite-2d.js";
 export * from "./water-2d.js";
 export * from "./sky-gradient.js";
 export * from "./fog-2d.js";
+export * from "./rain-2d.js";
 
 // Post-Processing
 export * from "./post-processing.js";

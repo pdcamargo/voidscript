@@ -12,6 +12,7 @@
  */
 
 import * as THREE from 'three';
+import RAPIER from '@dimforge/rapier2d';
 import { system } from '../../ecs/system.js';
 import { isGameplayActive } from '../../editor/system-conditions.js';
 import { Physics2DContext } from './physics-2d-context.js';
@@ -45,10 +46,12 @@ export const physics2DSyncSystem = system(({ commands }) => {
       if (!rapierController || !rapierCollider) return;
 
       // Compute movement with collision resolution
+      // Use QueryFilterFlags to exclude sensors from collision response
       const currentPos = rapierCollider.translation();
       rapierController.computeColliderMovement(
         rapierCollider,
         desiredMovement.translation,
+        RAPIER.QueryFilterFlags.EXCLUDE_SENSORS, // Exclude sensors from collision
       );
 
       // Store results in PhysicsObject2D
@@ -77,8 +80,9 @@ export const physics2DSyncSystem = system(({ commands }) => {
       desiredMovement.translation.set(0, 0);
     });
 
-  // Step physics simulation
-  world.step();
+  // Step physics simulation (pass event queue to collect collision events)
+  const eventQueue = physics.getEventQueue();
+  world.step(eventQueue);
 
   // ==========================================================================
   // Sync Rapier transforms → Transform3D (for normal rigid bodies)

@@ -54,6 +54,7 @@
 
 // Core
 export { UIManager, type UIManagerConfig, type UIOrigin } from './ui-manager.js';
+export { UIViewportBounds } from './ui-viewport-bounds.js';
 export { UIInteractionManager, type UIInteractionEvent, type UIInteractionEventType, type UIInteractionCallback } from './ui-interaction.js';
 
 // Components
@@ -90,6 +91,10 @@ export {
   type UIButtonState,
   uiButtonDataToOptions,
   getButtonBackgroundColor,
+
+  // Interaction
+  UIInteraction,
+  type UIInteractionData,
 } from './components/index.js';
 
 // Systems
@@ -101,4 +106,11 @@ export {
   uiUpdateSystem,
   uiRenderSystem,
   uiCleanupSystem,
+  clearUITracking,
 } from './ui-systems.js';
+
+// Interaction Event System
+export {
+  setupUIInteractionEvents,
+  uiInteractionUpdateSystem,
+} from './ui-interaction-event-system.js';

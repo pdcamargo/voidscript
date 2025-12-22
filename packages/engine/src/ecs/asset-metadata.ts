@@ -77,16 +77,21 @@ export interface BaseAssetMetadata {
 }
 
 /**
- * Sprite definition within a texture atlas
- * Simpler than SpriteSheetFrame, uses tile indices for grid-based sprite sheets
+ * Base sprite definition fields
  */
-export interface SpriteDefinition {
+export interface BaseSpriteDefinition {
   /** Unique identifier for this sprite */
   id: string;
 
   /** Display name shown in sprite picker */
   name: string;
+}
 
+/**
+ * Tile-based sprite definition (grid-based sprite sheets)
+ * Uses tile index for uniform grid layouts
+ */
+export interface TiledSpriteDefinition extends BaseSpriteDefinition {
   /** Tile index in the sheet (0-based, left-to-right, top-to-bottom) */
   tileIndex: number;
 
@@ -95,6 +100,48 @@ export interface SpriteDefinition {
 
   /** Tile height in pixels */
   tileHeight: number;
+}
+
+/**
+ * Rect-based sprite definition (arbitrary position in atlas)
+ * Uses pixel coordinates for non-uniform/packed atlases
+ */
+export interface RectSpriteDefinition extends BaseSpriteDefinition {
+  /** X position in the texture (pixels from left) */
+  x: number;
+
+  /** Y position in the texture (pixels from top) */
+  y: number;
+
+  /** Sprite width in pixels */
+  width: number;
+
+  /** Sprite height in pixels */
+  height: number;
+}
+
+/**
+ * Sprite definition within a texture atlas
+ * Can be either tile-based (grid) or rect-based (arbitrary position)
+ */
+export type SpriteDefinition = TiledSpriteDefinition | RectSpriteDefinition;
+
+/**
+ * Type guard for tiled (grid-based) sprite definitions
+ */
+export function isTiledSpriteDefinition(
+  sprite: SpriteDefinition,
+): sprite is TiledSpriteDefinition {
+  return 'tileIndex' in sprite;
+}
+
+/**
+ * Type guard for rect-based sprite definitions
+ */
+export function isRectSpriteDefinition(
+  sprite: SpriteDefinition,
+): sprite is RectSpriteDefinition {
+  return 'x' in sprite && 'y' in sprite && 'width' in sprite && 'height' in sprite;
 }
 
 /**

@@ -91,7 +91,13 @@ export { BundleRegistry, globalBundleRegistry, registerBundle } from "./bundle-r
 
 // Built-in bundles (import for side-effects to register them)
 import "./bundles/index.js";
-export { Sprite2DBundle } from "./bundles/index.js";
+export {
+  Sprite2DBundle,
+  MainCameraBundle,
+  VirtualCameraBundle,
+  Character2DBundle,
+  Character3DBundle,
+} from "./bundles/index.js";
 
 // Application system
 export { Application } from "./application.js";

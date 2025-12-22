@@ -152,6 +152,7 @@ export class EventReader<T> {
  */
 export class Events {
   #channels: Map<string, EventChannel<any>> = new Map();
+  #classRegistry: Map<string, EventClass<any>> = new Map();
   #readerSeqBySystem: WeakMap<object, Map<string, number>> = new WeakMap();
   #frame = 0;
   #retentionFrames = 2; // keep events for at least 2 frames
@@ -165,7 +166,33 @@ export class Events {
     const key = this.#keyFor(cls);
     if (!this.#channels.has(key)) {
       this.#channels.set(key, new EventChannel<T>());
+      this.#classRegistry.set(key, cls);
     }
+  }
+
+  /**
+   * Get an event class by its name
+   * @param name The class name used when registering the event
+   * @returns The event class, or undefined if not registered
+   */
+  public getEventClass<T>(name: string): EventClass<T> | undefined {
+    return this.#classRegistry.get(name) as EventClass<T> | undefined;
+  }
+
+  /**
+   * Get all registered event class names
+   * @returns Array of registered event class names
+   */
+  public getRegisteredEventNames(): string[] {
+    return Array.from(this.#classRegistry.keys());
+  }
+
+  /**
+   * Check if an event type is registered
+   * @param name The class name to check
+   */
+  public hasEvent(name: string): boolean {
+    return this.#classRegistry.has(name);
   }
 
   /**

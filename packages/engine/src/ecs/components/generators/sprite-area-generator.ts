@@ -5,6 +5,8 @@ import {
   RuntimeAssetManager,
   AssetDatabase,
   isTextureMetadata,
+  isTiledSpriteDefinition,
+  isRectSpriteDefinition,
   AssetType,
   type Command,
   Vector3,
@@ -117,15 +119,17 @@ function generateSprites(
       .with(Sprite2D, {
         texture: data.spriteTexture,
         color: data.tintColor ?? { r: 1, g: 1, b: 1, a: 1 },
-        tileIndex: sprite.tileIndex,
-        tileSize:
-          sprite.tileWidth && sprite.tileHeight
-            ? { x: sprite.tileWidth, y: sprite.tileHeight }
-            : null,
+        tileIndex: isTiledSpriteDefinition(sprite) ? sprite.tileIndex : null,
+        tileSize: isTiledSpriteDefinition(sprite)
+          ? { x: sprite.tileWidth, y: sprite.tileHeight }
+          : null,
         tilesetSize:
-          metadata.width && metadata.height
+          isTiledSpriteDefinition(sprite) && metadata.width && metadata.height
             ? { x: metadata.width, y: metadata.height }
             : null,
+        spriteRect: isRectSpriteDefinition(sprite)
+          ? { x: sprite.x, y: sprite.y, width: sprite.width, height: sprite.height }
+          : null,
         pixelsPerUnit: 100,
         flipX: false,
         flipY: false,

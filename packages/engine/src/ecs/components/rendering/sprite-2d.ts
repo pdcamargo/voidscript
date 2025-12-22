@@ -18,9 +18,31 @@ import { RuntimeAsset } from '../../runtime-asset.js';
 import { AssetDatabase } from '../../asset-database.js';
 import {
   isTextureMetadata,
+  isTiledSpriteDefinition,
+  isRectSpriteDefinition,
   type TextureMetadata,
+  type SpriteDefinition,
 } from '../../asset-metadata.js';
 import { ImGui } from '@mori2003/jsimgui';
+import {
+  renderSpritePickerModal,
+  openSpritePicker,
+} from '../../../app/imgui/sprite-picker.js';
+import type * as THREE from 'three';
+
+// Track pending sprite selections
+const pendingSpriteSelections = new Map<string, SpriteDefinition | null>();
+
+// Current renderer reference (set by inspector)
+let spritePickerRenderer: THREE.WebGLRenderer | null = null;
+
+/**
+ * Set the renderer for sprite picker previews
+ * Called by the inspector when rendering
+ */
+export function setSpritePickerRenderer(renderer: THREE.WebGLRenderer | null): void {
+  spritePickerRenderer = renderer;
+}
 
 export interface Sprite2DData {
   /**
@@ -105,6 +127,14 @@ export interface Sprite2DData {
    * @default false
    */
   isLit?: boolean;
+
+  /**
+   * Direct rect coordinates for sprite region (alternative to tileIndex)
+   * If set, this takes precedence over tileIndex/tileSize/tilesetSize
+   * Uses pixel coordinates where x,y is the top-left corner
+   * @default null
+   */
+  spriteRect: { x: number; y: number; width: number; height: number } | null;
 }
 
 export const Sprite2D = component<Sprite2DData>(
@@ -144,117 +174,122 @@ export const Sprite2D = component<Sprite2DData>(
         }
 
         if (hasSprites && metadata) {
-          // Show sprite picker button
-          ImGui.Text(`${label}:`);
-          ImGui.SameLine();
-
-          // Display current sprite name if found
-          const currentSprite = metadata.sprites?.find(
-            (s) => s.tileIndex === value,
-          );
-          if (currentSprite) {
-            ImGui.Text(currentSprite.name);
-          } else if (value !== null) {
-            ImGui.Text(`Custom (Index ${value})`);
-          } else {
-            ImGui.Text('None');
-          }
-
-          ImGui.SameLine();
-
-          // Sprite picker popup
           const popupId = `SpritePicker##${texture.guid}`;
 
-          if (ImGui.Button(`Pick Sprite##tileIndex`)) {
-            ImGui.OpenPopup(popupId);
-          }
+          // Check for pending sprite selection from callback
+          const pendingSprite = pendingSpriteSelections.get(popupId);
+          if (pendingSprite) {
+            pendingSpriteSelections.delete(popupId);
 
-          // Render sprite picker modal
-          ImGui.SetNextWindowSize({ x: 600, y: 400 }, ImGui.Cond.FirstUseEver);
-          if (ImGui.BeginPopupModal(popupId, null, ImGui.WindowFlags.None)) {
-            ImGui.Text('Select a sprite:');
-            ImGui.Separator();
+            // Handle sprite selection based on type
+            if (isTiledSpriteDefinition(pendingSprite)) {
+              // Tile-based sprite: set tile properties, clear rect
+              onChange(pendingSprite.tileIndex);
+              componentData.tileSize = {
+                x: pendingSprite.tileWidth,
+                y: pendingSprite.tileHeight,
+              };
 
-            const sprites = metadata.sprites || [];
-            const itemsPerRow = 4;
-            const buttonSize = 128;
-
-            ImGui.BeginChild(
-              'SpriteGrid',
-              { x: 0, y: -40 },
-              ImGui.WindowFlags.None,
-            );
-
-            for (let i = 0; i < sprites.length; i++) {
-              const sprite = sprites[i];
-              if (!sprite) continue;
-
-              if (i > 0 && i % itemsPerRow !== 0) {
-                ImGui.SameLine();
-              }
-
-              ImGui.BeginGroup();
-
-              const isSelected = value === sprite.tileIndex;
-              if (isSelected) {
-                ImGui.PushStyleColorImVec4(ImGui.Col.Button, {
-                  x: 0.2,
-                  y: 0.5,
-                  z: 0.8,
-                  w: 1.0,
-                });
-              }
-
-              if (
-                ImGui.Button(`##sprite_${sprite.id}`, {
-                  x: buttonSize,
-                  y: buttonSize,
-                })
-              ) {
-                // Update all sprite properties atomically
-                onChange(sprite.tileIndex);
-                componentData.tileSize = {
-                  x: sprite.tileWidth,
-                  y: sprite.tileHeight,
+              // Update tilesetSize from texture if loaded, or metadata
+              if (texture.isLoaded && texture.data?.image) {
+                const image = texture.data.image;
+                componentData.tilesetSize = {
+                  x: image.width || image.videoWidth || pendingSprite.tileWidth,
+                  y: image.height || image.videoHeight || pendingSprite.tileHeight,
                 };
-
-                // Update tilesetSize from texture if loaded, or metadata
-                if (texture.isLoaded && texture.data?.image) {
-                  const image = texture.data.image;
-                  componentData.tilesetSize = {
-                    x: image.width || image.videoWidth || sprite.tileWidth,
-                    y: image.height || image.videoHeight || sprite.tileHeight,
-                  };
-                } else {
-                  componentData.tilesetSize = {
-                    x: metadata.width || sprite.tileWidth,
-                    y: metadata.height || sprite.tileHeight,
-                  };
-                }
-
-                ImGui.CloseCurrentPopup();
+              } else {
+                componentData.tilesetSize = {
+                  x: metadata.width || pendingSprite.tileWidth,
+                  y: metadata.height || pendingSprite.tileHeight,
+                };
               }
 
-              if (isSelected) {
-                ImGui.PopStyleColor();
-              }
+              // Clear spriteRect when using tile-based
+              componentData.spriteRect = null;
+            } else if (isRectSpriteDefinition(pendingSprite)) {
+              // Rect-based sprite: set rect, clear tile properties
+              componentData.spriteRect = {
+                x: pendingSprite.x,
+                y: pendingSprite.y,
+                width: pendingSprite.width,
+                height: pendingSprite.height,
+              };
 
-              ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + buttonSize);
-              ImGui.TextWrapped(sprite.name);
-              ImGui.PopTextWrapPos();
-
-              ImGui.EndGroup();
+              // Clear tile-based properties
+              onChange(null);
+              componentData.tileSize = null;
+              componentData.tilesetSize = null;
             }
-
-            ImGui.EndChild();
-
-            ImGui.Separator();
-            if (ImGui.Button('Cancel', { x: 120, y: 0 })) {
-              ImGui.CloseCurrentPopup();
-            }
-
-            ImGui.EndPopup();
           }
+
+          // Show sprite picker button
+          ImGui.Text('Sprite:');
+          ImGui.SameLine();
+
+          // Find current sprite - check both tile-based and rect-based
+          const sprites = metadata.sprites || [];
+          let currentSprite: SpriteDefinition | undefined;
+
+          // Check if using spriteRect (rect-based)
+          if (componentData.spriteRect) {
+            currentSprite = sprites.find(
+              (s) =>
+                isRectSpriteDefinition(s) &&
+                s.x === componentData.spriteRect!.x &&
+                s.y === componentData.spriteRect!.y &&
+                s.width === componentData.spriteRect!.width &&
+                s.height === componentData.spriteRect!.height,
+            );
+          }
+
+          // Check if using tileIndex (tile-based)
+          if (!currentSprite && value !== null) {
+            currentSprite = sprites.find(
+              (s) => isTiledSpriteDefinition(s) && s.tileIndex === value,
+            );
+          }
+
+          if (currentSprite) {
+            const typeLabel = isTiledSpriteDefinition(currentSprite)
+              ? ' (Tile)'
+              : ' (Rect)';
+            ImGui.Text(currentSprite.name + typeLabel);
+          } else if (value !== null) {
+            ImGui.Text(`Custom (Index ${value})`);
+          } else if (componentData.spriteRect) {
+            ImGui.Text(
+              `Custom Rect (${componentData.spriteRect.x}, ${componentData.spriteRect.y})`,
+            );
+          } else {
+            ImGui.TextDisabled('None');
+          }
+
+          ImGui.SameLine();
+
+          if (ImGui.Button(`Pick Sprite##tileIndex`)) {
+            openSpritePicker(popupId);
+          }
+
+          // Render sprite picker modal with previews
+          renderSpritePickerModal({
+            popupId,
+            textureAsset: texture,
+            metadata,
+            currentSprite: currentSprite ?? null,
+            currentTileIndex: value,
+            currentSpriteRect: componentData.spriteRect,
+            renderer: spritePickerRenderer,
+            onSelect: (sprite) => {
+              // Store for next frame
+              pendingSpriteSelections.set(popupId, sprite);
+            },
+            onCancel: () => {
+              pendingSpriteSelections.delete(popupId);
+            },
+          });
+
+          // Don't show the default number input when sprites are defined
+          return;
         }
 
         // No sprites defined - show default number input
@@ -275,6 +310,11 @@ export const Sprite2D = component<Sprite2DData>(
       serializable: true,
       whenNullish: 'keep',
       customEditor: ({ label, value, onChange, componentData }) => {
+        // Hide if using spriteRect (rect-based doesn't use tileSize)
+        if (componentData.spriteRect) {
+          return;
+        }
+
         // Check if texture has sprites defined
         const texture = componentData.texture;
         let hasSprites = false;
@@ -312,6 +352,45 @@ export const Sprite2D = component<Sprite2DData>(
     tilesetSize: {
       serializable: true,
       whenNullish: 'keep',
+      customEditor: ({ label, value, onChange, componentData }) => {
+        // Hide if using spriteRect (rect-based doesn't use tilesetSize)
+        if (componentData.spriteRect) {
+          return;
+        }
+
+        // Check if texture has sprites defined
+        const texture = componentData.texture;
+        let hasSprites = false;
+
+        if (texture && texture.guid) {
+          const metadata = AssetDatabase.getMetadata(texture.guid);
+          if (metadata && isTextureMetadata(metadata)) {
+            hasSprites = (metadata.sprites?.length ?? 0) > 0;
+          }
+        }
+
+        if (hasSprites) {
+          // Hide this field - sprite picker handles it
+          return;
+        }
+
+        // Show Vec2 input for manual mode
+        ImGui.Text(`${label}:`);
+
+        if (value === null) {
+          ImGui.SameLine();
+          ImGui.Text('None');
+          ImGui.SameLine();
+          if (ImGui.Button(`Set##${label}`)) {
+            onChange({ x: 256, y: 256 }); // Default tileset size
+          }
+        } else {
+          const arr: [number, number] = [value.x, value.y];
+          if (ImGui.DragFloat2(`##${label}`, arr, 1.0)) {
+            onChange({ x: arr[0], y: arr[1] });
+          }
+        }
+      },
     },
     pixelsPerUnit: {
       serializable: true,
@@ -337,6 +416,64 @@ export const Sprite2D = component<Sprite2DData>(
     isLit: {
       serializable: true,
     },
+    spriteRect: {
+      serializable: true,
+      whenNullish: 'keep',
+      customEditor: ({ label, value, onChange, componentData }) => {
+        // Hide if using tile-based approach
+        if (componentData.tileIndex !== null) {
+          return;
+        }
+
+        // Check if texture has sprites defined
+        const texture = componentData.texture;
+        let hasSprites = false;
+
+        if (texture && texture.guid) {
+          const metadata = AssetDatabase.getMetadata(texture.guid);
+          if (metadata && isTextureMetadata(metadata)) {
+            hasSprites = (metadata.sprites?.length ?? 0) > 0;
+          }
+        }
+
+        if (hasSprites) {
+          // Hide this field - sprite picker handles it
+          return;
+        }
+
+        // Show rect input for manual mode
+        ImGui.Text(`${label}:`);
+
+        if (value === null) {
+          ImGui.SameLine();
+          ImGui.Text('None');
+          ImGui.SameLine();
+          if (ImGui.Button(`Set##${label}`)) {
+            onChange({ x: 0, y: 0, width: 32, height: 32 });
+          }
+        } else {
+          const posArr: [number, number] = [value.x, value.y];
+          const sizeArr: [number, number] = [value.width, value.height];
+
+          ImGui.Text('Position:');
+          ImGui.SameLine();
+          if (ImGui.DragFloat2(`##${label}-pos`, posArr, 1.0)) {
+            onChange({ ...value, x: posArr[0], y: posArr[1] });
+          }
+
+          ImGui.Text('Size:');
+          ImGui.SameLine();
+          if (ImGui.DragFloat2(`##${label}-size`, sizeArr, 1.0)) {
+            onChange({ ...value, width: sizeArr[0], height: sizeArr[1] });
+          }
+
+          ImGui.SameLine();
+          if (ImGui.Button(`Clear##${label}`)) {
+            onChange(null);
+          }
+        }
+      },
+    },
   },
   {
     path: 'rendering/2d',
@@ -354,6 +491,7 @@ export const Sprite2D = component<Sprite2DData>(
       anchor: { x: 0.5, y: 0.5 },
       visible: true,
       isLit: false,
+      spriteRect: null,
     }),
     displayName: 'Sprite 2D',
     description:

@@ -51,11 +51,40 @@ export {
   type CcdData,
 } from './components/index.js';
 
+// Collision System (shared types and events)
+export {
+  // Query Filter
+  QueryFilterFlags,
+  type QueryFilter,
+  type QueryPredicate,
+  DEFAULT_QUERY_FILTER,
+  // Physics Hooks
+  type PhysicsHooks2D,
+  type PhysicsHooks3D,
+  type ContactFilterContext,
+  type ContactModificationContext2D,
+  type ContactModificationContext3D,
+  SolverFlags,
+  ActiveHooksFlags,
+  // Collision Events
+  CollisionEventFlags,
+  CollisionStarted2D,
+  CollisionEnded2D,
+  CollisionStarted3D,
+  CollisionEnded3D,
+  // Contact Force Events
+  ContactForce2D,
+  ContactForce3D,
+} from './collision/index.js';
+
 // 2D Physics
 export {
   // Context
   Physics2DContext,
   type RaycastHit2D,
+  type ShapeCastHit2D,
+  type PointProjection2D,
+  type ContactPair2D,
   // Components
   RigidBody2D,
   type RigidBody2DData,
@@ -71,10 +100,21 @@ export {
   type CharacterController2DData,
   DesiredMovement2D,
   type DesiredMovement2DData,
+  ActiveCollisionEvents2D,
+  ActiveCollisionEventsFlags2D,
+  type ActiveCollisionEvents2DData,
+  ContactForceEventThreshold2D,
+  type ContactForceEventThreshold2DData,
+  CollisionGroups2D,
+  CollisionGroup,
+  type CollisionGroups2DData,
+  ActiveHooks2D,
+  type ActiveHooks2DData,
   // Systems
   physics2DComponentSyncSystem,
   physics2DSyncSystem,
   physics2DCleanupSystem,
+  physics2DCollisionEventSystem,
 } from './2d/index.js';
 
 // 3D Physics
@@ -82,6 +122,9 @@ export {
   // Context
   Physics3DContext,
   type RaycastHit3D,
+  type ShapeCastHit3D,
+  type PointProjection3D,
+  type ContactPair3D,
   // Components
   RigidBody3D,
   type RigidBody3DData,
@@ -97,10 +140,20 @@ export {
   type CharacterController3DData,
   DesiredMovement3D,
   type DesiredMovement3DData,
+  ActiveCollisionEvents3D,
+  ActiveCollisionEventsFlags3D,
+  type ActiveCollisionEvents3DData,
+  ContactForceEventThreshold3D,
+  type ContactForceEventThreshold3DData,
+  CollisionGroups3D,
+  type CollisionGroups3DData,
+  ActiveHooks3D,
+  type ActiveHooks3DData,
   // Systems
   physics3DComponentSyncSystem,
   physics3DSyncSystem,
   physics3DCleanupSystem,
+  physics3DCollisionEventSystem,
 } from './3d/index.js';
 
 // Config (re-export from Application)

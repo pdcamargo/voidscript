@@ -51,6 +51,7 @@ interface SpriteEntry {
   lastTileIndex: number | null;
   lastTileSize: { x: number; y: number } | null;
   lastTilesetSize: { x: number; y: number } | null;
+  lastSpriteRect: { x: number; y: number; width: number; height: number } | null;
 }
 
 /**
@@ -124,6 +125,7 @@ export class SpriteRenderManager {
       lastTileIndex: spriteData.tileIndex,
       lastTileSize: spriteData.tileSize ?? null,
       lastTilesetSize: spriteData.tilesetSize ?? null,
+      lastSpriteRect: spriteData.spriteRect ?? null,
     };
     this.sprites.set(entity, entry);
 
@@ -163,15 +165,31 @@ export class SpriteRenderManager {
     if (entry.texture) {
       const image = entry.texture.image as { width?: number; height?: number } | null;
 
-      // Use tile dimensions if specified, otherwise use full texture dimensions
-      const textureWidth = spriteData.tileSize?.x ?? (image?.width ?? 1);
-      const textureHeight = spriteData.tileSize?.y ?? (image?.height ?? 1);
+      // Determine dimensions: spriteRect > tileSize > full texture
+      let textureWidth: number;
+      let textureHeight: number;
+
+      if (spriteData.spriteRect) {
+        // Use rect dimensions
+        textureWidth = spriteData.spriteRect.width;
+        textureHeight = spriteData.spriteRect.height;
+      } else if (spriteData.tileSize) {
+        // Use tile dimensions
+        textureWidth = spriteData.tileSize.x;
+        textureHeight = spriteData.tileSize.y;
+      } else {
+        // Use full texture dimensions
+        textureWidth = image?.width ?? 1;
+        textureHeight = image?.height ?? 1;
+      }
 
       const spriteScale = calculateSpriteScale(
         spriteData.pixelsPerUnit,
         textureWidth,
         textureHeight,
-        spriteData.tileSize,
+        spriteData.spriteRect
+          ? { x: spriteData.spriteRect.width, y: spriteData.spriteRect.height }
+          : spriteData.tileSize,
       );
 
       // Calculate anchor offset based on sprite dimensions
@@ -233,26 +251,56 @@ export class SpriteRenderManager {
       entry.lastSortingOrder = spriteData.sortingOrder;
     }
 
-    // Update tiling if tile index, size, or tileset size changed
-    const tileIndexChanged = spriteData.tileIndex !== entry.lastTileIndex;
-    const tileSizeChanged =
-      spriteData.tileSize?.x !== entry.lastTileSize?.x ||
-      spriteData.tileSize?.y !== entry.lastTileSize?.y;
-    const tilesetSizeChanged =
-      spriteData.tilesetSize?.x !== entry.lastTilesetSize?.x ||
-      spriteData.tilesetSize?.y !== entry.lastTilesetSize?.y;
+    // Check if spriteRect changed
+    const spriteRectChanged =
+      spriteData.spriteRect?.x !== entry.lastSpriteRect?.x ||
+      spriteData.spriteRect?.y !== entry.lastSpriteRect?.y ||
+      spriteData.spriteRect?.width !== entry.lastSpriteRect?.width ||
+      spriteData.spriteRect?.height !== entry.lastSpriteRect?.height;
 
-    if (tileIndexChanged || tileSizeChanged || tilesetSizeChanged) {
-      if (spriteData.tileIndex !== null && spriteData.tileSize && spriteData.tilesetSize) {
-        material.tile({
-          tile: spriteData.tileIndex,
-          tileSize: spriteData.tileSize,
-          tilesetSize: spriteData.tilesetSize,
+    // Update UV mapping based on sprite mode (rect takes precedence over tile)
+    if (spriteData.spriteRect && entry.texture) {
+      // Rect-based sprite
+      if (spriteRectChanged) {
+        const image = entry.texture.image as { width?: number; height?: number } | null;
+        const textureSize = {
+          x: image?.width ?? 1,
+          y: image?.height ?? 1,
+        };
+        material.rect({
+          rect: spriteData.spriteRect,
+          textureSize,
         });
+        entry.lastSpriteRect = { ...spriteData.spriteRect };
+        // Clear tile tracking when using rect
+        entry.lastTileIndex = null;
+        entry.lastTileSize = null;
+        entry.lastTilesetSize = null;
       }
-      entry.lastTileIndex = spriteData.tileIndex;
-      entry.lastTileSize = spriteData.tileSize ?? null;
-      entry.lastTilesetSize = spriteData.tilesetSize ?? null;
+    } else {
+      // Tile-based sprite
+      const tileIndexChanged = spriteData.tileIndex !== entry.lastTileIndex;
+      const tileSizeChanged =
+        spriteData.tileSize?.x !== entry.lastTileSize?.x ||
+        spriteData.tileSize?.y !== entry.lastTileSize?.y;
+      const tilesetSizeChanged =
+        spriteData.tilesetSize?.x !== entry.lastTilesetSize?.x ||
+        spriteData.tilesetSize?.y !== entry.lastTilesetSize?.y;
+
+      if (tileIndexChanged || tileSizeChanged || tilesetSizeChanged) {
+        if (spriteData.tileIndex !== null && spriteData.tileSize && spriteData.tilesetSize) {
+          material.tile({
+            tile: spriteData.tileIndex,
+            tileSize: spriteData.tileSize,
+            tilesetSize: spriteData.tilesetSize,
+          });
+        }
+        entry.lastTileIndex = spriteData.tileIndex;
+        entry.lastTileSize = spriteData.tileSize ?? null;
+        entry.lastTilesetSize = spriteData.tilesetSize ?? null;
+        // Clear rect tracking when using tile
+        entry.lastSpriteRect = null;
+      }
     }
 
     // Check if texture needs updating
@@ -307,8 +355,18 @@ export class SpriteRenderManager {
     // Update entry
     entry.material = newMaterial;
 
-    // Reapply tiling if needed
-    if (spriteData.tileIndex !== null && spriteData.tileSize && spriteData.tilesetSize) {
+    // Reapply UV mapping if needed (rect takes precedence over tile)
+    if (spriteData.spriteRect && texture) {
+      const image = texture.image as { width?: number; height?: number } | null;
+      const textureSize = {
+        x: image?.width ?? 1,
+        y: image?.height ?? 1,
+      };
+      newMaterial.rect({
+        rect: spriteData.spriteRect,
+        textureSize,
+      });
+    } else if (spriteData.tileIndex !== null && spriteData.tileSize && spriteData.tilesetSize) {
       newMaterial.tile({
         tile: spriteData.tileIndex,
         tileSize: spriteData.tileSize,
@@ -373,8 +431,18 @@ export class SpriteRenderManager {
       entry.material.map = texture;
       entry.material.needsUpdate = true;
 
-      // Apply tiling if specified
-      if (spriteData.tileIndex !== null && spriteData.tileSize && spriteData.tilesetSize) {
+      // Apply UV mapping (rect takes precedence over tile)
+      if (spriteData.spriteRect) {
+        const image = texture.image as { width?: number; height?: number } | null;
+        const textureSize = {
+          x: image?.width ?? 1,
+          y: image?.height ?? 1,
+        };
+        entry.material.rect({
+          rect: spriteData.spriteRect,
+          textureSize,
+        });
+      } else if (spriteData.tileIndex !== null && spriteData.tileSize && spriteData.tilesetSize) {
         entry.material.tile({
           tile: spriteData.tileIndex,
           tileSize: spriteData.tileSize,

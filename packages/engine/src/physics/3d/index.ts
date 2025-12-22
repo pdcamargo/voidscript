@@ -5,7 +5,13 @@
  */
 
 // Context
-export { Physics3DContext, type RaycastHit3D } from './physics-3d-context.js';
+export {
+  Physics3DContext,
+  type RaycastHit3D,
+  type ShapeCastHit3D,
+  type PointProjection3D,
+  type ContactPair3D,
+} from './physics-3d-context.js';
 
 // Components
 export * from './components/index.js';
@@ -14,3 +20,4 @@ export * from './components/index.js';
 export { physics3DComponentSyncSystem } from './physics-3d-component-sync.js';
 export { physics3DSyncSystem } from './physics-3d-sync-system.js';
 export { physics3DCleanupSystem } from './physics-3d-cleanup-system.js';
+export { physics3DCollisionEventSystem } from './physics-3d-collision-event-system.js';

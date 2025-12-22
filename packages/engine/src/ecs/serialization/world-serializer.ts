@@ -127,31 +127,35 @@ export class WorldSerializer {
       if (Array.isArray(value)) {
         return value
           .filter((item) => {
-            // Filter out skipped entities
-            if (config.type === "entity" && typeof item === "number" && skipEntities && skipEntities.has(item)) {
-              return false;
+            // Filter out entity references that should be skipped or don't exist
+            if (config.type === "entity" && typeof item === "number") {
+              // Filter out skipped entities
+              if (skipEntities && skipEntities.has(item)) {
+                return false;
+              }
+              // Filter out entities that don't exist in the mapping (deleted entities)
+              if (!context.entityMapping.has(item)) {
+                return false;
+              }
             }
             return true;
           })
           .map((item) => {
             // If collection has entity ID items, remap them
             if (config.type === "entity" && typeof item === "number") {
-              const mappedId = context.entityMapping.get(item);
-              if (mappedId === undefined) {
-                throw new Error(`Cannot remap entity ID ${item} in array - not found in entity mapping`);
-              }
-              return mappedId;
+              // Safe to use ! here because we filtered out unmapped entities above
+              return context.entityMapping.get(item)!;
             }
-          // If collection has RuntimeAsset items, serialize them
-          if (config.type === "runtimeAsset" && isRuntimeAsset(item)) {
-            return { guid: item.guid };
-          }
-          // If collection has AssetRef items, serialize them
-          if (config.type === "assetRef" && isAssetRef(item)) {
-            return { guid: item.guid };
-          }
-          return item;
-        });
+            // If collection has RuntimeAsset items, serialize them
+            if (config.type === "runtimeAsset" && isRuntimeAsset(item)) {
+              return { guid: item.guid };
+            }
+            // If collection has AssetRef items, serialize them
+            if (config.type === "assetRef" && isAssetRef(item)) {
+              return { guid: item.guid };
+            }
+            return item;
+          });
       }
       return value;
     }
@@ -162,19 +166,22 @@ export class WorldSerializer {
         if (config.type === "entity") {
           return Array.from(value)
             .filter((item) => {
-              // Filter out skipped entities
-              if (typeof item === "number" && skipEntities && skipEntities.has(item)) {
-                return false;
+              if (typeof item === "number") {
+                // Filter out skipped entities
+                if (skipEntities && skipEntities.has(item)) {
+                  return false;
+                }
+                // Filter out entities that don't exist in the mapping (deleted entities)
+                if (!context.entityMapping.has(item)) {
+                  return false;
+                }
               }
               return true;
             })
             .map((item) => {
               if (typeof item === "number") {
-                const mappedId = context.entityMapping.get(item);
-                if (mappedId === undefined) {
-                  throw new Error(`Cannot remap entity ID ${item} in set - not found in entity mapping`);
-                }
-                return mappedId;
+                // Safe to use ! here because we filtered out unmapped entities above
+                return context.entityMapping.get(item)!;
               }
               return item;
             });
@@ -210,9 +217,10 @@ export class WorldSerializer {
         if (skipEntities && skipEntities.has(value)) {
           return undefined; // Will be handled by whenNullish logic if configured
         }
+        // If entity doesn't exist in mapping (was deleted), return undefined
         const mappedId = context.entityMapping.get(value);
         if (mappedId === undefined) {
-          throw new Error(`Cannot remap entity ID ${value} - not found in entity mapping`);
+          return undefined; // Will be handled by whenNullish logic if configured
         }
         return mappedId;
       }

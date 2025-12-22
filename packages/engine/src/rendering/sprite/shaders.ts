@@ -2,6 +2,14 @@ import * as THREE from 'three';
 import type { ISpriteUniforms, ISpriteTilingOptions } from './SpriteMaterial.js';
 
 /**
+ * UV result type for sprite tiling/rect calculations
+ */
+export interface SpriteUVResult {
+  offset: { x: number; y: number };
+  repeat: { x: number; y: number };
+}
+
+/**
  * Calculate tile UVs for a sprite texture.
  *
  * @param tile - Tile index (0-based, left-to-right, top-to-bottom)
@@ -13,7 +21,7 @@ export function calculateTileUVs(
   tile: number,
   tileSize: { x: number; y: number },
   tilesetSize: { x: number; y: number }
-): { offset: { x: number; y: number }; repeat: { x: number; y: number } } {
+): SpriteUVResult {
   const tilesPerRow = Math.floor(tilesetSize.x / tileSize.x);
   const tilesPerColumn = Math.floor(tilesetSize.y / tileSize.y);
   const tileX = tile % tilesPerRow;
@@ -27,6 +35,31 @@ export function calculateTileUVs(
 
   const repeatX = tileSize.x / tilesetSize.x;
   const repeatY = tileSize.y / tilesetSize.y;
+
+  return {
+    offset: { x: offsetX, y: offsetY },
+    repeat: { x: repeatX, y: repeatY },
+  };
+}
+
+/**
+ * Calculate UVs for a sprite defined by pixel rect coordinates.
+ *
+ * @param rect - Pixel rectangle in the texture (x, y from top-left, width, height in pixels)
+ * @param textureSize - Total size of the texture in pixels
+ * @returns UV coordinates for the rect region
+ */
+export function calculateRectUVs(
+  rect: { x: number; y: number; width: number; height: number },
+  textureSize: { x: number; y: number }
+): SpriteUVResult {
+  // Convert pixel coords to UV coords
+  // Note: Y is flipped (UV 0 = bottom, pixel 0 = top)
+  const offsetX = rect.x / textureSize.x;
+  const offsetY = (textureSize.y - rect.y - rect.height) / textureSize.y;
+
+  const repeatX = rect.width / textureSize.x;
+  const repeatY = rect.height / textureSize.y;
 
   return {
     offset: { x: offsetX, y: offsetY },

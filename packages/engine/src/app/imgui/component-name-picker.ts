@@ -112,9 +112,8 @@ export function renderComponentNamePicker(options: ComponentNamePickerOptions): 
   // Search box
   const searchBuffer: [string] = [state.searchText];
   ImGui.SetNextItemWidth(width - 20);
-  if (ImGui.InputText('##search', searchBuffer, 256)) {
-    state.searchText = searchBuffer[0];
-  }
+  ImGui.InputText('##search', searchBuffer, 256);
+  state.searchText = searchBuffer[0];
   ImGui.SameLine();
   if (ImGui.Button('Clear##search')) {
     state.searchText = '';
@@ -135,7 +134,7 @@ export function renderComponentNamePicker(options: ComponentNamePickerOptions): 
   );
 
   // Component list
-  ImGui.BeginChild('ComponentList', new ImVec2(width, height), ImGui.ChildFlags.Border);
+  ImGui.BeginChild('ComponentList', new ImVec2(width, height), ImGui.ChildFlags.Borders);
 
   if (filteredComponents.length === 0) {
     ImGui.TextDisabled('No components found');

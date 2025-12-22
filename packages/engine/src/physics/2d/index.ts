@@ -5,7 +5,13 @@
  */
 
 // Context
-export { Physics2DContext, type RaycastHit2D } from './physics-2d-context.js';
+export {
+  Physics2DContext,
+  type RaycastHit2D,
+  type ShapeCastHit2D,
+  type PointProjection2D,
+  type ContactPair2D,
+} from './physics-2d-context.js';
 
 // Components
 export * from './components/index.js';
@@ -14,3 +20,4 @@ export * from './components/index.js';
 export { physics2DComponentSyncSystem } from './physics-2d-component-sync.js';
 export { physics2DSyncSystem } from './physics-2d-sync-system.js';
 export { physics2DCleanupSystem } from './physics-2d-cleanup-system.js';
+export { physics2DCollisionEventSystem } from './physics-2d-collision-event-system.js';

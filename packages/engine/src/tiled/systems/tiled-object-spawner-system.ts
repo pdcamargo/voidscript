@@ -155,6 +155,7 @@ function spawnTiledObject(
         tileIndex: localTileId,
         tileSize: { x: tilesetInfo.tileWidth, y: tilesetInfo.tileHeight },
         tilesetSize: { x: tilesetInfo.imageWidth, y: tilesetInfo.imageHeight },
+        spriteRect: null, // Tiled uses tile-based sprites
         pixelsPerUnit: map.tilewidth, // Use map's tile size as pixelsPerUnit
         flipX,
         flipY,

@@ -38,6 +38,8 @@ export interface CustomMenu {
  * Each callback is invoked synchronously when the menu item is clicked.
  */
 export interface MenuBarCallbacks {
+  /** Called when New World menu item is clicked (creates new empty world) */
+  onNewWorld?: () => void;
   /** Called when Save World menu item is clicked (saves to current path if available) */
   onSaveWorld?: () => void;
   /** Called when Save World As menu item is clicked (always shows dialog) */
@@ -89,6 +91,17 @@ function renderCustomMenuItems(items: CustomMenuItem[]): void {
 export function renderMainMenuBar(callbacks: MenuBarCallbacks): void {
   if (ImGui.BeginMainMenuBar()) {
     if (ImGui.BeginMenu('File')) {
+      // New World - only enabled if not playing
+      if (!callbacks.isPlaying) {
+        if (ImGui.MenuItem('New World', 'Ctrl+N')) {
+          callbacks.onNewWorld?.();
+        }
+      } else {
+        ImGui.BeginDisabled();
+        ImGui.MenuItem('New World', 'Ctrl+N');
+        ImGui.EndDisabled();
+      }
+
       // Save - only enabled if we have a current path AND not playing
       const canSave = callbacks.hasCurrentPath && !callbacks.isPlaying;
       if (canSave) {

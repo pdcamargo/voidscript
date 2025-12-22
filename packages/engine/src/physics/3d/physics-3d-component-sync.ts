@@ -27,7 +27,17 @@ import { Damping } from '../components/damping.js';
 import { Ccd } from '../components/ccd.js';
 import { Transform3D } from '../../ecs/components/rendering/transform-3d.js';
 import { CharacterController3D } from './components/character-controller-3d.js';
+import {
+  ActiveCollisionEvents3D,
+  ActiveCollisionEventsFlags3D,
+} from './components/active-collision-events-3d.js';
+import { ContactForceEventThreshold3D } from './components/contact-force-threshold-3d.js';
+import { CollisionGroups3D } from './components/collision-groups-3d.js';
+import { ActiveHooks3D } from './components/active-hooks-3d.js';
+import { ActiveHooksFlags } from '../collision/physics-hooks.js';
 import type { ColliderShape3D } from '../types.js';
+import type { Command } from '../../ecs/command.js';
+import type { Entity } from '../../ecs/entity.js';
 
 /**
  * Helper to create Rapier collider descriptor from shape definition
@@ -58,6 +68,63 @@ function eulerToQuaternion(euler: { x: number; y: number; z: number }): { x: num
   const quat = new THREE.Quaternion();
   quat.setFromEuler(new THREE.Euler(euler.x, euler.y, euler.z, 'XYZ'));
   return { x: quat.x, y: quat.y, z: quat.z, w: quat.w };
+}
+
+/**
+ * Configure collision event flags, groups, hooks, and thresholds on a collider descriptor.
+ * Called when creating colliders to apply optional collision components.
+ */
+function configureColliderCollisionSettings(
+  colliderDesc: RAPIER.ColliderDesc,
+  entity: Entity,
+  commands: Command,
+): void {
+  // Configure active collision events
+  const activeEvents = commands.tryGetComponent(entity, ActiveCollisionEvents3D);
+  if (activeEvents) {
+    let rapierEvents = 0;
+    if (activeEvents.events & ActiveCollisionEventsFlags3D.COLLISION_EVENTS) {
+      rapierEvents |= RAPIER.ActiveEvents.COLLISION_EVENTS;
+    }
+    if (activeEvents.events & ActiveCollisionEventsFlags3D.CONTACT_FORCE_EVENTS) {
+      rapierEvents |= RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS;
+    }
+    colliderDesc.setActiveEvents(rapierEvents);
+
+    // CRITICAL: Enable collision types for kinematic-fixed pairs (character controller + sensor/static)
+    // By default, Rapier only generates events for dynamic-dynamic and dynamic-fixed.
+    // For character controllers (kinematic) to receive events from sensors (fixed), we need this.
+    colliderDesc.setActiveCollisionTypes(RAPIER.ActiveCollisionTypes.ALL);
+  }
+
+  // Configure contact force event threshold
+  const threshold = commands.tryGetComponent(entity, ContactForceEventThreshold3D);
+  if (threshold) {
+    colliderDesc.setContactForceEventThreshold(threshold.threshold);
+  }
+
+  // Configure collision groups
+  const collisionGroups = commands.tryGetComponent(entity, CollisionGroups3D);
+  if (collisionGroups) {
+    // Rapier packs memberships in high 16 bits, filter in low 16 bits
+    const packed =
+      ((collisionGroups.memberships & 0xffff) << 16) |
+      (collisionGroups.filter & 0xffff);
+    colliderDesc.setCollisionGroups(packed);
+  }
+
+  // Configure active hooks
+  const activeHooks = commands.tryGetComponent(entity, ActiveHooks3D);
+  if (activeHooks) {
+    let rapierHooks = 0;
+    if (activeHooks.hooks & ActiveHooksFlags.FILTER_CONTACT_PAIRS) {
+      rapierHooks |= RAPIER.ActiveHooks.FILTER_CONTACT_PAIRS;
+    }
+    if (activeHooks.hooks & ActiveHooksFlags.FILTER_INTERSECTION_PAIRS) {
+      rapierHooks |= RAPIER.ActiveHooks.FILTER_INTERSECTION_PAIRS;
+    }
+    colliderDesc.setActiveHooks(rapierHooks);
+  }
 }
 
 export const physics3DComponentSyncSystem = system(({ commands }) => {
@@ -216,6 +283,9 @@ export const physics3DComponentSyncSystem = system(({ commands }) => {
       colliderDesc.setRestitution(collider.restitution);
       colliderDesc.setDensity(collider.density);
 
+      // Configure collision events, groups, and hooks
+      configureColliderCollisionSettings(colliderDesc, entity, commands);
+
       const rapierCollider = world.createCollider(colliderDesc, rapierBody);
       physics.registerCollider(entity, rapierCollider.handle);
 
@@ -240,6 +310,23 @@ export const physics3DComponentSyncSystem = system(({ commands }) => {
       rapierCollider.setRestitution(collider.restitution);
       rapierCollider.setDensity(collider.density);
       rapierCollider.setSensor(collider.isSensor);
+
+      // Update active collision events if component exists
+      const activeEvents = commands.tryGetComponent(entity, ActiveCollisionEvents3D);
+      if (activeEvents) {
+        let rapierEvents = 0;
+        if (activeEvents.events & ActiveCollisionEventsFlags3D.COLLISION_EVENTS) {
+          rapierEvents |= RAPIER.ActiveEvents.COLLISION_EVENTS;
+        }
+        if (activeEvents.events & ActiveCollisionEventsFlags3D.CONTACT_FORCE_EVENTS) {
+          rapierEvents |= RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS;
+        }
+        const currentEvents = rapierCollider.activeEvents();
+        if (currentEvents !== rapierEvents) {
+          rapierCollider.setActiveEvents(rapierEvents);
+          rapierCollider.setActiveCollisionTypes(RAPIER.ActiveCollisionTypes.ALL);
+        }
+      }
     });
 
   // ==========================================================================
@@ -281,6 +368,9 @@ export const physics3DComponentSyncSystem = system(({ commands }) => {
       colliderDesc.setFriction(collider.friction);
       colliderDesc.setRestitution(collider.restitution);
       colliderDesc.setDensity(collider.density);
+
+      // Configure collision events, groups, and hooks
+      configureColliderCollisionSettings(colliderDesc, entity, commands);
 
       const rapierCollider = world.createCollider(colliderDesc, rapierBody);
       physics.registerCollider(entity, rapierCollider.handle);

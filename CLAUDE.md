@@ -490,6 +490,39 @@ customEditor: ({ label, value, onChange, componentData }) => {
 - Access other properties via `componentData` in property editors
 - Property editors can return early to hide the field entirely
 
+**CRITICAL - Label Positioning:**
+
+When implementing custom editors, **ALWAYS put labels on the LEFT side of controls**, not on the right. This follows standard UI conventions and improves readability.
+
+**INCORRECT (label on right):**
+```typescript
+// DON'T DO THIS - label appears on the right side
+const value: [number] = [data.myValue];
+ImGui.SliderFloat('My Value', value, 0.0, 1.0);  // ❌ WRONG
+data.myValue = value[0];
+```
+
+**CORRECT (label on left):**
+```typescript
+// DO THIS - label appears on the left side
+ImGui.Text('My Value:');
+const value: [number] = [data.myValue];
+ImGui.SliderFloat('##myValue', value, 0.0, 1.0);  // ✅ CORRECT (using ## hidden label)
+if (ImGui.IsItemHovered()) {
+  ImGui.SetTooltip('Helpful description of this property');
+}
+data.myValue = value[0];
+```
+
+**Pattern for all controls:**
+- Sliders: `ImGui.Text('Label:')` then `ImGui.SliderFloat('##hiddenLabel', ...)`
+- Drag inputs: `ImGui.Text('Label:')` then `ImGui.DragFloat('##hiddenLabel', ...)`
+- Integer inputs: `ImGui.Text('Label:')` then `ImGui.DragInt('##hiddenLabel', ...)`
+- Checkboxes: Use `ImGui.Checkbox('Label', ...)` (checkboxes naturally have labels on the right)
+- Color pickers: `ImGui.Text('Label:')` then `ImGui.ColorEdit3('##hiddenLabel', ...)`
+
+Always use unique `##hiddenLabel` identifiers for each control to avoid ImGui ID conflicts.
+
 ### Animation System
 
 The engine has a keyframe-based animation system supporting multiple property types, easing functions, and loop modes.

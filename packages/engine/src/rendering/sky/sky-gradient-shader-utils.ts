@@ -129,16 +129,19 @@ export const skyGradientFragmentUnlit = /* glsl */`
   }
 `;
 
-// Lit fragment shader (TODO: integrate Three.js lighting)
+// Lit fragment shader (integrates Three.js ambient lighting)
 export const skyGradientFragmentLit = /* glsl */`
-  ${skyGradientFragmentCommon}
-
   void main() {
     vec4 gradient = texture2D(gradientTexture, vec2(0.5, vUv.y));
     vec3 stars = generateStars(vUv, time);
 
-    // For now, same as unlit (lighting integration TBD)
-    vec3 finalColor = gradient.rgb + stars;
+    // Apply ambient lighting to gradient and stars
+    // Multiply both by ambientLightColor for consistent scene lighting
+    vec3 litGradient = gradient.rgb * ambientLightColor;
+    vec3 litStars = stars * ambientLightColor;
+
+    // Additive blending for stars (with lighting applied)
+    vec3 finalColor = litGradient + litStars;
 
     gl_FragColor = vec4(finalColor, gradient.a);
   }

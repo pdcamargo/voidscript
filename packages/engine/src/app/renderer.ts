@@ -106,8 +106,14 @@ export class Renderer {
     });
 
     // Configure renderer
+    // NOTE: We intentionally set pixelRatio to 1 to avoid conflicts with jsimgui.
+    // jsimgui reads canvas.clientWidth/clientHeight for DisplaySize, but Three.js
+    // with setPixelRatio(2) sets canvas.width/height to 2x the CSS size.
+    // This mismatch causes ImGui to render to only 1/4 of the screen on Retina.
+    // By setting pixelRatio to 1, both Three.js and ImGui use the same coordinate system.
+    // Trade-off: Slightly less sharp rendering on Retina displays.
     this.renderer.setSize(window.getWidth(), window.getHeight());
-    this.renderer.setPixelRatio(window.getPixelRatio());
+    this.renderer.setPixelRatio(1);
     this.renderer.setClearColor(
       config.clearColor ?? 0x000000,
       config.clearAlpha ?? 1.0,

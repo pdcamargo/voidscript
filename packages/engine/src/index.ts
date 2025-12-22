@@ -116,6 +116,8 @@ export {
   isAnimationMetadata,
   isAudioAssetMetadata,
   isUnknownAssetMetadata,
+  isTiledSpriteDefinition,
+  isRectSpriteDefinition,
 } from "./ecs/asset-metadata.js";
 export type {
   GUID,
@@ -126,6 +128,9 @@ export type {
   AudioAssetMetadata,
   UnknownAssetMetadata,
   AssetMetadata,
+  BaseSpriteDefinition,
+  TiledSpriteDefinition,
+  RectSpriteDefinition,
   SpriteDefinition,
 } from "./ecs/asset-metadata.js";
 export type {
@@ -222,6 +227,8 @@ export { SkyGradient2D } from "./ecs/components/rendering/sky-gradient.js";
 export type { SkyGradient2DData, GradientStop } from "./ecs/components/rendering/sky-gradient.js";
 export { Fog2D, FogType } from "./ecs/components/rendering/fog-2d.js";
 export type { Fog2DData } from "./ecs/components/rendering/fog-2d.js";
+export { Rain2D } from "./ecs/components/rendering/rain-2d.js";
+export type { Rain2DData } from "./ecs/components/rendering/rain-2d.js";
 
 // Audio Components
 export { AudioListener } from "./ecs/components/audio/audio-listener.js";
@@ -407,6 +414,12 @@ export {
   PhysicsObject2D,
   CharacterController2D,
   DesiredMovement2D,
+  ActiveCollisionEvents2D,
+  ActiveCollisionEventsFlags2D,
+  CollisionGroups2D,
+  CollisionGroup,
+  ActiveHooks2D,
+  ContactForceEventThreshold2D,
   // 3D Components
   RigidBody3D,
   Velocity3D,
@@ -415,10 +428,28 @@ export {
   PhysicsObject3D,
   CharacterController3D,
   DesiredMovement3D,
+  ActiveCollisionEvents3D,
+  ActiveCollisionEventsFlags3D,
+  CollisionGroups3D,
+  ActiveHooks3D,
+  ContactForceEventThreshold3D,
   // Shared Components
   GravityScale,
   Damping,
   Ccd,
+  // Collision Events
+  CollisionEventFlags,
+  CollisionStarted2D,
+  CollisionEnded2D,
+  CollisionStarted3D,
+  CollisionEnded3D,
+  ContactForce2D,
+  ContactForce3D,
+  // Query Filter & Physics Hooks
+  QueryFilterFlags,
+  DEFAULT_QUERY_FILTER,
+  SolverFlags,
+  ActiveHooksFlags,
   // Systems
   physics2DComponentSyncSystem,
   physics3DComponentSyncSystem,
@@ -426,6 +457,8 @@ export {
   physics3DCleanupSystem,
   physics2DSyncSystem,
   physics3DSyncSystem,
+  physics2DCollisionEventSystem,
+  physics3DCollisionEventSystem,
 } from './physics/index.js';
 export type {
   // Config
@@ -442,6 +475,10 @@ export type {
   PhysicsObject2DData,
   CharacterController2DData,
   DesiredMovement2DData,
+  ActiveCollisionEvents2DData,
+  CollisionGroups2DData,
+  ActiveHooks2DData,
+  ContactForceEventThreshold2DData,
   // 3D Data
   RigidBody3DData,
   Velocity3DData,
@@ -450,6 +487,10 @@ export type {
   PhysicsObject3DData,
   CharacterController3DData,
   DesiredMovement3DData,
+  ActiveCollisionEvents3DData,
+  CollisionGroups3DData,
+  ActiveHooks3DData,
+  ContactForceEventThreshold3DData,
   // Shared Data
   GravityScaleData,
   DampingData,
@@ -457,7 +498,51 @@ export type {
   // Query Results
   RaycastHit2D,
   RaycastHit3D,
+  ShapeCastHit2D,
+  ShapeCastHit3D,
+  PointProjection2D,
+  PointProjection3D,
+  ContactPair2D,
+  ContactPair3D,
+  // Query Filter & Hooks
+  QueryFilter,
+  QueryPredicate,
+  PhysicsHooks2D,
+  PhysicsHooks3D,
+  ContactFilterContext,
+  ContactModificationContext2D,
+  ContactModificationContext3D,
 } from './physics/index.js';
+
+// Trigger Zone Components (generic collision event dispatching)
+export { TriggerZone2D } from './ecs/components/trigger/trigger-zone-2d.js';
+export type { TriggerZone2DData } from './ecs/components/trigger/trigger-zone-2d.js';
+export { TriggerZone3D } from './ecs/components/trigger/trigger-zone-3d.js';
+export type { TriggerZone3DData } from './ecs/components/trigger/trigger-zone-3d.js';
+
+// Trigger Zone Systems
+export {
+  triggerZone2DSystem,
+  triggerZone3DSystem,
+  passesTriggerFilter,
+  dispatchTriggerEvents,
+} from './ecs/systems/trigger/index.js';
+export type { TriggerFilterMode } from './ecs/systems/trigger/trigger-utils.js';
+
+// Trigger Zone Events
+export {
+  TriggerZoneEnter2D,
+  TriggerZoneLeave2D,
+  TriggerZoneEnter3D,
+  TriggerZoneLeave3D,
+} from './physics/collision/trigger-events.js';
+
+// Event Name Picker (for custom trigger zone editors)
+export {
+  renderEventNamePicker,
+  clearEventPickerState,
+} from './app/imgui/event-name-picker.js';
+export type { EventNamePickerOptions } from './app/imgui/event-name-picker.js';
 
 // Math utilities
 export { Vector3, SeededRandom, SimplexNoise } from './math/index.js';

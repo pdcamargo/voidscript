@@ -17,3 +17,20 @@ export {
   DesiredMovement3D,
   type DesiredMovement3DData,
 } from './desired-movement-3d.js';
+export {
+  ActiveCollisionEvents3D,
+  ActiveCollisionEventsFlags3D,
+  type ActiveCollisionEvents3DData,
+} from './active-collision-events-3d.js';
+export {
+  ContactForceEventThreshold3D,
+  type ContactForceEventThreshold3DData,
+} from './contact-force-threshold-3d.js';
+export {
+  CollisionGroups3D,
+  type CollisionGroups3DData,
+} from './collision-groups-3d.js';
+export {
+  ActiveHooks3D,
+  type ActiveHooks3DData,
+} from './active-hooks-3d.js';
