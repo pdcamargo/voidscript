@@ -5,6 +5,8 @@ export interface Cloud2DData {
   direction: { x: number; y: number };
   minBoundX: number;
   maxBoundX: number;
+  /** Actual speed after random variation (90%-110% of base speed). Set at runtime. */
+  actualSpeed: number;
 }
 
 export const Cloud2D = component<Cloud2DData>(
@@ -25,6 +27,9 @@ export const Cloud2D = component<Cloud2DData>(
       serializable: true,
       instanceType: Number,
     },
+    actualSpeed: {
+      serializable: false,
+    },
   },
   {
     displayName: 'Cloud 2D',
@@ -36,6 +41,7 @@ export const Cloud2D = component<Cloud2DData>(
       direction: { x: 1, y: 0 },
       minBoundX: -250,
       maxBoundX: 300,
+      actualSpeed: 0,
     }),
   },
 );

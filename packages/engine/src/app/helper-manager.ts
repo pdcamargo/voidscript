@@ -14,7 +14,9 @@ import { HELPER_LAYER } from '../constants/layers.js';
 import { Collider2DHelper } from '../rendering/helpers/Collider2DHelper.js';
 import { Collider3DHelper } from '../rendering/helpers/Collider3DHelper.js';
 import { Box3Helper } from '../rendering/helpers/Box3Helper.js';
+import { LightningField2DHelper } from '../rendering/helpers/LightningField2DHelper.js';
 import type { ColliderShape2D, ColliderShape3D } from '../physics/types.js';
+import type { Transform3DData } from '../ecs/components/rendering/transform-3d.js';
 
 const HELPER_RENDER_ORDER = 999999999;
 
@@ -41,7 +43,12 @@ interface Box3HelperEntry {
   helper: Box3Helper;
 }
 
-type HelperEntry = CameraHelperEntry | Collider2DHelperEntry | Collider3DHelperEntry | Box3HelperEntry;
+interface LightningField2DHelperEntry {
+  type: 'lightningField2d';
+  helper: LightningField2DHelper;
+}
+
+type HelperEntry = CameraHelperEntry | Collider2DHelperEntry | Collider3DHelperEntry | Box3HelperEntry | LightningField2DHelperEntry;
 
 export interface HelperManagerConfig {
   scene: THREE.Scene;
@@ -224,6 +231,43 @@ export class HelperManager {
   }
 
   /**
+   * Create a lightning field 2D helper for the given entity.
+   */
+  createLightningField2DHelper(
+    entity: Entity,
+    baseSize: { x: number; y: number },
+    resolution: { width: number; height: number },
+  ): LightningField2DHelper | null {
+    if (!this._showHelpers) return null;
+
+    this.removeHelper(entity);
+
+    const helper = new LightningField2DHelper(baseSize, resolution);
+    this.applyHelperProperties(helper);
+    this.scene.add(helper);
+    this.helpers.set(entity, {
+      type: 'lightningField2d',
+      helper,
+    });
+
+    return helper;
+  }
+
+  /**
+   * Update a lightning field 2D helper's transform and size.
+   */
+  updateLightningField2DHelper(
+    entity: Entity,
+    baseSize: { x: number; y: number },
+    transform: Transform3DData,
+  ): void {
+    const entry = this.helpers.get(entity);
+    if (entry && entry.type === 'lightningField2d') {
+      entry.helper.update(baseSize, transform);
+    }
+  }
+
+  /**
    * Update a camera helper's transform.
    */
   updateCameraHelper(
@@ -246,7 +290,7 @@ export class HelperManager {
    */
   updateResolution(width: number, height: number): void {
     for (const entry of this.helpers.values()) {
-      if (entry.type === 'collider2d' || entry.type === 'collider3d' || entry.type === 'box3') {
+      if (entry.type === 'collider2d' || entry.type === 'collider3d' || entry.type === 'box3' || entry.type === 'lightningField2d') {
         entry.helper.setResolution(width, height);
       }
     }
@@ -300,6 +344,8 @@ export class HelperManager {
     if (entry.type === 'camera') {
       entry.helper.dispose();
     } else if (entry.type === 'collider2d' || entry.type === 'collider3d') {
+      entry.helper.dispose();
+    } else if (entry.type === 'lightningField2d') {
       entry.helper.dispose();
     }
 

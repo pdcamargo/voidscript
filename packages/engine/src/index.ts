@@ -229,6 +229,8 @@ export { Fog2D, FogType } from "./ecs/components/rendering/fog-2d.js";
 export type { Fog2DData } from "./ecs/components/rendering/fog-2d.js";
 export { Rain2D } from "./ecs/components/rendering/rain-2d.js";
 export type { Rain2DData } from "./ecs/components/rendering/rain-2d.js";
+export { LightningField2D } from "./ecs/components/rendering/lightning-field-2d.js";
+export type { LightningField2DData } from "./ecs/components/rendering/lightning-field-2d.js";
 
 // Audio Components
 export { AudioListener } from "./ecs/components/audio/audio-listener.js";
@@ -263,6 +265,10 @@ export {
   SkyGradientRenderManager,
   skyGradient2DSystem,
 } from "./ecs/systems/sky-gradient-system.js";
+export {
+  LightningField2DRenderManager,
+  lightningField2DSyncSystem,
+} from "./ecs/systems/lightning-field-2d-system.js";
 
 // ECS Systems (3D)
 export {

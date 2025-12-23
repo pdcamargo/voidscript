@@ -41,6 +41,7 @@ import { Collider2D } from '../physics/2d/components/collider-2d.js';
 import { Collider3D } from '../physics/3d/components/collider-3d.js';
 import { SpriteAreaGenerator } from '../ecs/components/generators/sprite-area-generator.js';
 import { Rain2D } from '../ecs/components/rendering/rain-2d.js';
+import { LightningField2D } from '../ecs/components/rendering/lightning-field-2d.js';
 import { VirtualCamera } from '../ecs/components/rendering/virtual-camera.js';
 import { VirtualCameraBounds } from '../ecs/components/rendering/virtual-camera-bounds.js';
 import { VirtualCameraFollow } from '../ecs/components/rendering/virtual-camera-follow.js';
@@ -557,6 +558,37 @@ export class EditorLayer extends Layer {
             1
           );
         }
+      } else {
+        // Remove helper if shouldn't show
+        if (this.helperManager!.hasHelper(entity)) {
+          this.helperManager!.removeHelper(entity);
+          this.helperEntities.delete(entity);
+        }
+      }
+    });
+
+    // Sync LightningField2D helpers
+    commands.query().all(LightningField2D, Transform3D).each((entity, lightning, transform) => {
+      seenEntities.add(entity);
+      const shouldShow = showAll || entity === selectedEntity;
+
+      if (shouldShow) {
+        // Create helper if doesn't exist
+        if (!this.helperManager!.hasHelper(entity)) {
+          this.helperManager!.createLightningField2DHelper(
+            entity,
+            lightning.baseSize,
+            resolution
+          );
+          this.helperEntities.add(entity);
+        }
+
+        // Update helper transform and size
+        this.helperManager!.updateLightningField2DHelper(
+          entity,
+          lightning.baseSize,
+          transform
+        );
       } else {
         // Remove helper if shouldn't show
         if (this.helperManager!.hasHelper(entity)) {
