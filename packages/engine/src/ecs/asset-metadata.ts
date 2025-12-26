@@ -85,6 +85,13 @@ export interface BaseSpriteDefinition {
 
   /** Display name shown in sprite picker */
   name: string;
+
+  /**
+   * GUID of the texture this sprite belongs to.
+   * Auto-populated by AssetDatabase during registration.
+   * Enables cross-texture sprite animations.
+   */
+  textureGuid?: GUID;
 }
 
 /**

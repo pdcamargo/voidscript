@@ -41,6 +41,13 @@ export interface AnimationControllerData {
 
   /** Callback when animation loops */
   onLoop?: (loopCount: number) => void;
+
+  /**
+   * Runtime-loaded clips that aren't from asset references.
+   * Used by the animation editor for preview mode.
+   * Key is the clip ID.
+   */
+  loadedClips?: Map<string, AnimationClip>;
 }
 
 // ============================================================================
@@ -214,13 +221,22 @@ export function removeAnimationAsset(
 }
 
 /**
- * Get the currently active AnimationClip from loaded assets
+ * Get the currently active AnimationClip from loaded assets or loadedClips map
  */
 export function getCurrentClip(
   controller: AnimationControllerData
 ): AnimationClip | null {
   if (!controller.currentAnimationId) return null;
 
+  // First check loadedClips (used for editor preview)
+  if (controller.loadedClips) {
+    const clip = controller.loadedClips.get(controller.currentAnimationId);
+    if (clip) {
+      return clip;
+    }
+  }
+
+  // Then check animation assets
   for (const asset of controller.animations) {
     if (
       asset.isLoaded &&

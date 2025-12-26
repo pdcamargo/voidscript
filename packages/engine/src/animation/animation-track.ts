@@ -28,6 +28,13 @@ export interface Color {
 export interface SpriteValue {
   /** Sprite ID to display */
   spriteId: string;
+
+  /**
+   * Optional texture GUID. If provided, the animation system will switch
+   * to this texture when applying the sprite. If not provided, the system
+   * will search all textures to find the sprite by ID.
+   */
+  textureGuid?: string;
 }
 
 /**

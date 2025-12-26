@@ -31,13 +31,12 @@ import type {
   AssetMetadata,
   TextureMetadata,
   Model3DMetadata,
-  ModelFormat,
   TiledMapMetadata,
   AnimationMetadata,
   AudioAssetMetadata,
   SpriteDefinition,
 } from './asset-metadata.js';
-import { AssetType, TextureFilter, TextureWrap } from './asset-metadata.js';
+import { AssetType, TextureFilter, TextureWrap, ModelFormat, isTextureMetadata } from './asset-metadata.js';
 import { RuntimeAssetManager } from './runtime-asset-manager.js';
 import type { Vector3 } from '../math/index.js';
 
@@ -290,6 +289,205 @@ export class AssetDatabase {
     AssetDatabase.instance = null;
   }
 
+  /**
+   * Register additional assets (e.g., from manifest file)
+   * Can be called after initialization to merge more assets
+   *
+   * @param assets - Assets to register (will merge with existing, overwriting on conflict)
+   */
+  static registerAdditionalAssets(assets: AssetsConfig): void {
+    AssetDatabase.get().registerAssets(assets);
+  }
+
+  /**
+   * Parse a JSON string into AssetsConfig format.
+   * The JSON should be an object where keys are GUIDs and values are asset configurations.
+   *
+   * String values for enums are automatically converted:
+   * - type: "texture" | "audio" | "model3d" | "tiledmap" | "animation"
+   * - magFilter/minFilter: "nearest" | "linear"
+   * - wrapS/wrapT: "repeat" | "clamp" | "mirror"
+   * - format (Model3D): "gltf" | "glb" | "fbx"
+   *
+   * @param jsonString - JSON string containing asset configurations
+   * @returns Parsed AssetsConfig object
+   * @throws Error if JSON is invalid or contains unknown asset types
+   *
+   * @example
+   * ```typescript
+   * const json = `{
+   *   "player-texture": {
+   *     "type": "texture",
+   *     "path": "/textures/player.png",
+   *     "magFilter": "nearest"
+   *   }
+   * }`;
+   * const assets = AssetDatabase.parseAssetsJson(json);
+   * AssetDatabase.registerAdditionalAssets(assets);
+   * ```
+   */
+  static parseAssetsJson(jsonString: string): AssetsConfig {
+    const parsed = JSON.parse(jsonString) as Record<string, unknown>;
+    const result: AssetsConfig = {};
+
+    for (const [guid, rawConfig] of Object.entries(parsed)) {
+      if (!rawConfig || typeof rawConfig !== 'object') {
+        console.warn(`[AssetDatabase] Invalid asset config for GUID ${guid}, skipping`);
+        continue;
+      }
+
+      const config = rawConfig as Record<string, unknown>;
+      const type = config['type'] as string;
+
+      if (!type) {
+        console.warn(`[AssetDatabase] Missing type for asset ${guid}, skipping`);
+        continue;
+      }
+
+      // Validate and convert type string to AssetType enum
+      if (!Object.values(AssetType).includes(type as AssetType)) {
+        console.warn(`[AssetDatabase] Unknown asset type "${type}" for ${guid}, skipping`);
+        continue;
+      }
+
+      // Build the typed config based on asset type
+      switch (type as AssetType) {
+        case AssetType.Texture: {
+          const textureConfig: TextureAssetConfig = {
+            type: AssetType.Texture,
+            path: config['path'] as string,
+            magFilter: config['magFilter'] as TextureFilter | undefined,
+            minFilter: config['minFilter'] as TextureFilter | undefined,
+            wrapS: config['wrapS'] as TextureWrap | undefined,
+            wrapT: config['wrapT'] as TextureWrap | undefined,
+            sRGB: config['sRGB'] as boolean | undefined,
+            generateMipmaps: config['generateMipmaps'] as boolean | undefined,
+            width: config['width'] as number | undefined,
+            height: config['height'] as number | undefined,
+            sprites: config['sprites'] as SpriteDefinition[] | undefined,
+          };
+          result[guid] = textureConfig;
+          break;
+        }
+
+        case AssetType.Audio: {
+          const audioConfig: AudioAssetConfig = {
+            type: AssetType.Audio,
+            path: config['path'] as string,
+          };
+          result[guid] = audioConfig;
+          break;
+        }
+
+        case AssetType.Model3D: {
+          const model3DConfig: Model3DAssetConfig = {
+            type: AssetType.Model3D,
+            path: config['path'] as string,
+            format: config['format'] as ModelFormat,
+            scale: config['scale'] as number | Vector3 | undefined,
+            rotation: config['rotation'] as Vector3 | undefined,
+            hasAnimations: config['hasAnimations'] as boolean | undefined,
+            animationNames: config['animationNames'] as string[] | undefined,
+            vertexCount: config['vertexCount'] as number | undefined,
+            triangleCount: config['triangleCount'] as number | undefined,
+            boundingBox: config['boundingBox'] as
+              | { min: Vector3; max: Vector3 }
+              | undefined,
+          };
+          result[guid] = model3DConfig;
+          break;
+        }
+
+        case AssetType.TiledMap: {
+          const tiledMapConfig: TiledMapAssetConfig = {
+            type: AssetType.TiledMap,
+            path: config['path'] as string,
+            pixelsPerUnit: config['pixelsPerUnit'] as number | undefined,
+            worldOffset: config['worldOffset'] as
+              | { x: number; y: number; z: number }
+              | undefined,
+            autoSpawnLayers: config['autoSpawnLayers'] as boolean | undefined,
+          };
+          result[guid] = tiledMapConfig;
+          break;
+        }
+
+        case AssetType.Animation: {
+          const animationConfig: AnimationAssetConfig = {
+            type: AssetType.Animation,
+            path: config['path'] as string,
+          };
+          result[guid] = animationConfig;
+          break;
+        }
+
+        default:
+          console.warn(`[AssetDatabase] Unsupported asset type "${type}" for ${guid}, skipping`);
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Find a sprite by ID across all registered textures.
+   * Returns the sprite definition along with the texture GUID it belongs to.
+   *
+   * @param spriteId - The sprite ID to search for
+   * @returns Object with textureGuid and sprite, or null if not found
+   *
+   * @example
+   * ```typescript
+   * const result = AssetDatabase.findSpriteById('walk-frame-1');
+   * if (result) {
+   *   console.log(`Found sprite in texture: ${result.textureGuid}`);
+   *   console.log(`Sprite name: ${result.sprite.name}`);
+   * }
+   * ```
+   */
+  static findSpriteById(spriteId: string): { textureGuid: GUID; sprite: SpriteDefinition } | null {
+    const db = AssetDatabase.get();
+    for (const [guid, metadata] of db.assetsByGuid) {
+      if (isTextureMetadata(metadata) && metadata.sprites) {
+        const sprite = metadata.sprites.find((s) => s.id === spriteId);
+        if (sprite) {
+          return { textureGuid: guid, sprite };
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Get all sprites from a specific texture
+   *
+   * @param textureGuid - The texture GUID
+   * @returns Array of sprite definitions, or empty array if texture not found or has no sprites
+   */
+  static getSpritesForTexture(textureGuid: GUID): SpriteDefinition[] {
+    const metadata = AssetDatabase.getMetadata(textureGuid);
+    if (metadata && isTextureMetadata(metadata) && metadata.sprites) {
+      return metadata.sprites;
+    }
+    return [];
+  }
+
+  /**
+   * Get all sprites from all registered textures
+   *
+   * @returns Array of all sprite definitions across all textures
+   */
+  static getAllSprites(): SpriteDefinition[] {
+    const db = AssetDatabase.get();
+    const allSprites: SpriteDefinition[] = [];
+    for (const [, metadata] of db.assetsByGuid) {
+      if (isTextureMetadata(metadata) && metadata.sprites) {
+        allSprites.push(...metadata.sprites);
+      }
+    }
+    return allSprites;
+  }
+
   // ===== Instance Methods =====
 
   private registerAssets(assets: AssetsConfig): void {
@@ -335,7 +533,13 @@ export class AssetDatabase {
     };
 
     switch (config.type) {
-      case AssetType.Texture:
+      case AssetType.Texture: {
+        // Inject textureGuid into each sprite definition
+        const sprites = config.sprites?.map((sprite) => ({
+          ...sprite,
+          textureGuid: guid,
+        }));
+
         return {
           ...base,
           type: AssetType.Texture,
@@ -346,8 +550,9 @@ export class AssetDatabase {
           generateMipmaps: config.generateMipmaps ?? true,
           width: config.width,
           height: config.height,
-          sprites: config.sprites,
+          sprites,
         } as TextureMetadata;
+      }
 
       case AssetType.Model3D: {
         // Normalize scale to Vector3 format

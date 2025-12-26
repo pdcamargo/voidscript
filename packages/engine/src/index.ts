@@ -375,6 +375,25 @@ export { AnimationClip, LoopMode } from "./animation/animation-clip.js";
 export type { TrackValue } from "./animation/animation-clip.js";
 export { AnimationManager } from "./animation/animation-manager.js";
 
+// Animation - Property-Based System
+export { PropertyTrack, getEasingFunction, getEasingName, getAvailableEasingNames } from "./animation/property-track.js";
+export type { PropertyKeyframe, SerializedKeyframe } from "./animation/property-track.js";
+export { parsePropertyPath, setNestedProperty, getNestedProperty } from "./animation/property-path.js";
+export type { ResolvedPropertyPath } from "./animation/property-path.js";
+export {
+  InterpolationMode,
+  getInterpolationMode,
+  inferInterpolationMode,
+  interpolateValue,
+  lerpNumber,
+  lerpVector3,
+  lerpColor,
+  isVector3Like,
+  isColorLike,
+  isSpriteValueLike,
+} from "./animation/interpolation.js";
+export type { SpriteValue } from "./animation/interpolation.js";
+
 // Animation - Controller Component
 export {
   AnimationController,
@@ -652,3 +671,44 @@ export type {
   UIButtonData,
   UIButtonState,
 } from './ui/index.js';
+
+// Animation Editor module - visual animation clip editor
+export {
+  // Window and state
+  renderAnimationEditorWindow,
+  isAnimationEditorOpen,
+  openAnimationEditor,
+  closeAnimationEditor,
+  createNewAnimation,
+  getAnimationEditorState,
+  handleAnimationEditorShortcut,
+  initializeCustomWindowsFromStorage,
+  // Panel visibility API
+  isPanelVisible,
+  setPanelVisible,
+  togglePanelVisibility,
+  // Serialization
+  jsonToEditorState,
+  editorStateToJson,
+  loadAnimationFromJson,
+  serializeCurrentState,
+  getDefaultValueForProperty,
+  // Constants
+  ANIMATION_EDITOR_COLORS,
+  TRACK_PANEL_WIDTH,
+  TRACK_ROW_HEIGHT,
+  TIME_RULER_HEIGHT,
+  TOOLBAR_HEIGHT,
+  PLAYBACK_CONTROLS_HEIGHT,
+  KEYFRAME_SIZE,
+  EASING_NAMES,
+} from './app/imgui/animation-editor/index.js';
+export type {
+  AnimationEditorState,
+  EditorTrack,
+  EditorKeyframe,
+  KeyframeValue,
+  Vector3Value,
+  EasingName,
+  PanelName,
+} from './app/imgui/animation-editor/index.js';

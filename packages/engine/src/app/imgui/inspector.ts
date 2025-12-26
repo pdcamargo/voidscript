@@ -30,6 +30,10 @@ import {
   openAssetPicker,
 } from './asset-picker.js';
 import { setSpritePickerRenderer } from '../../ecs/components/rendering/sprite-2d.js';
+import {
+  hasSelectedKeyframe,
+  renderKeyframeEditor,
+} from './animation-editor/keyframe-editor.js';
 
 // Selection state
 let selectedEntity: Entity | undefined = undefined;
@@ -58,6 +62,13 @@ export function renderImGuiInspector(app: Application, entity?: Entity): void {
   ImGui.SetNextWindowSize({ x: 400, y: 600 }, ImGui.Cond.FirstUseEver);
 
   if (ImGui.Begin('Inspector')) {
+    // Check if a keyframe is selected in the animation editor - show keyframe editor instead
+    if (hasSelectedKeyframe()) {
+      renderKeyframeEditor(currentRenderer, app.world);
+      ImGui.End();
+      return;
+    }
+
     // Keyboard shortcuts (only when window focused and not typing in text fields)
     if (
       targetEntity !== undefined &&

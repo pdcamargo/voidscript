@@ -1,0 +1,238 @@
+{
+  "$schema": "../../../packages/engine/schemas/asset-manifest.schema.json",
+  "woods": {
+    "type": "audio",
+    "path": "/assets/audio/woods.ogg"
+  },
+  "mountain-grass-1": {
+    "type": "texture",
+    "path": "/assets/sprites/Mountain Grass 1.png",
+    "magFilter": "nearest",
+    "minFilter": "nearest",
+    "wrapS": "clamp",
+    "wrapT": "clamp",
+    "width": 2029,
+    "height": 700,
+    "sprites": [
+      {
+        "id": "mountain-grass-1",
+        "name": "Mountain Grass 1",
+        "tileIndex": 0,
+        "tileWidth": 2029,
+        "tileHeight": 700
+      }
+    ]
+  },
+  "moon": {
+    "type": "texture",
+    "path": "/assets/sprites/Moon.png",
+    "magFilter": "nearest",
+    "minFilter": "nearest",
+    "wrapS": "clamp",
+    "wrapT": "clamp",
+    "width": 512,
+    "height": 512,
+    "sprites": [
+      {
+        "id": "moon-1",
+        "name": "Moon",
+        "tileIndex": 0,
+        "tileWidth": 512,
+        "tileHeight": 512
+      }
+    ]
+  },
+  "sun": {
+    "type": "texture",
+    "path": "/assets/sprites/Sun.png",
+    "magFilter": "nearest",
+    "minFilter": "nearest",
+    "wrapS": "clamp",
+    "wrapT": "clamp",
+    "width": 512,
+    "height": 512,
+    "sprites": [
+      {
+        "id": "sun-1",
+        "name": "Sun",
+        "tileIndex": 0,
+        "tileWidth": 512,
+        "tileHeight": 512
+      }
+    ]
+  },
+  "clouds": {
+    "type": "texture",
+    "path": "/assets/sprites/Clouds.png",
+    "magFilter": "nearest",
+    "minFilter": "nearest",
+    "wrapS": "clamp",
+    "wrapT": "clamp",
+    "width": 640,
+    "height": 94,
+    "sprites": [
+      {
+        "id": "cloud-1",
+        "name": "Cloud 1",
+        "tileIndex": 0,
+        "tileWidth": 160,
+        "tileHeight": 47
+      },
+      {
+        "id": "cloud-2",
+        "name": "Cloud 2",
+        "tileIndex": 1,
+        "tileWidth": 160,
+        "tileHeight": 47
+      },
+      {
+        "id": "cloud-3",
+        "name": "Cloud 3",
+        "tileIndex": 2,
+        "tileWidth": 160,
+        "tileHeight": 47
+      },
+      {
+        "id": "cloud-4",
+        "name": "Cloud 4",
+        "tileIndex": 3,
+        "tileWidth": 160,
+        "tileHeight": 47
+      },
+      {
+        "id": "cloud-5",
+        "name": "Cloud 5",
+        "tileIndex": 4,
+        "tileWidth": 160,
+        "tileHeight": 47
+      }
+    ]
+  },
+  "forestBackground": {
+    "type": "texture",
+    "path": "/assets/sprites/Forest Background.png",
+    "magFilter": "nearest",
+    "minFilter": "nearest",
+    "wrapS": "clamp",
+    "wrapT": "clamp",
+    "width": 1600,
+    "height": 276,
+    "sprites": [
+      {
+        "id": "forest-background-1",
+        "name": "Forest Background 1",
+        "tileIndex": 0,
+        "tileWidth": 1600,
+        "tileHeight": 276
+      }
+    ]
+  },
+  "trees": {
+    "type": "texture",
+    "path": "/assets/sprites/Trees.png",
+    "magFilter": "nearest",
+    "minFilter": "nearest",
+    "wrapS": "clamp",
+    "wrapT": "clamp",
+    "width": 1678,
+    "height": 319,
+    "sprites": [
+      {
+        "id": "trees-1",
+        "name": "Tree 1",
+        "x": 0,
+        "y": 0,
+        "width": 295,
+        "height": 319
+      },
+      {
+        "id": "trees-2",
+        "name": "Tree 2",
+        "x": 295,
+        "y": 0,
+        "width": 295,
+        "height": 319
+      },
+      {
+        "id": "trees-3",
+        "name": "Tree 3",
+        "x": 590,
+        "y": 0,
+        "width": 285,
+        "height": 319
+      },
+      {
+        "id": "trees-4",
+        "name": "Tree 4",
+        "x": 875,
+        "y": 0,
+        "width": 202,
+        "height": 319
+      },
+      {
+        "id": "trees-5",
+        "name": "Tree 5",
+        "x": 1077,
+        "y": 0,
+        "width": 202,
+        "height": 319
+      },
+      {
+        "id": "trees-6",
+        "name": "Tree 6",
+        "x": 1279,
+        "y": 0,
+        "width": 202,
+        "height": 319
+      }
+    ]
+  },
+  "ground": {
+    "type": "texture",
+    "path": "/assets/sprites/Ground.png",
+    "magFilter": "nearest",
+    "minFilter": "nearest",
+    "wrapS": "clamp",
+    "wrapT": "clamp",
+    "width": 1652,
+    "height": 116,
+    "sprites": [
+      {
+        "id": "ground-1",
+        "name": "Ground",
+        "x": 0,
+        "y": 0,
+        "width": 1652,
+        "height": 116
+      }
+    ]
+  },
+  "rocks": {
+    "type": "texture",
+    "path": "/assets/sprites/Rocks.png",
+    "magFilter": "nearest",
+    "minFilter": "nearest",
+    "wrapS": "clamp",
+    "wrapT": "clamp",
+    "width": 1244,
+    "height": 210,
+    "sprites": [
+      {
+        "id": "rocks-1",
+        "name": "Rock 1",
+        "x": 0,
+        "y": 0,
+        "width": 577,
+        "height": 222
+      },
+      {
+        "id": "rocks-2",
+        "name": "Rock 2",
+        "x": 570,
+        "y": 0,
+        "width": 178,
+        "height": 96
+      }
+    ]
+  }
+}

@@ -23,7 +23,8 @@
 import type * as tiled from '@kayahr/tiled';
 import * as THREE from 'three';
 import { AnimationClip, LoopMode } from '../animation/animation-clip.js';
-import { IntegerTrack } from '../animation/animation-track.js';
+import { PropertyTrack } from '../animation/property-track.js';
+import { InterpolationMode } from '../animation/interpolation.js';
 import { loadTexture, type TextureLoadOptions } from '../loaders/texture-loader.js';
 import { resolvePath } from './tiled-utils.js';
 import { AssetDatabase } from '../ecs/asset-database.js';
@@ -305,8 +306,8 @@ export class TiledAssetRegistry {
     const totalDuration =
       animation.reduce((sum, frame) => sum + frame.duration, 0) / 1000;
 
-    // Create IntegerTrack for frame changes
-    const track = new IntegerTrack('tileIndex');
+    // Create PropertyTrack with discrete interpolation for frame changes
+    const track = new PropertyTrack<number>('Sprite2D.tileIndex', InterpolationMode.Discrete);
     let time = 0;
 
     for (const frame of animation) {

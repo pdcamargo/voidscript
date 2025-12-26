@@ -37,6 +37,7 @@ import { MainCamera } from '../ecs/components/rendering/main-camera.js';
 import { Camera } from '../ecs/components/rendering/camera.js';
 import { CameraClearColor } from '../ecs/components/rendering/camera-clear-color.js';
 import { Transform3D } from '../ecs/components/rendering/transform-3d.js';
+import { Name } from '../ecs/components/name.js';
 import { Collider2D } from '../physics/2d/components/collider-2d.js';
 import { Collider3D } from '../physics/3d/components/collider-3d.js';
 import { SpriteAreaGenerator } from '../ecs/components/generators/sprite-area-generator.js';
@@ -52,6 +53,16 @@ import { UIViewportBounds } from '../ui/ui-viewport-bounds.js';
 import { UIInteractionManager } from '../ui/ui-interaction.js';
 import { PostProcessingManager } from '../post-processing/managers/post-processing-manager.js';
 import { PostProcessing, type PostProcessingData } from '../ecs/components/rendering/post-processing.js';
+import {
+  renderAnimationEditorWindow,
+  isAnimationEditorOpen,
+  openAnimationEditor,
+  closeAnimationEditor,
+  initializeCustomWindowsFromStorage,
+  isPanelVisible,
+  togglePanelVisibility,
+} from '../app/imgui/animation-editor/index.js';
+import { AnimationController } from '../ecs/components/animation/animation-controller.js';
 
 // ============================================================================
 // Editor Configuration
@@ -88,25 +99,22 @@ export interface EditorConfig {
   menuCallbacks?: Partial<MenuBarCallbacks>;
 
   /**
-   * Whether to show the Scene View panel (default: true)
-   */
-  showSceneView?: boolean;
-
-  /**
-   * Whether to show the Game View panel (default: true)
-   */
-  showGameView?: boolean;
-
-  /**
-   * Whether to show the Debug panel (default: true)
-   */
-  showDebugPanel?: boolean;
-
-  /**
    * Whether to show debug helpers for all entities with applicable components
    * (Collider2D, Camera, etc.) by default. (default: true)
    */
   showHelpers?: boolean;
+
+  // -------------------------------------------------------------------------
+  // DEPRECATED: Panel visibility is now controlled via Window menu and persisted
+  // to localStorage. These options are ignored. Use togglePanelVisibility() instead.
+  // -------------------------------------------------------------------------
+
+  /** @deprecated Use Window menu instead. Panel visibility is persisted to localStorage. */
+  showSceneView?: boolean;
+  /** @deprecated Use Window menu instead. Panel visibility is persisted to localStorage. */
+  showGameView?: boolean;
+  /** @deprecated Use Window menu instead. Panel visibility is persisted to localStorage. */
+  showDebugPanel?: boolean;
 }
 
 // ============================================================================
@@ -210,6 +218,9 @@ export class EditorLayer extends Layer {
     // Restore currentScenePath from localStorage so Save button is enabled
     // if a scene was previously saved and auto-loaded by Application
     this.currentScenePath = this.getCachedScenePath();
+
+    // Restore custom window states (e.g., Animation Editor)
+    initializeCustomWindowsFromStorage();
   }
 
   /**
@@ -999,6 +1010,44 @@ export class EditorLayer extends Layer {
     const editorManager = app.getResource(EditorManager);
 
     // Render main menu bar
+    // Combine built-in window menu items with user-defined ones
+    // Panel toggles with checkmarks (using unicode checkmark for visual feedback)
+    const builtInWindowMenuItems = [
+      {
+        label: isPanelVisible('hierarchy') ? '✓ Hierarchy' : '   Hierarchy',
+        onClick: () => togglePanelVisibility('hierarchy'),
+      },
+      {
+        label: isPanelVisible('inspector') ? '✓ Inspector' : '   Inspector',
+        onClick: () => togglePanelVisibility('inspector'),
+      },
+      {
+        label: isPanelVisible('sceneView') ? '✓ Scene View' : '   Scene View',
+        onClick: () => togglePanelVisibility('sceneView'),
+      },
+      {
+        label: isPanelVisible('gameView') ? '✓ Game View' : '   Game View',
+        onClick: () => togglePanelVisibility('gameView'),
+      },
+      {
+        label: isPanelVisible('debugPanel') ? '✓ Debug' : '   Debug',
+        onClick: () => togglePanelVisibility('debugPanel'),
+      },
+      {
+        label: isAnimationEditorOpen() ? '✓ Animation Editor' : '   Animation Editor',
+        onClick: () => {
+          if (isAnimationEditorOpen()) {
+            closeAnimationEditor();
+          } else {
+            openAnimationEditor();
+          }
+        },
+        separatorBefore: true,
+      },
+    ];
+    const userWindowMenuItems = this.config.menuCallbacks?.windowMenuItems ?? [];
+    const combinedWindowMenuItems = [...builtInWindowMenuItems, ...userWindowMenuItems];
+
     const menuCallbacks: MenuBarCallbacks = {
       onNewWorld: this.config.menuCallbacks?.onNewWorld ?? (() => this.handleNewWorld()),
       onSaveWorld: this.config.menuCallbacks?.onSaveWorld ?? (() => this.handleSaveWorld()),
@@ -1008,7 +1057,7 @@ export class EditorLayer extends Layer {
       hasCurrentPath: this.config.menuCallbacks?.hasCurrentPath ?? (this.currentScenePath !== null),
       isPlaying: this.config.menuCallbacks?.isPlaying ?? (editorManager?.mode === 'play'),
       fileMenuItems: this.config.menuCallbacks?.fileMenuItems,
-      windowMenuItems: this.config.menuCallbacks?.windowMenuItems,
+      windowMenuItems: combinedWindowMenuItems,
       customMenus: this.config.menuCallbacks?.customMenus,
     };
     renderMainMenuBar(menuCallbacks);
@@ -1373,18 +1422,32 @@ export class EditorLayer extends Layer {
       const dockspaceId = ImGui.GetID('EditorDockspace');
       ImGui.DockSpace(dockspaceId, { x: 0, y: 0 }, ImGui.DockNodeFlags.PassthruCentralNode);
 
-      // Render individual panels
-      this.renderHierarchyPanel(app);
-      this.renderInspectorPanel(app);
-
-      if (this.config.showSceneView !== false) {
+      // Render individual panels based on visibility state
+      if (isPanelVisible('hierarchy')) {
+        this.renderHierarchyPanel(app);
+      }
+      if (isPanelVisible('inspector')) {
+        this.renderInspectorPanel(app);
+      }
+      if (isPanelVisible('sceneView')) {
         this.renderSceneViewPanel(app);
       }
-      if (this.config.showGameView !== false) {
+      if (isPanelVisible('gameView')) {
         this.renderGameViewPanel(app);
       }
-      if (this.config.showDebugPanel !== false) {
+      if (isPanelVisible('debugPanel')) {
         renderDebugPanel(app);
+      }
+
+      // Render animation editor window if open
+      if (isAnimationEditorOpen()) {
+        renderAnimationEditorWindow(
+          this.config.platform!,
+          app.getRenderer(),
+          () => this.getEntitiesForAnimationPreview(app),
+          app.world,
+          app.getCommands(),
+        );
       }
     } else {
       ImGui.PopStyleVar(3);
@@ -1781,6 +1844,38 @@ export class EditorLayer extends Layer {
     this.cacheScenePath(filePath);
 
     console.log(`[EditorLayer] New world created at: ${filePath}`);
+  }
+
+  // ============================================================================
+  // Animation Editor Helpers
+  // ============================================================================
+
+  /**
+   * Get list of entities with AnimationController component.
+   * Only these entities can be used for animation editing.
+   */
+  private getEntitiesForAnimationPreview(app: Application): Array<{ entity: Entity; name: string }> {
+    const entities: Array<{ entity: Entity; name: string }> = [];
+    const world = app.world;
+
+    // Query only entities with AnimationController (entities that can be animated)
+    app
+      .getCommands()
+      .query()
+      .all(AnimationController)
+      .each((entity) => {
+        // Get entity name from Name component, always include ID for uniqueness
+        const nameComp = world.getComponent(entity, Name);
+        const displayName = nameComp?.name
+          ? `${nameComp.name} (#${entity})`
+          : `Entity #${entity}`;
+        entities.push({
+          entity,
+          name: displayName,
+        });
+      });
+
+    return entities;
   }
 
   // ============================================================================

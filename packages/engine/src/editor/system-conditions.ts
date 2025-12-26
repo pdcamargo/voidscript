@@ -8,6 +8,45 @@
 
 import type { SystemRunCondition } from '../ecs/system.js';
 import { EditorManager } from './editor-manager.js';
+import type { Entity } from '../ecs/entity.js';
+
+// ============================================================================
+// Animation Preview State
+// ============================================================================
+
+/**
+ * Entity currently being previewed in the animation editor.
+ * When set, the animation system will run for this entity even in edit mode.
+ */
+let animationPreviewEntity: Entity | null = null;
+
+/**
+ * Set the entity to preview animations on.
+ * When set, the animation system will update this entity even in edit mode.
+ *
+ * @param entity - Entity to preview, or null to disable preview
+ */
+export function setAnimationPreviewEntity(entity: Entity | null): void {
+  animationPreviewEntity = entity;
+}
+
+/**
+ * Get the entity currently being previewed in the animation editor.
+ *
+ * @returns The preview entity, or null if no preview is active
+ */
+export function getAnimationPreviewEntity(): Entity | null {
+  return animationPreviewEntity;
+}
+
+/**
+ * Check if animation preview mode is currently active.
+ *
+ * @returns True if an entity is being previewed
+ */
+export function isAnimationPreviewMode(): boolean {
+  return animationPreviewEntity !== null;
+}
 
 /**
  * System runs only in Play mode
@@ -100,6 +139,37 @@ export function isPausedMode(): SystemRunCondition {
       return false;
     }
     return editor.mode === 'pause';
+  };
+}
+
+/**
+ * System runs when animation preview is active.
+ *
+ * Use for systems that should run during animation preview in the editor.
+ * Animation preview runs in edit mode for a specific entity.
+ *
+ * @example
+ * ```ts
+ * const animationSystem = system(({ commands }) => {
+ *   // Animation logic
+ * }).runIf(or(isGameplayActive(), isAnimationPreviewActive()));
+ * ```
+ */
+export function isAnimationPreviewActive(): SystemRunCondition {
+  return ({ commands }) => {
+    // Only active when we have a preview entity set
+    if (!animationPreviewEntity) {
+      return false;
+    }
+
+    // In edit mode (not play mode), allow animation preview
+    const editor = commands.tryGetResource(EditorManager);
+    if (!editor) {
+      return false;
+    }
+
+    // Preview should work in edit mode
+    return editor.mode === 'edit';
   };
 }
 

@@ -2,10 +2,13 @@
  * Animation Update System
  *
  * ECS system that updates all AnimationController components each frame.
- * Evaluates animation clips and applies values to entity components.
+ * Evaluates animation clips and applies values to entity components using
+ * the property-based animation system.
  *
- * Note: This system only runs when gameplay is active (play mode or no editor).
- * In edit mode, animations are paused.
+ * This system runs when:
+ * - In play mode (EditorManager exists and is playing)
+ * - Or no editor (pure game, always runs)
+ * - Or in editor preview mode (for animation preview in the editor)
  */
 
 import { system } from '../system.js';
@@ -14,25 +17,38 @@ import {
   getCurrentClip,
   type AnimationControllerData,
 } from '../components/animation/animation-controller.js';
-import { Transform3D } from '../components/rendering/transform-3d.js';
-import { Sprite2D, type Sprite2DData } from '../components/rendering/sprite-2d.js';
 import { AnimationManager } from '../../animation/animation-manager.js';
-import { LoopMode, type TrackValue } from '../../animation/animation-clip.js';
-import type { Color, SpriteValue } from '../../animation/animation-track.js';
-import type { Vector3 } from '../../math/vector3.js';
+import { LoopMode, type TrackValue, type GroupedTrackValues } from '../../animation/animation-clip.js';
+import {
+  parsePropertyPath,
+  resolveComponentType,
+  setNestedProperty,
+  buildPropertyPath,
+} from '../../animation/property-path.js';
+import {
+  applyValueHandler,
+  hasValueHandler,
+  type ValueHandlerContext,
+} from '../../animation/value-handlers.js';
+import { isColorLike, isVector3Like } from '../../animation/interpolation.js';
 import type { Entity } from '../entity.js';
 import type { Command } from '../command.js';
-import { isGameplayActive } from '../../editor/system-conditions.js';
-import { AssetDatabase } from '../asset-database.js';
 import {
-  isTextureMetadata,
-  isTiledSpriteDefinition,
-  isRectSpriteDefinition,
-} from '../asset-metadata.js';
+  isGameplayActive,
+  isAnimationPreviewActive,
+  getAnimationPreviewEntity,
+  or,
+} from '../../editor/system-conditions.js';
 
 // ============================================================================
 // Animation Update System
 // ============================================================================
+
+/**
+ * Condition for running the animation system.
+ * Runs during gameplay OR during animation preview in editor.
+ */
+const isAnimationActive = or(isGameplayActive(), isAnimationPreviewActive());
 
 /**
  * System that updates all AnimationController components.
@@ -40,25 +56,33 @@ import {
  * Registered automatically by Application.addBuiltInSystems().
  * Runs in the 'update' phase.
  *
- * Only executes when:
+ * Executes when:
  * - In play mode (EditorManager exists and is playing)
  * - Or no editor (pure game, always runs)
+ * - Or in editor animation preview mode (only for the preview entity)
  */
 export const animationUpdateSystem = system(({ commands }) => {
   const animManager = commands.getResource(AnimationManager);
   const deltaTime = animManager.getEffectiveDeltaTime(commands.getDeltaTime());
 
-  // Skip if paused
-  if (deltaTime === 0) return;
+  // Check if we're in preview mode
+  const previewEntity = getAnimationPreviewEntity();
+  const isPreviewMode = previewEntity !== null;
+
+  // Skip if paused (unless we're in preview mode which manages its own time)
+  if (deltaTime === 0 && !isPreviewMode) return;
 
   // Update all entities with AnimationController
   commands
     .query()
     .all(AnimationController)
     .each((entity, controller) => {
-      updateAnimationController(entity, controller, deltaTime, commands);
+      // In preview mode, only update the preview entity
+      if (isPreviewMode && entity !== previewEntity) return;
+
+      updateAnimationController(entity, controller, deltaTime, commands, isPreviewMode);
     });
-}).runIf(isGameplayActive());
+}).runIf(isAnimationActive);
 
 // ============================================================================
 // Internal Functions
@@ -71,241 +95,170 @@ function updateAnimationController(
   entity: Entity,
   controller: AnimationControllerData,
   deltaTime: number,
-  commands: Command
+  commands: Command,
+  isPreviewMode: boolean = false,
 ): void {
-  // Skip if not playing or no animation selected
-  if (!controller.isPlaying || !controller.currentAnimationId) return;
+  // Skip if no animation selected
+  if (!controller.currentAnimationId) return;
+
+  // In preview mode, we always evaluate at the current time (managed by editor)
+  // In normal mode, we only update if playing
+  if (!isPreviewMode && !controller.isPlaying) return;
 
   // Get the current clip from loaded animation assets
   const clip = getCurrentClip(controller);
   if (!clip) return;
 
-  // Update time
-  controller.currentTime += deltaTime * controller.speed;
+  let normalizedTime: number;
+  let completed = false;
+  let loopCount = 0;
 
-  // Calculate normalized time with loop handling
-  const { normalizedTime, completed, loopCount } = clip.calculateNormalizedTime(
-    controller.currentTime
-  );
+  if (isPreviewMode) {
+    // In preview mode, the editor manages currentTime directly
+    // Just calculate normalized time without advancing
+    const result = clip.calculateNormalizedTime(controller.currentTime);
+    normalizedTime = result.normalizedTime;
+    completed = result.completed;
+    loopCount = result.loopCount;
+  } else {
+    // Normal playback mode - advance time by deltaTime
+    controller.currentTime += deltaTime * controller.speed;
 
-  // Handle loop callbacks
-  if (loopCount > controller.loopCount) {
-    controller.loopCount = loopCount;
-    controller.onLoop?.(loopCount);
+    // Calculate normalized time with loop handling
+    const result = clip.calculateNormalizedTime(controller.currentTime);
+    normalizedTime = result.normalizedTime;
+    completed = result.completed;
+    loopCount = result.loopCount;
+
+    // Handle loop callbacks
+    if (loopCount > controller.loopCount) {
+      controller.loopCount = loopCount;
+      controller.onLoop?.(loopCount);
+    }
+
+    // Handle completion
+    if (completed && clip.loopMode === LoopMode.Once) {
+      controller.isPlaying = false;
+      controller.onComplete?.();
+    }
   }
 
-  // Handle completion
-  if (completed && clip.loopMode === LoopMode.Once) {
-    controller.isPlaying = false;
-    controller.onComplete?.();
-  }
-
-  // Evaluate all tracks and apply values
-  const values = clip.evaluate(normalizedTime);
-  applyAnimationValues(entity, commands, values);
+  // Evaluate all tracks and apply values (grouped by component)
+  const groupedValues = clip.evaluateGrouped(normalizedTime);
+  applyAnimationValues(entity, commands, groupedValues);
 }
 
 /**
- * Apply evaluated animation values to entity components
+ * Apply evaluated animation values to entity components.
+ * Uses the property-based system to generically apply values to any component.
  */
 function applyAnimationValues(
   entity: Entity,
   commands: Command,
-  values: Map<string, TrackValue>
+  groupedValues: GroupedTrackValues,
 ): void {
-  // Get Transform3D if it exists
-  const transform = commands.tryGetComponent(entity, Transform3D);
+  for (const [componentName, properties] of groupedValues) {
+    // Resolve the component type from the registry
+    const componentType = resolveComponentType(componentName);
+    if (!componentType) {
+      // Component not found in registry - skip
+      continue;
+    }
 
-  // Get Sprite2D if it exists (for color animations)
-  const sprite = commands.tryGetComponent(entity, Sprite2D);
+    // Get the component data from the entity
+    const componentData = commands.tryGetComponent(entity, componentType);
+    if (!componentData) {
+      // Entity doesn't have this component - skip
+      continue;
+    }
 
-  for (const [propertyPath, value] of values) {
-    applyPropertyValue(propertyPath, value, transform, sprite);
+    // Apply each property value
+    for (const [propertyPath, value] of properties) {
+      applyPropertyValue(entity, commands, componentName, propertyPath, componentData, value);
+    }
   }
 }
 
 /**
- * Apply a single property value based on property path
+ * Apply a single property value to a component.
  */
 function applyPropertyValue(
+  entity: Entity,
+  commands: Command,
+  componentName: string,
   propertyPath: string,
+  componentData: any,
   value: TrackValue,
-  transform: { position: Vector3; rotation: Vector3; scale: Vector3 } | undefined,
-  sprite: Sprite2DData | undefined
 ): void {
-  // Handle Transform3D properties
-  if (transform) {
-    switch (propertyPath) {
-      case 'position':
-        if (isVector3(value)) {
-          transform.position.x = value.x;
-          transform.position.y = value.y;
-          transform.position.z = value.z;
-        }
-        break;
+  // Skip undefined values (e.g., from tracks with no keyframes)
+  if (value === undefined) {
+    return;
+  }
 
-      case 'rotation':
-        if (isVector3(value)) {
-          transform.rotation.x = value.x;
-          transform.rotation.y = value.y;
-          transform.rotation.z = value.z;
-        }
-        break;
+  const fullPropertyPath = buildPropertyPath(componentName, propertyPath);
 
-      case 'scale':
-        if (isVector3(value)) {
-          transform.scale.x = value.x;
-          transform.scale.y = value.y;
-          transform.scale.z = value.z;
-        }
-        break;
+  // Check if there's a value handler for this property
+  if (hasValueHandler(fullPropertyPath)) {
+    const context: ValueHandlerContext = {
+      entity,
+      componentData,
+      commands,
+      fullPropertyPath,
+      componentName,
+      propertyPath,
+    };
 
-      case 'position.x':
-        if (typeof value === 'number') transform.position.x = value;
-        break;
-      case 'position.y':
-        if (typeof value === 'number') transform.position.y = value;
-        break;
-      case 'position.z':
-        if (typeof value === 'number') transform.position.z = value;
-        break;
+    const transformedValue = applyValueHandler(value, context);
 
-      case 'rotation.x':
-        if (typeof value === 'number') transform.rotation.x = value;
-        break;
-      case 'rotation.y':
-        if (typeof value === 'number') transform.rotation.y = value;
-        break;
-      case 'rotation.z':
-        if (typeof value === 'number') transform.rotation.z = value;
-        break;
+    // If handler returns undefined, it means it applied the value directly
+    if (transformedValue === undefined) {
+      return;
+    }
 
-      case 'scale.x':
-        if (typeof value === 'number') transform.scale.x = value;
-        break;
-      case 'scale.y':
-        if (typeof value === 'number') transform.scale.y = value;
-        break;
-      case 'scale.z':
-        if (typeof value === 'number') transform.scale.z = value;
-        break;
+    // Otherwise, use the transformed value
+    value = transformedValue as TrackValue;
+  }
+
+  // Apply the value to the component using the property path
+  applyValueToComponent(componentData, propertyPath, value);
+}
+
+/**
+ * Apply a value to a component using a property path.
+ * Handles both simple properties and nested paths (e.g., "position.x").
+ */
+function applyValueToComponent(componentData: any, propertyPath: string, value: TrackValue): void {
+  // Check if this is a nested path
+  const dotIndex = propertyPath.indexOf('.');
+  if (dotIndex !== -1) {
+    // Nested path like "position.x"
+    setNestedProperty(componentData, propertyPath, value);
+    return;
+  }
+
+  // Simple property - check if it's a complex object that needs special handling
+  const existingValue = componentData[propertyPath];
+
+  if (existingValue !== null && existingValue !== undefined && typeof existingValue === 'object') {
+    // Existing value is an object - try to update its properties
+    if (isVector3Like(value) && isVector3Like(existingValue)) {
+      // Vector3-like: update x, y, z
+      existingValue.x = value.x;
+      existingValue.y = value.y;
+      existingValue.z = value.z;
+      return;
+    }
+
+    if (isColorLike(value) && isColorLike(existingValue)) {
+      // Color-like: update r, g, b, a
+      existingValue.r = value.r;
+      existingValue.g = value.g;
+      existingValue.b = value.b;
+      existingValue.a = value.a;
+      return;
     }
   }
 
-  // Handle Sprite2D color property
-  if (sprite) {
-    switch (propertyPath) {
-      case 'color':
-        if (isColor(value)) {
-          sprite.color.r = value.r;
-          sprite.color.g = value.g;
-          sprite.color.b = value.b;
-          sprite.color.a = value.a;
-        }
-        break;
-
-      case 'color.r':
-        if (typeof value === 'number') sprite.color.r = value;
-        break;
-      case 'color.g':
-        if (typeof value === 'number') sprite.color.g = value;
-        break;
-      case 'color.b':
-        if (typeof value === 'number') sprite.color.b = value;
-        break;
-      case 'color.a':
-      case 'opacity':
-        if (typeof value === 'number') sprite.color.a = value;
-        break;
-
-      case 'tileIndex':
-        if (typeof value === 'number') {
-          sprite.tileIndex = Math.round(value); // Ensure integer
-        }
-        break;
-
-      case 'sprite':
-        if (isSpriteValue(value) && sprite.texture && sprite.texture.guid) {
-          // Look up sprite definition from texture metadata
-          const metadata = AssetDatabase.getMetadata(sprite.texture.guid);
-          if (metadata && isTextureMetadata(metadata)) {
-            const spriteDef = metadata.sprites?.find((s) => s.id === value.spriteId);
-            if (spriteDef) {
-              // Handle based on sprite type (tile vs rect)
-              if (isTiledSpriteDefinition(spriteDef)) {
-                // Tile-based sprite
-                sprite.tileIndex = spriteDef.tileIndex;
-                sprite.tileSize = { x: spriteDef.tileWidth, y: spriteDef.tileHeight };
-                sprite.spriteRect = null;
-
-                // Update tilesetSize from texture if loaded, or metadata
-                if (sprite.texture.isLoaded && sprite.texture.data?.image) {
-                  const image = sprite.texture.data.image;
-                  sprite.tilesetSize = {
-                    x: image.width || image.videoWidth || spriteDef.tileWidth,
-                    y: image.height || image.videoHeight || spriteDef.tileHeight,
-                  };
-                } else {
-                  sprite.tilesetSize = {
-                    x: metadata.width || spriteDef.tileWidth,
-                    y: metadata.height || spriteDef.tileHeight,
-                  };
-                }
-              } else if (isRectSpriteDefinition(spriteDef)) {
-                // Rect-based sprite
-                sprite.spriteRect = {
-                  x: spriteDef.x,
-                  y: spriteDef.y,
-                  width: spriteDef.width,
-                  height: spriteDef.height,
-                };
-                sprite.tileIndex = null;
-                sprite.tileSize = null;
-                sprite.tilesetSize = null;
-              }
-            }
-          }
-        }
-        break;
-    }
-  }
-}
-
-/**
- * Type guard for Vector3
- */
-function isVector3(value: TrackValue): value is Vector3 {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'x' in value &&
-    'y' in value &&
-    'z' in value &&
-    !('r' in value)
-  );
-}
-
-/**
- * Type guard for Color
- */
-function isColor(value: TrackValue): value is Color {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'r' in value &&
-    'g' in value &&
-    'b' in value &&
-    'a' in value
-  );
-}
-
-/**
- * Type guard for SpriteValue
- */
-function isSpriteValue(value: TrackValue): value is SpriteValue {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'spriteId' in value
-  );
+  // For simple values or when replacing the whole object
+  componentData[propertyPath] = value;
 }

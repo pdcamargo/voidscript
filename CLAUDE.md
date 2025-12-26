@@ -230,13 +230,37 @@ dispose(): void {
 
 ### Asset Database System
 
-The engine has a comprehensive asset management system for loading textures, audio, 3D models, animations, and more.
+The engine has a comprehensive asset management system for loading textures, audio, 3D models, animations, and more. Assets can be configured either inline in code or loaded from a JSON manifest file.
 
 **Key Files:**
 - `packages/engine/src/ecs/asset-metadata.ts` - Asset types and metadata interfaces
 - `packages/engine/src/ecs/asset-database.ts` - Asset registration and lookup
 - `packages/engine/src/ecs/asset-loader-registry.ts` - Asset loaders by type
 - `packages/engine/src/ecs/runtime-asset.ts` - Runtime asset wrapper with lazy loading
+
+**Two Ways to Configure Assets:**
+
+1. **Code-based** (inline in ApplicationConfig):
+```typescript
+const app = new Application({
+  assets: {
+    'player-texture': {
+      type: AssetType.Texture,
+      path: '/textures/player.png',
+      magFilter: TextureFilter.Nearest,
+    }
+  }
+});
+```
+
+2. **JSON Manifest** (external file):
+```typescript
+const app = new Application({
+  assetsManifest: '/assets/manifest.json'
+});
+```
+
+Both approaches can be used together - manifest assets are merged with code-based assets, with manifest taking priority on GUID conflicts.
 
 **Existing Asset Types** (in `AssetType` enum):
 - `Texture` - Images (.png, .jpg, etc.)
@@ -334,6 +358,120 @@ if (myComponentData.myAsset && !myComponentData.myAsset.isLoaded) {
 
 // Accessing loaded data
 const loadedData = myComponentData.myAsset?.data;
+```
+
+### Asset Manifest (JSON Format)
+
+Assets can be defined in an external JSON file instead of inline code. This is useful for:
+- Separating asset configuration from code
+- Editing assets without recompiling
+- Sharing asset definitions across projects
+
+**Using a Manifest:**
+```typescript
+const app = new Application({
+  // Load assets from JSON file
+  assetsManifest: '/assets/manifest.json',
+
+  // Can still have inline assets too (merged together)
+  assets: {
+    'extra-asset': { type: AssetType.Audio, path: '/audio/extra.ogg' }
+  }
+});
+```
+
+**Manifest JSON Format:**
+
+The manifest is a JSON object where keys are asset GUIDs and values are asset configurations:
+
+```json
+{
+  "player-texture": {
+    "type": "texture",
+    "path": "/textures/player.png",
+    "magFilter": "nearest",
+    "minFilter": "nearest",
+    "wrapS": "clamp",
+    "wrapT": "clamp",
+    "width": 64,
+    "height": 64,
+    "sprites": [
+      {
+        "id": "player-idle",
+        "name": "Player Idle",
+        "tileIndex": 0,
+        "tileWidth": 32,
+        "tileHeight": 32
+      }
+    ]
+  },
+  "background-music": {
+    "type": "audio",
+    "path": "/audio/background.ogg"
+  },
+  "enemy-model": {
+    "type": "model3d",
+    "path": "/models/enemy.glb",
+    "format": "glb",
+    "scale": 1.0
+  }
+}
+```
+
+**Supported Asset Types in JSON:**
+
+| Type | JSON `type` value | Additional Properties |
+|------|-------------------|----------------------|
+| Texture | `"texture"` | `magFilter`, `minFilter`, `wrapS`, `wrapT`, `width`, `height`, `sprites` |
+| Audio | `"audio"` | (none) |
+| Model3D | `"model3d"` | `format` (`"gltf"`, `"glb"`, `"fbx"`), `scale`, `rotation` |
+| TiledMap | `"tiledmap"` | `pixelsPerUnit`, `worldOffset`, `autoSpawnLayers` |
+| Animation | `"animation"` | (none) |
+
+**Enum String Values:**
+
+| Property | Valid Values |
+|----------|-------------|
+| `magFilter`, `minFilter` | `"nearest"`, `"linear"` |
+| `wrapS`, `wrapT` | `"repeat"`, `"clamp"`, `"mirror"` |
+| `format` (Model3D) | `"gltf"`, `"glb"`, `"fbx"` |
+
+**Sprite Definitions (Two Formats):**
+
+1. **Tile-based** (grid sprite sheets):
+```json
+{
+  "id": "walk-1",
+  "name": "Walk Frame 1",
+  "tileIndex": 0,
+  "tileWidth": 32,
+  "tileHeight": 32
+}
+```
+
+2. **Rect-based** (arbitrary atlas positions):
+```json
+{
+  "id": "tree-1",
+  "name": "Tree",
+  "x": 0,
+  "y": 0,
+  "width": 64,
+  "height": 128
+}
+```
+
+**Loading Order:**
+1. Code-based `assets` are registered in the Application constructor
+2. Manifest is loaded at the start of `app.run()` via fetch (or platform file reading for native apps)
+3. Manifest assets are merged in, overwriting any conflicting GUIDs
+
+**Programmatic JSON Parsing:**
+```typescript
+// Parse JSON string manually if needed
+const jsonString = await fetch('/assets/manifest.json').then(r => r.text());
+const assets = AssetDatabase.parseAssetsJson(jsonString);
+AssetDatabase.registerAdditionalAssets(assets);
 ```
 
 ### Custom Editor System

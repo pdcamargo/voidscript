@@ -267,6 +267,29 @@ export interface ApplicationConfig {
    */
   assets?: AssetsConfig;
 
+  /**
+   * Path to asset manifest JSON file (optional)
+   * Assets from this file will be merged with code-based assets.
+   * Manifest assets take priority on GUID conflicts.
+   *
+   * The JSON format matches the assets config structure:
+   * ```json
+   * {
+   *   "player-texture": {
+   *     "type": "texture",
+   *     "path": "/textures/player.png",
+   *     "magFilter": "nearest"
+   *   }
+   * }
+   * ```
+   *
+   * @example
+   * ```typescript
+   * assetsManifest: '/assets/manifest.json'
+   * ```
+   */
+  assetsManifest?: string;
+
   /** Physics configuration (optional) */
   physics?: PhysicsConfig;
 
@@ -446,6 +469,9 @@ export class Application {
    * Initializes all systems and starts the game loop
    */
   async run(): Promise<void> {
+    // Load asset manifest if specified (before other initialization)
+    await this.loadAssetManifest();
+
     // Detect target FPS if not specified
     if (this.targetFPS === 60) {
       const detectedFPS = await this.detectTargetFPS();
@@ -840,6 +866,42 @@ export class Application {
     this.pushLayer(this.editorLayer);
 
     console.log('[Application] Editor initialized');
+  }
+
+  /**
+   * Load asset manifest from JSON file (called from run())
+   * Assets from the manifest are merged with any code-based assets.
+   */
+  private async loadAssetManifest(): Promise<void> {
+    const manifestPath = this.config.assetsManifest;
+    if (!manifestPath) {
+      return;
+    }
+
+    console.log(`[Application] Loading asset manifest from: ${manifestPath}`);
+
+    try {
+      // Try to load via fetch first (works for web and Vite dev server)
+      let jsonString: string;
+      try {
+        const response = await fetch(manifestPath);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        jsonString = await response.text();
+      } catch {
+        // Fallback to platform file reading (for native apps like Tauri)
+        jsonString = await this.platform.readTextFile(manifestPath);
+      }
+
+      const assets = AssetDatabase.parseAssetsJson(jsonString);
+      const assetCount = Object.keys(assets).length;
+
+      AssetDatabase.registerAdditionalAssets(assets);
+      console.log(`[Application] Loaded ${assetCount} assets from manifest`);
+    } catch (error) {
+      console.error(`[Application] Failed to load asset manifest:`, error);
+    }
   }
 
   /**

@@ -2,24 +2,38 @@
  * Animation JSON Parser
  *
  * Parses animation clip definitions from JSON format into AnimationClip instances.
+ *
+ * New format (property-based):
+ * ```json
+ * {
+ *   "id": "walk",
+ *   "duration": 1.0,
+ *   "loopMode": "loop",
+ *   "tracks": [
+ *     {
+ *       "propertyPath": "Transform3D.position",
+ *       "keyframes": [
+ *         { "time": 0, "value": { "x": 0, "y": 0, "z": 0 } },
+ *         { "time": 1, "value": { "x": 10, "y": 0, "z": 0 }, "easing": "easeInOutQuad" }
+ *       ]
+ *     }
+ *   ]
+ * }
+ * ```
  */
 
-import { AnimationClip, LoopMode, type TrackValue } from './animation-clip.js';
 import {
-  NumberTrack,
-  IntegerTrack,
-  Vector3Track,
-  ColorTrack,
-  SpriteTrack,
-  type AnimationTrack,
-  type Color,
-  type SpriteValue,
-} from './animation-track.js';
-import { Vector3 } from '../math/vector3.js';
+  AnimationClip,
+  LoopMode,
+  type SerializedAnimationClip,
+  type SerializedTrack,
+} from './animation-clip.js';
+import { PropertyTrack, getEasingFunction, type SerializedKeyframe } from './property-track.js';
+import { InterpolationMode } from './interpolation.js';
 import { Easing, type EasingFunction } from './tween.js';
 
 // ============================================================================
-// JSON Schema Types
+// JSON Schema Types (for backwards compatibility documentation)
 // ============================================================================
 
 /**
@@ -46,16 +60,13 @@ export interface ColorJson {
  */
 export interface SpriteValueJson {
   spriteId: string;
+  textureGuid?: string;
 }
 
 /**
  * Keyframe value union type in JSON format
  */
-export type KeyframeValueJson =
-  | number
-  | Vector3Json
-  | ColorJson
-  | SpriteValueJson;
+export type KeyframeValueJson = number | Vector3Json | ColorJson | SpriteValueJson | unknown;
 
 /**
  * A keyframe in JSON format
@@ -70,13 +81,13 @@ export interface AnimationKeyframeJson {
 }
 
 /**
- * An animation track in JSON format
+ * An animation track in JSON format (new property-based format)
  */
 export interface AnimationTrackJson {
-  /** Property path (e.g., 'tileIndex', 'position', 'color') */
+  /** Full property path (e.g., 'Transform3D.position.x', 'Sprite2D.color') */
   propertyPath: string;
-  /** Type of property being animated */
-  propertyType: 'number' | 'integer' | 'vector3' | 'color' | 'sprite';
+  /** Optional interpolation mode override */
+  interpolationMode?: 'smooth' | 'discrete';
   /** Ordered keyframes */
   keyframes: AnimationKeyframeJson[];
 }
@@ -98,67 +109,6 @@ export interface AnimationClipJson {
 }
 
 // ============================================================================
-// Easing Name Mapping
-// ============================================================================
-
-/**
- * Map of easing function names to EasingFunction implementations
- */
-const EASING_MAP: Record<string, EasingFunction> = {
-  linear: Easing.linear,
-
-  // Quad
-  easeInQuad: Easing.easeInQuad,
-  easeOutQuad: Easing.easeOutQuad,
-  easeInOutQuad: Easing.easeInOutQuad,
-
-  // Cubic
-  easeInCubic: Easing.easeInCubic,
-  easeOutCubic: Easing.easeOutCubic,
-  easeInOutCubic: Easing.easeInOutCubic,
-
-  // Quart
-  easeInQuart: Easing.easeInQuart,
-  easeOutQuart: Easing.easeOutQuart,
-  easeInOutQuart: Easing.easeInOutQuart,
-
-  // Quint
-  easeInQuint: Easing.easeInQuint,
-  easeOutQuint: Easing.easeOutQuint,
-  easeInOutQuint: Easing.easeInOutQuint,
-
-  // Sine
-  easeInSine: Easing.easeInSine,
-  easeOutSine: Easing.easeOutSine,
-  easeInOutSine: Easing.easeInOutSine,
-
-  // Expo
-  easeInExpo: Easing.easeInExpo,
-  easeOutExpo: Easing.easeOutExpo,
-  easeInOutExpo: Easing.easeInOutExpo,
-
-  // Circ
-  easeInCirc: Easing.easeInCirc,
-  easeOutCirc: Easing.easeOutCirc,
-  easeInOutCirc: Easing.easeInOutCirc,
-
-  // Back
-  easeInBack: Easing.easeInBack,
-  easeOutBack: Easing.easeOutBack,
-  easeInOutBack: Easing.easeInOutBack,
-
-  // Elastic
-  easeInElastic: Easing.easeInElastic,
-  easeOutElastic: Easing.easeOutElastic,
-  easeInOutElastic: Easing.easeInOutElastic,
-
-  // Bounce
-  easeInBounce: Easing.easeInBounce,
-  easeOutBounce: Easing.easeOutBounce,
-  easeInOutBounce: Easing.easeInOutBounce,
-};
-
-// ============================================================================
 // Parsing Functions
 // ============================================================================
 
@@ -170,7 +120,7 @@ const EASING_MAP: Record<string, EasingFunction> = {
  */
 export function easingFromString(name: string | undefined): EasingFunction {
   if (!name) return Easing.linear;
-  return EASING_MAP[name] ?? Easing.linear;
+  return getEasingFunction(name);
 }
 
 /**
@@ -189,39 +139,17 @@ function loopModeFromString(mode: string | undefined): LoopMode {
 }
 
 /**
- * Type guard for Vector3Json
+ * Convert interpolation mode string to InterpolationMode enum
  */
-function isVector3Json(value: KeyframeValueJson): value is Vector3Json {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'x' in value &&
-    'y' in value &&
-    'z' in value
-  );
-}
-
-/**
- * Type guard for ColorJson
- */
-function isColorJson(value: KeyframeValueJson): value is ColorJson {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'r' in value &&
-    'g' in value &&
-    'b' in value &&
-    'a' in value
-  );
-}
-
-/**
- * Type guard for SpriteValueJson
- */
-function isSpriteValueJson(value: KeyframeValueJson): value is SpriteValueJson {
-  return (
-    typeof value === 'object' && value !== null && 'spriteId' in value
-  );
+function interpolationModeFromString(mode: string | undefined): InterpolationMode | undefined {
+  switch (mode) {
+    case 'smooth':
+      return InterpolationMode.Smooth;
+    case 'discrete':
+      return InterpolationMode.Discrete;
+    default:
+      return undefined; // Let the track infer from values
+  }
 }
 
 /**
@@ -238,7 +166,7 @@ export function parseAnimationClipJson(json: AnimationClipJson): AnimationClip {
 
   if (typeof json.duration !== 'number' || json.duration <= 0) {
     throw new Error(
-      `[AnimationJsonParser] Animation clip "${json.id}" must have a positive "duration" number`
+      `[AnimationJsonParser] Animation clip "${json.id}" must have a positive "duration" number`,
     );
   }
 
@@ -248,168 +176,161 @@ export function parseAnimationClipJson(json: AnimationClipJson): AnimationClip {
     .setSpeed(json.speed ?? 1.0);
 
   if (!Array.isArray(json.tracks)) {
-    throw new Error(
-      `[AnimationJsonParser] Animation clip "${json.id}" must have a "tracks" array`
-    );
+    throw new Error(`[AnimationJsonParser] Animation clip "${json.id}" must have a "tracks" array`);
   }
 
   for (const trackJson of json.tracks) {
     const track = parseTrackJson(trackJson, json.id);
-    clip.addTrack(track as AnimationTrack<TrackValue>);
+    clip.addTrack(track);
   }
 
   return clip;
 }
 
 /**
- * Parse a single track from JSON
+ * Parse a single track from JSON using the new PropertyTrack format
  */
-function parseTrackJson(
-  trackJson: AnimationTrackJson,
-  clipId: string
-): NumberTrack | IntegerTrack | Vector3Track | ColorTrack | SpriteTrack {
+function parseTrackJson(trackJson: AnimationTrackJson, clipId: string): PropertyTrack<unknown> {
   if (!trackJson.propertyPath || typeof trackJson.propertyPath !== 'string') {
     throw new Error(
-      `[AnimationJsonParser] Track in clip "${clipId}" must have a "propertyPath" string`
+      `[AnimationJsonParser] Track in clip "${clipId}" must have a "propertyPath" string`,
     );
   }
 
   if (!Array.isArray(trackJson.keyframes)) {
     throw new Error(
-      `[AnimationJsonParser] Track "${trackJson.propertyPath}" in clip "${clipId}" must have a "keyframes" array`
+      `[AnimationJsonParser] Track "${trackJson.propertyPath}" in clip "${clipId}" must have a "keyframes" array`,
     );
   }
 
-  switch (trackJson.propertyType) {
-    case 'number':
-      return parseNumberTrack(trackJson, clipId);
-    case 'integer':
-      return parseIntegerTrack(trackJson, clipId);
-    case 'vector3':
-      return parseVector3Track(trackJson, clipId);
-    case 'color':
-      return parseColorTrack(trackJson, clipId);
-    case 'sprite':
-      return parseSpriteTrack(trackJson, clipId);
-    default:
-      throw new Error(
-        `[AnimationJsonParser] Unknown property type "${trackJson.propertyType}" in track "${trackJson.propertyPath}" of clip "${clipId}"`
-      );
-  }
-}
+  // Create the track with optional interpolation mode
+  const interpolationMode = interpolationModeFromString(trackJson.interpolationMode);
+  const track = new PropertyTrack<unknown>(trackJson.propertyPath, interpolationMode);
 
-/**
- * Parse a NumberTrack from JSON
- */
-function parseNumberTrack(
-  trackJson: AnimationTrackJson,
-  clipId: string
-): NumberTrack {
-  const track = new NumberTrack(trackJson.propertyPath);
-
+  // Add keyframes
   for (const kf of trackJson.keyframes) {
-    if (typeof kf.value !== 'number') {
+    if (typeof kf.time !== 'number') {
       throw new Error(
-        `[AnimationJsonParser] NumberTrack "${trackJson.propertyPath}" in clip "${clipId}" has non-number keyframe value`
+        `[AnimationJsonParser] Keyframe in track "${trackJson.propertyPath}" of clip "${clipId}" must have a "time" number`,
       );
     }
-    track.keyframe(kf.time, kf.value, easingFromString(kf.easing));
+
+    const easing = easingFromString(kf.easing);
+    track.keyframe(kf.time, kf.value, easing);
   }
 
   return track;
 }
 
 /**
- * Parse an IntegerTrack from JSON
+ * Parse animation clip from JSON using the AnimationClip.fromJSON method
+ * This is the preferred method as it uses the built-in serialization format.
  */
-function parseIntegerTrack(
-  trackJson: AnimationTrackJson,
-  clipId: string
-): IntegerTrack {
-  const track = new IntegerTrack(trackJson.propertyPath);
-
-  for (const kf of trackJson.keyframes) {
-    if (typeof kf.value !== 'number') {
-      throw new Error(
-        `[AnimationJsonParser] IntegerTrack "${trackJson.propertyPath}" in clip "${clipId}" has non-number keyframe value`
-      );
-    }
-    track.keyframe(kf.time, kf.value, easingFromString(kf.easing));
-  }
-
-  return track;
+export function parseSerializedAnimationClip(data: SerializedAnimationClip): AnimationClip {
+  return AnimationClip.fromJSON(data);
 }
 
 /**
- * Parse a Vector3Track from JSON
+ * Serialize an AnimationClip to JSON format
  */
-function parseVector3Track(
-  trackJson: AnimationTrackJson,
-  clipId: string
-): Vector3Track {
-  const track = new Vector3Track(trackJson.propertyPath);
-
-  for (const kf of trackJson.keyframes) {
-    if (!isVector3Json(kf.value)) {
-      throw new Error(
-        `[AnimationJsonParser] Vector3Track "${trackJson.propertyPath}" in clip "${clipId}" has invalid keyframe value (expected {x, y, z})`
-      );
-    }
-    track.keyframe(
-      kf.time,
-      new Vector3(kf.value.x, kf.value.y, kf.value.z),
-      easingFromString(kf.easing)
-    );
-  }
-
-  return track;
+export function serializeAnimationClip(clip: AnimationClip): SerializedAnimationClip {
+  return clip.toJSON();
 }
 
 /**
- * Parse a ColorTrack from JSON
+ * Convert a legacy format JSON (with propertyType) to the new format
+ * For migration purposes only
  */
-function parseColorTrack(
-  trackJson: AnimationTrackJson,
-  clipId: string
-): ColorTrack {
-  const track = new ColorTrack(trackJson.propertyPath);
+export function migrateLegacyFormat(legacyJson: LegacyAnimationClipJson): AnimationClipJson {
+  const newTracks: AnimationTrackJson[] = [];
 
-  for (const kf of trackJson.keyframes) {
-    if (!isColorJson(kf.value)) {
-      throw new Error(
-        `[AnimationJsonParser] ColorTrack "${trackJson.propertyPath}" in clip "${clipId}" has invalid keyframe value (expected {r, g, b, a})`
-      );
+  for (const track of legacyJson.tracks || []) {
+    // Convert legacy property paths to new format
+    // Old format: "position", "color", "tileIndex"
+    // New format: "ComponentName.property"
+
+    let propertyPath = track.propertyPath;
+    let interpolationMode: 'smooth' | 'discrete' | undefined;
+
+    // Infer component name from property type and path
+    switch (track.propertyType) {
+      case 'vector3':
+        // Likely Transform3D
+        if (['position', 'rotation', 'scale'].includes(propertyPath)) {
+          propertyPath = `Transform3D.${propertyPath}`;
+        }
+        interpolationMode = 'smooth';
+        break;
+
+      case 'color':
+        // Likely Sprite2D
+        if (propertyPath === 'color') {
+          propertyPath = 'Sprite2D.color';
+        }
+        interpolationMode = 'smooth';
+        break;
+
+      case 'number':
+        // Could be Transform3D sub-property or Sprite2D opacity
+        if (propertyPath.startsWith('position.') || propertyPath.startsWith('rotation.') || propertyPath.startsWith('scale.')) {
+          propertyPath = `Transform3D.${propertyPath}`;
+        } else if (propertyPath === 'opacity' || propertyPath.startsWith('color.')) {
+          propertyPath = `Sprite2D.${propertyPath}`;
+        }
+        interpolationMode = 'smooth';
+        break;
+
+      case 'integer':
+        // Likely Sprite2D tileIndex
+        if (propertyPath === 'tileIndex') {
+          propertyPath = 'Sprite2D.tileIndex';
+        }
+        interpolationMode = 'discrete';
+        break;
+
+      case 'sprite':
+        // Sprite2D sprite
+        propertyPath = 'Sprite2D.sprite';
+        interpolationMode = 'discrete';
+        break;
     }
-    const color: Color = {
-      r: kf.value.r,
-      g: kf.value.g,
-      b: kf.value.b,
-      a: kf.value.a,
-    };
-    track.keyframe(kf.time, color, easingFromString(kf.easing));
+
+    newTracks.push({
+      propertyPath,
+      interpolationMode,
+      keyframes: track.keyframes,
+    });
   }
 
-  return track;
+  return {
+    id: legacyJson.id,
+    duration: legacyJson.duration,
+    loopMode: legacyJson.loopMode,
+    speed: legacyJson.speed,
+    tracks: newTracks,
+  };
+}
+
+// ============================================================================
+// Legacy Format Types (for migration)
+// ============================================================================
+
+/**
+ * Legacy track format with explicit propertyType
+ */
+interface LegacyAnimationTrackJson {
+  propertyPath: string;
+  propertyType: 'number' | 'integer' | 'vector3' | 'color' | 'sprite';
+  keyframes: AnimationKeyframeJson[];
 }
 
 /**
- * Parse a SpriteTrack from JSON
+ * Legacy animation clip format
  */
-function parseSpriteTrack(
-  trackJson: AnimationTrackJson,
-  clipId: string
-): SpriteTrack {
-  const track = new SpriteTrack(trackJson.propertyPath);
-
-  for (const kf of trackJson.keyframes) {
-    if (!isSpriteValueJson(kf.value)) {
-      throw new Error(
-        `[AnimationJsonParser] SpriteTrack "${trackJson.propertyPath}" in clip "${clipId}" has invalid keyframe value (expected {spriteId})`
-      );
-    }
-    const spriteValue: SpriteValue = { spriteId: kf.value.spriteId };
-    track.keyframe(kf.time, spriteValue, easingFromString(kf.easing));
-  }
-
-  return track;
+interface LegacyAnimationClipJson {
+  id: string;
+  duration: number;
+  loopMode?: 'once' | 'loop' | 'pingPong';
+  speed?: number;
+  tracks: LegacyAnimationTrackJson[];
 }
