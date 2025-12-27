@@ -92,6 +92,13 @@ export interface BaseSpriteDefinition {
    * Enables cross-texture sprite animations.
    */
   textureGuid?: GUID;
+
+  /**
+   * Optional pivot point for this sprite (0-1 range, where 0.5,0.5 = center).
+   * When set, this becomes the default anchor value when this sprite is selected.
+   * Used for rotation/scale origin and positioning offset.
+   */
+  pivot?: { x: number; y: number };
 }
 
 /**

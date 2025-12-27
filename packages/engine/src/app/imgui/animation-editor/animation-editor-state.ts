@@ -162,6 +162,7 @@ interface CustomWindowsState {
   debugPanel?: boolean;
   // Custom windows (default to false when undefined)
   animationEditor: boolean;
+  spriteEditor?: boolean;
 }
 
 // In-memory state for built-in panels (initialized from localStorage)
@@ -171,6 +172,7 @@ let panelVisibility = {
   hierarchy: true,
   inspector: true,
   debugPanel: true,
+  spriteEditor: false,
 };
 
 /**
@@ -189,6 +191,7 @@ function loadCustomWindowsState(): CustomWindowsState {
         inspector: parsed.inspector ?? true,
         debugPanel: parsed.debugPanel ?? true,
         animationEditor: parsed.animationEditor ?? false,
+        spriteEditor: parsed.spriteEditor ?? false,
       };
     }
   } catch {
@@ -201,6 +204,7 @@ function loadCustomWindowsState(): CustomWindowsState {
     inspector: true,
     debugPanel: true,
     animationEditor: false,
+    spriteEditor: false,
   };
 }
 
@@ -228,6 +232,7 @@ export function initializeCustomWindowsFromStorage(): void {
   panelVisibility.hierarchy = state.hierarchy ?? true;
   panelVisibility.inspector = state.inspector ?? true;
   panelVisibility.debugPanel = state.debugPanel ?? true;
+  panelVisibility.spriteEditor = state.spriteEditor ?? false;
 
   // Initialize custom windows
   if (state.animationEditor) {
@@ -244,7 +249,8 @@ export type PanelName =
   | 'gameView'
   | 'hierarchy'
   | 'inspector'
-  | 'debugPanel';
+  | 'debugPanel'
+  | 'spriteEditor';
 
 /**
  * Check if a built-in panel is visible

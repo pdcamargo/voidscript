@@ -231,6 +231,10 @@
           "type": "integer",
           "description": "Tile height in pixels",
           "minimum": 1
+        },
+        "pivot": {
+          "$ref": "#/definitions/Pivot",
+          "description": "Pivot point (0-1 range, 0.5,0.5 = center). Used as default anchor when sprite is selected."
         }
       },
       "additionalProperties": false
@@ -267,6 +271,10 @@
           "type": "integer",
           "description": "Sprite height in pixels",
           "minimum": 1
+        },
+        "pivot": {
+          "$ref": "#/definitions/Pivot",
+          "description": "Pivot point (0-1 range, 0.5,0.5 = center). Used as default anchor when sprite is selected."
         }
       },
       "additionalProperties": false
@@ -285,6 +293,16 @@
       "type": "string",
       "enum": ["gltf", "glb", "fbx"],
       "description": "3D model file format"
+    },
+    "Pivot": {
+      "type": "object",
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": "number", "minimum": 0, "maximum": 1 },
+        "y": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": false,
+      "description": "Pivot point (0-1 range, where 0.5,0.5 = center)"
     },
     "Vector3": {
       "type": "object",

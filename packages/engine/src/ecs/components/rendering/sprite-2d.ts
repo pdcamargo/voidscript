@@ -220,6 +220,14 @@ export const Sprite2D = component<Sprite2DData>(
               componentData.tileSize = null;
               componentData.tilesetSize = null;
             }
+
+            // Apply pivot as anchor if defined on the sprite
+            if (pendingSprite.pivot) {
+              componentData.anchor = {
+                x: pendingSprite.pivot.x,
+                y: pendingSprite.pivot.y,
+              };
+            }
           }
 
           // Show sprite picker button

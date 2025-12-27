@@ -203,6 +203,11 @@ const spriteValueHandler: AnimationValueHandler<SpriteValue> = {
         sprite.tileSize = null;
         sprite.tilesetSize = null;
       }
+
+      // Apply pivot as anchor if defined on the sprite
+      if (spriteDef.pivot) {
+        sprite.anchor = { x: spriteDef.pivot.x, y: spriteDef.pivot.y };
+      }
     }
 
     // Return undefined to indicate the value was applied directly

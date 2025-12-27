@@ -488,6 +488,135 @@ export class AssetDatabase {
     return allSprites;
   }
 
+  /**
+   * Serialize all registered assets to JSON format.
+   * This is the inverse operation of parseAssetsJson().
+   *
+   * Note: The $schema property is preserved if assets were loaded from a manifest.
+   *
+   * @param pretty - If true, format with indentation (default: true)
+   * @returns JSON string representing all assets
+   *
+   * @example
+   * ```typescript
+   * const json = AssetDatabase.serializeToJson();
+   * await fs.writeFile('assets/manifest.json', json);
+   * ```
+   */
+  static serializeToJson(pretty: boolean = true): string {
+    const db = AssetDatabase.get();
+    const result: Record<string, unknown> = {};
+
+    // Add $schema reference if available
+    result['$schema'] = '../../../packages/engine/schemas/asset-manifest.schema.json';
+
+    for (const [guid, metadata] of db.assetsByGuid) {
+      result[guid] = AssetDatabase.metadataToConfig(metadata);
+    }
+
+    return pretty ? JSON.stringify(result, null, 2) : JSON.stringify(result);
+  }
+
+  /**
+   * Convert metadata back to config format for JSON serialization.
+   * Removes internal fields like guid, importedAt, modifiedAt.
+   */
+  private static metadataToConfig(metadata: AssetMetadata): Record<string, unknown> {
+    switch (metadata.type) {
+      case AssetType.Texture: {
+        const textureMetadata = metadata as TextureMetadata;
+        const config: Record<string, unknown> = {
+          type: 'texture',
+          path: metadata.path,
+        };
+
+        // Only include non-default values
+        if (textureMetadata.filtering && textureMetadata.filtering !== TextureFilter.Linear) {
+          config['magFilter'] = textureMetadata.filtering;
+          config['minFilter'] = textureMetadata.filtering;
+        } else {
+          // Include filter settings if explicitly set
+          config['magFilter'] = textureMetadata.filtering;
+          config['minFilter'] = textureMetadata.filtering;
+        }
+
+        if (textureMetadata.wrapS) config['wrapS'] = textureMetadata.wrapS;
+        if (textureMetadata.wrapT) config['wrapT'] = textureMetadata.wrapT;
+        if (textureMetadata.width) config['width'] = textureMetadata.width;
+        if (textureMetadata.height) config['height'] = textureMetadata.height;
+
+        // Serialize sprites, removing the auto-populated textureGuid
+        if (textureMetadata.sprites && textureMetadata.sprites.length > 0) {
+          config['sprites'] = textureMetadata.sprites.map((sprite) => {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { textureGuid, ...rest } = sprite;
+            return rest;
+          });
+        }
+
+        return config;
+      }
+
+      case AssetType.Audio: {
+        return {
+          type: 'audio',
+          path: metadata.path,
+        };
+      }
+
+      case AssetType.Model3D: {
+        const model3DMetadata = metadata as Model3DMetadata;
+        const config: Record<string, unknown> = {
+          type: 'model3d',
+          path: metadata.path,
+          format: model3DMetadata.format,
+        };
+
+        if (model3DMetadata.scale !== 1) config['scale'] = model3DMetadata.scale;
+        if (model3DMetadata.rotation) config['rotation'] = model3DMetadata.rotation;
+        if (model3DMetadata.hasAnimations) config['hasAnimations'] = model3DMetadata.hasAnimations;
+        if (model3DMetadata.animationNames && model3DMetadata.animationNames.length > 0) {
+          config['animationNames'] = model3DMetadata.animationNames;
+        }
+        if (model3DMetadata.vertexCount) config['vertexCount'] = model3DMetadata.vertexCount;
+        if (model3DMetadata.triangleCount) config['triangleCount'] = model3DMetadata.triangleCount;
+        if (model3DMetadata.boundingBox) config['boundingBox'] = model3DMetadata.boundingBox;
+
+        return config;
+      }
+
+      case AssetType.TiledMap: {
+        const tiledMapMetadata = metadata as TiledMapMetadata;
+        const config: Record<string, unknown> = {
+          type: 'tiledmap',
+          path: metadata.path,
+        };
+
+        if (tiledMapMetadata.pixelsPerUnit) config['pixelsPerUnit'] = tiledMapMetadata.pixelsPerUnit;
+        if (tiledMapMetadata.worldOffset) config['worldOffset'] = tiledMapMetadata.worldOffset;
+        if (tiledMapMetadata.autoSpawnLayers !== undefined) {
+          config['autoSpawnLayers'] = tiledMapMetadata.autoSpawnLayers;
+        }
+
+        return config;
+      }
+
+      case AssetType.Animation: {
+        return {
+          type: 'animation',
+          path: metadata.path,
+        };
+      }
+
+      default:
+        // Fallback for unknown types
+        return {
+          type: metadata.type,
+          path: metadata.path,
+        };
+    }
+  }
+
   // ===== Instance Methods =====
 
   private registerAssets(assets: AssetsConfig): void {

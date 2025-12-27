@@ -304,8 +304,9 @@ function renderEntityNode(
       }
 
       if (ImGui.MenuItem('Delete')) {
-        // Delete the entity
-        commands.entity(entity).destroy();
+        // Delete the entity and all its children
+        commands.entity(entity).destroyRecursive();
+        setSelectedEntity(undefined);
         console.log(`[Hierarchy] Deleted entity #${entity}`);
       }
 
@@ -408,8 +409,9 @@ function renderEntityNode(
       }
 
       if (ImGui.MenuItem('Delete')) {
-        // Delete the entity
-        commands.entity(entity).destroy();
+        // Delete the entity and all its children
+        commands.entity(entity).destroyRecursive();
+        setSelectedEntity(undefined);
         console.log(`[Hierarchy] Deleted entity #${entity}`);
       }
 

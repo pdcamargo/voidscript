@@ -143,47 +143,83 @@
         "x": 0,
         "y": 0,
         "width": 295,
-        "height": 319
+        "height": 319,
+        "pivot": {
+          "x": 0.5,
+          "y": 1
+        }
       },
       {
         "id": "trees-2",
         "name": "Tree 2",
         "x": 295,
         "y": 0,
-        "width": 295,
-        "height": 319
+        "width": 275,
+        "height": 319,
+        "pivot": {
+          "x": 0.5,
+          "y": 1
+        }
       },
       {
         "id": "trees-3",
         "name": "Tree 3",
         "x": 590,
         "y": 0,
-        "width": 285,
-        "height": 319
+        "width": 265,
+        "height": 319,
+        "pivot": {
+          "x": 0.5,
+          "y": 1
+        }
       },
       {
         "id": "trees-4",
         "name": "Tree 4",
         "x": 875,
         "y": 0,
-        "width": 202,
-        "height": 319
+        "width": 179,
+        "height": 319,
+        "pivot": {
+          "x": 0.5,
+          "y": 1
+        }
       },
       {
         "id": "trees-5",
         "name": "Tree 5",
-        "x": 1077,
+        "x": 1075,
         "y": 0,
-        "width": 202,
-        "height": 319
+        "width": 185,
+        "height": 319,
+        "pivot": {
+          "x": 0.5,
+          "y": 1
+        }
       },
       {
         "id": "trees-6",
         "name": "Tree 6",
-        "x": 1279,
+        "x": 1269,
         "y": 0,
-        "width": 202,
-        "height": 319
+        "width": 210,
+        "height": 319,
+        "pivot": {
+          "x": 0.5,
+          "y": 1
+        }
+      },
+      {
+        "id": "trees-7",
+        "name": "Tree 7",
+        "x": 1503,
+        "y": 0,
+        "width": 177,
+        "height": 319,
+        "pivot": {
+          "x": 0.5,
+          "y": 1
+        }
       }
     ]
   },
@@ -222,15 +258,27 @@
         "name": "Rock 1",
         "x": 0,
         "y": 0,
-        "width": 577,
-        "height": 222
+        "width": 560,
+        "height": 210,
+        "pivot": {
+          "x": 0.5,
+          "y": 0.5
+        }
       },
       {
         "id": "rocks-2",
         "name": "Rock 2",
-        "x": 570,
-        "y": 0,
-        "width": 178,
+        "x": 565,
+        "y": 115,
+        "width": 95,
+        "height": 96
+      },
+      {
+        "id": "sprite-mjnldi96",
+        "name": "Sprite 3",
+        "x": 660,
+        "y": 115,
+        "width": 139,
         "height": 96
       }
     ]

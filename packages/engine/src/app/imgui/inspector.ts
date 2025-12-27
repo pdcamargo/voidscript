@@ -92,7 +92,7 @@ export function renderImGuiInspector(app: Application, entity?: Entity): void {
 
       // Delete key to delete
       if (Input.isKeyJustPressed(KeyCode.Delete)) {
-        app.getCommands().entity(targetEntity).destroy();
+        app.getCommands().entity(targetEntity).destroyRecursive();
         setSelectedEntity(undefined); // Clear selection
         console.log(`[Inspector] Deleted entity #${targetEntity}`);
       }
@@ -134,7 +134,7 @@ function renderEntityInspector(app: Application, entity: Entity): void {
     }
 
     if (ImGui.MenuItem('Delete', 'Del')) {
-      commands.entity(entity).destroy();
+      commands.entity(entity).destroyRecursive();
       setSelectedEntity(undefined);
       console.log(`[Inspector] Deleted entity #${entity}`);
     }

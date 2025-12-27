@@ -63,6 +63,12 @@ import {
   togglePanelVisibility,
 } from '../app/imgui/animation-editor/index.js';
 import { AnimationController } from '../ecs/components/animation/animation-controller.js';
+import {
+  renderSpriteEditorPanel,
+  isSpriteEditorOpen,
+  openSpriteEditor,
+  closeSpriteEditor,
+} from '../app/imgui/sprite-editor/index.js';
 
 // ============================================================================
 // Editor Configuration
@@ -1044,6 +1050,10 @@ export class EditorLayer extends Layer {
         },
         separatorBefore: true,
       },
+      {
+        label: isPanelVisible('spriteEditor') ? '✓ Sprite Editor' : '   Sprite Editor',
+        onClick: () => togglePanelVisibility('spriteEditor'),
+      },
     ];
     const userWindowMenuItems = this.config.menuCallbacks?.windowMenuItems ?? [];
     const combinedWindowMenuItems = [...builtInWindowMenuItems, ...userWindowMenuItems];
@@ -1447,6 +1457,14 @@ export class EditorLayer extends Layer {
           () => this.getEntitiesForAnimationPreview(app),
           app.world,
           app.getCommands(),
+        );
+      }
+
+      // Render sprite editor panel if visible
+      if (isPanelVisible('spriteEditor')) {
+        renderSpriteEditorPanel(
+          this.config.platform ?? null,
+          app.getRenderer().getThreeRenderer(),
         );
       }
     } else {

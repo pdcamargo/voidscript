@@ -712,3 +712,20 @@ export type {
   EasingName,
   PanelName,
 } from './app/imgui/animation-editor/index.js';
+
+// Sprite Editor module - visual sprite region editor
+export {
+  // Panel functions
+  renderSpriteEditorPanel,
+  isSpriteEditorOpen,
+  openSpriteEditor,
+  closeSpriteEditor,
+  toggleSpriteEditor,
+  // State functions
+  getSpriteEditorState,
+  selectTexture,
+  selectSprite,
+  markDirty,
+  markClean,
+} from './app/imgui/sprite-editor/index.js';
+export type { SpriteEditorState } from './app/imgui/sprite-editor/index.js';
