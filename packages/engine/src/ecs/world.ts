@@ -755,6 +755,9 @@ export class World {
     this.archetypeGraph.clear();
     this.commandBuffer.length = 0;
     this.isIterating = false;
+    // Invalidate query cache since all archetypes are cleared
+    this.queryCache.clear();
+    this.archetypeVersion++;
   }
 
   /**

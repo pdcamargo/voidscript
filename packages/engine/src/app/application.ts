@@ -145,6 +145,9 @@ import { audioSyncSystem } from "../ecs/systems/audio-sync-system.js";
 // Play mode cleanup
 import { setupPlayModeCleanup } from "../ecs/systems/play-mode-cleanup-system.js";
 
+// Generator systems
+import { spriteAreaGeneratorSystem } from "../ecs/systems/sprite-area-generator-system.js";
+
 // Event system
 import { Events, type EventClass } from "../ecs/events.js";
 
@@ -1270,6 +1273,11 @@ export class Application {
     this.addUpdateSystem(tiledObjectCollisionSystem);
     this.addUpdateSystem(tiledAnimationSystem);
     this.addRenderSystem(tiledTileLayerSyncSystem);
+
+    // Sprite area generator system
+    // - update: Regenerates sprites for SpriteAreaGenerator entities that don't have the Generated marker
+    // This runs every frame but only acts on entities missing the marker (after world load/restore)
+    this.addUpdateSystem(spriteAreaGeneratorSystem);
 
     // Editor camera resource
     const editorCameraManager = new EditorCameraManager(this.renderer);

@@ -21,6 +21,18 @@ import {
 } from '@voidscript/engine';
 import { ImGui, ImVec2, ImVec4 } from '@mori2003/jsimgui';
 
+/**
+ * Marker component to indicate sprites have been generated.
+ * This is NOT serialized - sprites are regenerated at runtime.
+ * No metadata = hidden from inspector.
+ * serializerConfig = false = not serialized.
+ */
+export const SpriteAreaGeneratorGenerated = component<Record<string, never>>(
+  'SpriteAreaGeneratorGenerated',
+  false, // Not serializable - will be regenerated at runtime
+  // No metadata = hidden from inspector
+);
+
 export interface SpriteAreaGeneratorData {
   // Boundary definition
   boundsMin: { x: number; y: number; z: number };
@@ -201,6 +213,9 @@ function generateSprites(
     });
   }
 
+  // 7. Add marker component to indicate sprites have been generated
+  commands.entity(parentEntity).addComponent(SpriteAreaGeneratorGenerated, {});
+
   if (skippedCount > 0) {
     console.log(`[SpriteAreaGenerator] Generated ${childIds.length} of ${data.spriteCount} sprites (${skippedCount} skipped due to distance constraints)`);
   } else {
@@ -214,10 +229,17 @@ function generateSprites(
 function clearSprites(parentEntity: Entity, commands: Command): void {
   const existingChildren = commands.tryGetComponent(parentEntity, Children);
   if (existingChildren) {
+    // Destroy all child entities
     for (const childId of existingChildren.ids) {
       commands.entity(childId).destroyRecursive();
     }
+    // Clear the Children component's ids Set to remove dead references
+    existingChildren.ids.clear();
   }
+
+  // Remove the generated marker so sprites can be regenerated
+  commands.entity(parentEntity).removeComponent(SpriteAreaGeneratorGenerated);
+
   console.log('[SpriteAreaGenerator] Cleared all sprites');
 }
 
@@ -605,7 +627,22 @@ function renderActionsSection(
   // Info - get child count from Children component
   const children = commands.tryGetComponent(entity, Children);
   const count = children?.ids.size ?? 0;
-  ImGui.TextDisabled(`Children: ${count}`);
+
+  // DEBUG: Count how many children are actually alive
+  let aliveCount = 0;
+  if (children?.ids) {
+    for (const childId of children.ids) {
+      if (commands.isAlive(childId)) {
+        aliveCount++;
+      }
+    }
+  }
+
+  if (aliveCount !== count) {
+    ImGui.TextColored({ x: 1, y: 0.5, z: 0, w: 1 }, `Children: ${aliveCount} (${count - aliveCount} dead refs!)`);
+  } else {
+    ImGui.TextDisabled(`Children: ${count}`);
+  }
 }
 
 export const SpriteAreaGenerator = component<SpriteAreaGeneratorData>(
@@ -670,6 +707,7 @@ export const SpriteAreaGenerator = component<SpriteAreaGeneratorData>(
     description: 'Generates seeded sprite children within defined 3D boundaries',
     path: 'generators/sprites',
     showHelper: true,
+    skipChildrenSerialization: true,
     defaultValue: () => ({
       boundsMin: { x: -50, y: 0, z: -5 },
       boundsMax: { x: 50, y: 30, z: 5 },

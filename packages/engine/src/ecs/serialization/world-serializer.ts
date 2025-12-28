@@ -14,6 +14,7 @@ import type { Command } from "../command.js";
 import type { ComponentType } from "../component.js";
 import { globalComponentRegistry } from "../component.js";
 import { Parent } from "../components/parent.js";
+import { Children } from "../components/children.js";
 import type { Entity } from "../entity.js";
 import type {
   ComponentSerializer,
@@ -164,10 +165,11 @@ export class WorldSerializer {
       if (value instanceof Set) {
         // If collection has entity ID items, remap them
         if (config.type === "entity") {
-          return Array.from(value)
+          const originalSize = value.size;
+          const filtered = Array.from(value)
             .filter((item) => {
               if (typeof item === "number") {
-                // Filter out skipped entities
+                // Filter out skipped entities (e.g. children of generators)
                 if (skipEntities && skipEntities.has(item)) {
                   return false;
                 }
@@ -185,6 +187,10 @@ export class WorldSerializer {
               }
               return item;
             });
+          if (filtered.length !== originalSize) {
+            console.warn(`[Serialization] Set reduced from ${originalSize} to ${filtered.length} items`);
+          }
+          return filtered;
         }
         // If collection has RuntimeAsset items, serialize them
         if (config.type === "runtimeAsset") {
@@ -277,7 +283,9 @@ export class WorldSerializer {
       if (typeof value === "number") {
         const mappedEntity = context.entityMapping.get(value);
         if (mappedEntity === undefined) {
-          throw new Error(`Cannot remap entity ID ${value} - not found in entity mapping`);
+          // Return null for unmapped entity references instead of throwing
+          // This allows graceful handling of references to entities that failed to load
+          return null;
         }
         return mappedEntity;
       }
@@ -329,15 +337,25 @@ export class WorldSerializer {
     // Handle collection types
     if (config.collectionType === "array") {
       if (Array.isArray(value)) {
+        // If collection has entity ID items, filter and remap them
+        if (config.type === "entity") {
+          return value
+            .filter((item) => {
+              // Filter out entity IDs that don't exist in the mapping
+              if (typeof item === "number") {
+                return context.entityMapping.has(item);
+              }
+              return true;
+            })
+            .map((item) => {
+              if (typeof item === "number") {
+                // Safe to use ! here because we filtered out unmapped entities above
+                return context.entityMapping.get(item)!;
+              }
+              return item;
+            });
+        }
         return value.map((item) => {
-          // If collection has entity ID items, remap them
-          if (config.type === "entity" && typeof item === "number") {
-            const mappedEntity = context.entityMapping.get(item);
-            if (mappedEntity === undefined) {
-              throw new Error(`Cannot remap entity ID ${item} in array - not found in entity mapping`);
-            }
-            return mappedEntity;
-          }
           // If collection has RuntimeAsset items, deserialize them
           if (config.type === "runtimeAsset" && typeof item === "object" && item !== null && "guid" in item) {
             const guid = item.guid as string;
@@ -368,15 +386,25 @@ export class WorldSerializer {
 
     if (config.collectionType === "set") {
       if (Array.isArray(value)) {
+        // If collection has entity ID items, filter and remap them
+        if (config.type === "entity") {
+          const items = value
+            .filter((item) => {
+              // Filter out entity IDs that don't exist in the mapping
+              if (typeof item === "number") {
+                return context.entityMapping.has(item);
+              }
+              return true;
+            })
+            .map((item) => {
+              if (typeof item === "number") {
+                return context.entityMapping.get(item)!;
+              }
+              return item;
+            });
+          return new Set(items);
+        }
         const items = value.map((item) => {
-          // If collection has entity ID items, remap them
-          if (config.type === "entity" && typeof item === "number") {
-            const mappedEntity = context.entityMapping.get(item);
-            if (mappedEntity === undefined) {
-              throw new Error(`Cannot remap entity ID ${item} in set - not found in entity mapping`);
-            }
-            return mappedEntity;
-          }
           // If collection has RuntimeAsset items, deserialize them
           if (config.type === "runtimeAsset" && typeof item === "object" && item !== null && "guid" in item) {
             const guid = item.guid as string;
@@ -406,7 +434,12 @@ export class WorldSerializer {
       return value;
     }
 
-    // Default: pass through
+    // Deep-clone plain objects to prevent reference sharing between entities
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      return structuredClone(value);
+    }
+
+    // Default: pass through (primitives)
     return value;
   }
 
@@ -673,8 +706,6 @@ export class WorldSerializer {
       });
     });
 
-    const serializeTime = performance.now() - startTime;
-
     return {
       version: "1.0.0",
       componentRegistry,
@@ -780,8 +811,9 @@ export class WorldSerializer {
         const newEntity = entityBuilder.build();
 
         // Build entity mapping immediately
-        entityMapping.set(serializedEntity.id, newEntity.id());
-        entitiesToPopulate.push({ serializedEntity, entity: newEntity.id() });
+        const newEntityId = newEntity.id();
+        entityMapping.set(serializedEntity.id, newEntityId);
+        entitiesToPopulate.push({ serializedEntity, entity: newEntityId });
         entitiesCreated++;
       } catch (error) {
         if (continueOnError) {
@@ -805,9 +837,9 @@ export class WorldSerializer {
 
     // PASS 2: Add components with complete entity mapping
     for (const { serializedEntity, entity } of entitiesToPopulate) {
-      try {
-        // Add all components
-        for (const serializedComponent of serializedEntity.components) {
+      // Add all components - each component has its own try/catch to avoid skipping remaining components on failure
+      for (const serializedComponent of serializedEntity.components) {
+        try {
           // Skip components with missing typeId (corrupted data)
           if (serializedComponent.typeId === undefined) {
             if (skipMissingComponents) {
@@ -858,22 +890,22 @@ export class WorldSerializer {
           }
 
           world.addComponent(entity, componentType, componentData);
-        }
-      } catch (error) {
-        if (continueOnError) {
-          warnings.push(
-            `Failed to add components to entity ${serializedEntity.id}: ${error instanceof Error ? error.message : String(error)}`
-          );
-          continue;
-        } else {
-          return {
-            success: false,
-            entitiesCreated,
-            entitiesSkipped,
-            warnings,
-            error: `Failed to add components to entity ${serializedEntity.id}: ${error instanceof Error ? error.message : String(error)}`,
-            entityMapping,
-          };
+        } catch (error) {
+          if (continueOnError) {
+            warnings.push(
+              `Failed to add component "${serializedComponent.typeName}" to entity ${serializedEntity.id}: ${error instanceof Error ? error.message : String(error)}`
+            );
+            continue; // Continue to next component, not next entity
+          } else {
+            return {
+              success: false,
+              entitiesCreated,
+              entitiesSkipped,
+              warnings,
+              error: `Failed to add component "${serializedComponent.typeName}" to entity ${serializedEntity.id}: ${error instanceof Error ? error.message : String(error)}`,
+              entityMapping,
+            };
+          }
         }
       }
     }

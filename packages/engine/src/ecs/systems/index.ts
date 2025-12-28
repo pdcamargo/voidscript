@@ -31,3 +31,6 @@ export * from './audio-sync-system.js';
 
 // Editor Integration Systems
 export * from './play-mode-cleanup-system.js';
+
+// Generator Systems
+export * from './sprite-area-generator-system.js';

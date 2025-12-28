@@ -315,11 +315,20 @@ function renderEntityNode(
 
     if (nodeOpen) {
       // Recursively render children (filtered if searching)
+      let skippedDead = 0;
       for (const childId of childrenComp.ids) {
+        // Check if child entity is alive
+        if (!commands.isAlive(childId)) {
+          skippedDead++;
+          continue;
+        }
         if (visibleEntities && !visibleEntities.has(childId)) {
           continue;
         }
         renderEntityNode(app, childId, visibleEntities);
+      }
+      if (skippedDead > 0) {
+        console.warn(`[Hierarchy] Entity ${entity} (${displayName}) has ${skippedDead} dead children in its Children component!`);
       }
       ImGui.TreePop();
     }

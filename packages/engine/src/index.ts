@@ -241,7 +241,7 @@ export { PositionalAudioSource } from "./ecs/components/audio/positional-audio-s
 export type { PositionalAudioSourceData, DistanceModel } from "./ecs/components/audio/positional-audio-source.js";
 
 // Generator Components
-export { SpriteAreaGenerator } from "./ecs/components/generators/sprite-area-generator.js";
+export { SpriteAreaGenerator, SpriteAreaGeneratorGenerated } from "./ecs/components/generators/sprite-area-generator.js";
 export type { SpriteAreaGeneratorData } from "./ecs/components/generators/sprite-area-generator.js";
 
 // Post-Processing Component

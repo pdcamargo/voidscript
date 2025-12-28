@@ -47,86 +47,82 @@
     },
     {
       "id": 11,
-      "name": "UIButton"
-    },
-    {
-      "id": 12,
-      "name": "UIInteraction"
-    },
-    {
-      "id": 13,
-      "name": "SpriteAreaGenerator"
-    },
-    {
-      "id": 14,
       "name": "RenderObject"
     },
     {
-      "id": 15,
+      "id": 12,
       "name": "Water2D"
     },
     {
-      "id": 16,
+      "id": 13,
+      "name": "SpriteAreaGeneratorGenerated"
+    },
+    {
+      "id": 14,
+      "name": "SpriteAreaGenerator"
+    },
+    {
+      "id": 15,
       "name": "Sprite2D"
     },
     {
-      "id": 17,
+      "id": 16,
       "name": "RigidBody2D"
     },
     {
-      "id": 18,
+      "id": 17,
       "name": "Collider2D"
     },
     {
-      "id": 19,
+      "id": 18,
       "name": "CharacterController2D"
     },
     {
-      "id": 20,
+      "id": 19,
       "name": "Ccd"
     },
     {
-      "id": 21,
+      "id": 20,
       "name": "AnimationController"
     },
     {
-      "id": 22,
+      "id": 21,
       "name": "DesiredMovement2D"
     },
     {
-      "id": 23,
+      "id": 22,
       "name": "ActiveCollisionEvents2D"
     },
     {
-      "id": 24,
+      "id": 23,
       "name": "Player2D"
     },
     {
-      "id": 25,
+      "id": 24,
       "name": "Light3D"
     },
     {
-      "id": 26,
+      "id": 25,
       "name": "SunLight"
     },
     {
-      "id": 27,
+      "id": 26,
       "name": "SkyGradient2D"
     },
     {
-      "id": 28,
+      "id": 27,
       "name": "Fog2D"
     },
     {
-      "id": 29,
+      "id": 28,
       "name": "FogSkySync"
     },
     {
-      "id": 30,
+      "id": 29,
       "name": "Rain2D"
     },
     {
-      "id": 31,
+      "id": 30,
       "name": "LightningField2D"
     }
   ],
@@ -140,11 +136,11 @@
           "typeName": "Children",
           "data": {
             "ids": [
-              6,
-              7,
-              8,
-              9,
-              10
+              10,
+              11,
+              12,
+              13,
+              14
             ]
           }
         },
@@ -183,6 +179,51 @@
       "generation": 0,
       "components": [
         {
+          "typeId": 0,
+          "typeName": "Children",
+          "data": {
+            "ids": [
+              4,
+              20,
+              21
+            ]
+          }
+        },
+        {
+          "typeId": 1,
+          "typeName": "Name",
+          "data": {
+            "name": "Forest Right"
+          }
+        },
+        {
+          "typeId": 2,
+          "typeName": "Transform3D",
+          "data": {
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "generation": 0,
+      "components": [
+        {
           "typeId": 1,
           "typeName": "Name",
           "data": {
@@ -195,7 +236,7 @@
           "data": {
             "position": {
               "x": 4.199999809265137,
-              "y": -0.959868518359472,
+              "y": 1.0000000223517418,
               "z": 10
             },
             "rotation": {
@@ -231,11 +272,11 @@
           "typeId": 4,
           "typeName": "VirtualCameraFollow",
           "data": {
-            "target": 11,
+            "target": 15,
             "mode": "transposer",
             "offset": {
               "x": 0,
-              "y": 1.2000000476837158,
+              "y": -0.10000000149011612,
               "z": 10
             },
             "damping": 30,
@@ -265,7 +306,7 @@
       ]
     },
     {
-      "id": 2,
+      "id": 3,
       "generation": 0,
       "components": [
         {
@@ -281,7 +322,7 @@
           "data": {
             "position": {
               "x": 4.199999809265137,
-              "y": -0.959868518359472,
+              "y": 1.0000000223517418,
               "z": 10
             },
             "rotation": {
@@ -342,19 +383,32 @@
       ]
     },
     {
-      "id": 3,
+      "id": 4,
       "generation": 0,
       "components": [
         {
           "typeId": 9,
           "typeName": "Parent",
-          "data": {}
+          "data": {
+            "id": 1
+          }
+        },
+        {
+          "typeId": 0,
+          "typeName": "Children",
+          "data": {
+            "ids": [
+              7,
+              8,
+              9
+            ]
+          }
         },
         {
           "typeId": 1,
           "typeName": "Name",
           "data": {
-            "name": "Test"
+            "name": "Generators"
           }
         },
         {
@@ -398,149 +452,6 @@
               "z": 1
             }
           }
-        },
-        {
-          "typeId": 11,
-          "typeName": "UIButton",
-          "data": {
-            "anchor": "middle-center",
-            "pivot": "middle-center",
-            "width": 120,
-            "height": 40,
-            "contentDirection": "row",
-            "justifyContent": "center",
-            "alignItems": "center",
-            "padding": {
-              "top": 8,
-              "right": 16,
-              "bottom": 8,
-              "left": 16
-            },
-            "margin": 4,
-            "borderRadius": 4,
-            "borderWidth": 0,
-            "borderColor": {
-              "r": 1,
-              "g": 1,
-              "b": 1
-            },
-            "idleColor": {
-              "r": 0.2,
-              "g": 0.2,
-              "b": 0.3
-            },
-            "hoverColor": {
-              "r": 0.3,
-              "g": 0.3,
-              "b": 0.4
-            },
-            "activeColor": {
-              "r": 0.15,
-              "g": 0.15,
-              "b": 0.25
-            },
-            "disabledColor": {
-              "r": 0.1,
-              "g": 0.1,
-              "b": 0.1
-            },
-            "backgroundOpacity": 1,
-            "isDisabled": false,
-            "visible": true,
-            "label": "Button",
-            "labelFontSize": 14,
-            "labelColor": {
-              "r": 1,
-              "g": 1,
-              "b": 1
-            },
-            "labelFontFamily": null,
-            "labelFontTexture": null
-          }
-        },
-        {
-          "typeId": 12,
-          "typeName": "UIInteraction",
-          "data": {
-            "onClickEventNames": [
-              "ClickEvent"
-            ],
-            "onPressEventNames": [],
-            "onReleaseEventNames": [],
-            "onHoverEnterEventNames": [],
-            "onHoverExitEventNames": [],
-            "enabled": true
-          }
-        }
-      ]
-    },
-    {
-      "id": 4,
-      "generation": 0,
-      "components": [
-        {
-          "typeId": 1,
-          "typeName": "Name",
-          "data": {
-            "name": "Clouds"
-          }
-        },
-        {
-          "typeId": 2,
-          "typeName": "Transform3D",
-          "data": {
-            "position": {
-              "x": 0,
-              "y": 20,
-              "z": 0
-            },
-            "rotation": {
-              "x": 0,
-              "y": 0,
-              "z": 0
-            },
-            "scale": {
-              "x": 1,
-              "y": 1,
-              "z": 1
-            }
-          }
-        },
-        {
-          "typeId": 13,
-          "typeName": "SpriteAreaGenerator",
-          "data": {
-            "boundsMin": {
-              "x": -100,
-              "y": -5,
-              "z": -40
-            },
-            "boundsMax": {
-              "x": 100,
-              "y": 5,
-              "z": 40
-            },
-            "spriteTexture": {
-              "guid": "clouds"
-            },
-            "seed": 42,
-            "spriteCount": 1371,
-            "minScale": 7.059000015258789,
-            "maxScale": 8.604000091552734,
-            "minDistance": 0,
-            "sortingLayer": 0,
-            "sortingOrder": 0,
-            "isLit": true,
-            "tintColor": {
-              "r": 0.29113924503326416,
-              "g": 0.29113924503326416,
-              "b": 0.29113924503326416,
-              "a": 1
-            },
-            "additionalComponents": [
-              "Cloud2D"
-            ]
-          }
         }
       ]
     },
@@ -577,7 +488,7 @@
           }
         },
         {
-          "typeId": 15,
+          "typeId": 12,
           "typeName": "Water2D",
           "data": {
             "baseSize": {
@@ -644,17 +555,17 @@
       "generation": 0,
       "components": [
         {
-          "typeId": 9,
-          "typeName": "Parent",
+          "typeId": 0,
+          "typeName": "Children",
           "data": {
-            "id": 0
+            "ids": []
           }
         },
         {
           "typeId": 1,
           "typeName": "Name",
           "data": {
-            "name": "Ground"
+            "name": "Clouds"
           }
         },
         {
@@ -663,7 +574,7 @@
           "data": {
             "position": {
               "x": 0,
-              "y": 0,
+              "y": 20,
               "z": 0
             },
             "rotation": {
@@ -679,59 +590,39 @@
           }
         },
         {
-          "typeId": 10,
-          "typeName": "LocalTransform3D",
+          "typeId": 14,
+          "typeName": "SpriteAreaGenerator",
           "data": {
-            "position": {
-              "x": 0,
-              "y": 0,
-              "z": 0
+            "boundsMin": {
+              "x": -100,
+              "y": -5,
+              "z": -40
             },
-            "rotation": {
-              "x": 0,
-              "y": 0,
-              "z": 0
+            "boundsMax": {
+              "x": 100,
+              "y": 5,
+              "z": 40
             },
-            "scale": {
-              "x": 1,
-              "y": 1,
-              "z": 1
-            }
-          }
-        },
-        {
-          "typeId": 16,
-          "typeName": "Sprite2D",
-          "data": {
-            "texture": {
-              "guid": "ground"
+            "spriteTexture": {
+              "guid": "clouds"
             },
-            "color": {
-              "r": 1,
-              "g": 1,
-              "b": 1,
-              "a": 1
-            },
-            "tileIndex": null,
-            "tileSize": null,
-            "tilesetSize": null,
-            "pixelsPerUnit": 100,
-            "flipX": false,
-            "flipY": false,
+            "seed": 42,
+            "spriteCount": 1371,
+            "minScale": 7.059000015258789,
+            "maxScale": 8.604000091552734,
+            "minDistance": 0,
             "sortingLayer": 0,
             "sortingOrder": 0,
-            "anchor": {
-              "x": 0.5,
-              "y": 0.5
-            },
-            "visible": true,
             "isLit": true,
-            "spriteRect": {
-              "x": 0,
-              "y": 0,
-              "width": 1652,
-              "height": 116
-            }
+            "tintColor": {
+              "r": 0.29113924503326416,
+              "g": 0.29113924503326416,
+              "b": 0.29113924503326416,
+              "a": 1
+            },
+            "additionalComponents": [
+              "Cloud2D"
+            ]
           }
         }
       ]
@@ -744,14 +635,21 @@
           "typeId": 9,
           "typeName": "Parent",
           "data": {
-            "id": 0
+            "id": 4
+          }
+        },
+        {
+          "typeId": 0,
+          "typeName": "Children",
+          "data": {
+            "ids": []
           }
         },
         {
           "typeId": 1,
           "typeName": "Name",
           "data": {
-            "name": "Ground"
+            "name": "Forest Tree BG"
           }
         },
         {
@@ -759,9 +657,9 @@
           "typeName": "Transform3D",
           "data": {
             "position": {
-              "x": -16.5,
-              "y": 0,
-              "z": 0
+              "x": 0,
+              "y": -0.699999988079071,
+              "z": -3
             },
             "rotation": {
               "x": 0,
@@ -780,9 +678,9 @@
           "typeName": "LocalTransform3D",
           "data": {
             "position": {
-              "x": -16.5,
-              "y": 0,
-              "z": 0
+              "x": 0,
+              "y": -0.699999988079071,
+              "z": -3
             },
             "rotation": {
               "x": 0,
@@ -797,38 +695,41 @@
           }
         },
         {
-          "typeId": 16,
-          "typeName": "Sprite2D",
+          "typeId": 14,
+          "typeName": "SpriteAreaGenerator",
           "data": {
-            "texture": {
-              "guid": "ground"
+            "boundsMin": {
+              "x": -23,
+              "y": 0,
+              "z": -0.10000000149011612
             },
-            "color": {
-              "r": 1,
-              "g": 1,
-              "b": 1,
-              "a": 1
+            "boundsMax": {
+              "x": 23,
+              "y": 0,
+              "z": 0
             },
-            "tileIndex": null,
-            "tileSize": null,
-            "tilesetSize": null,
-            "pixelsPerUnit": 100,
-            "flipX": false,
-            "flipY": false,
+            "spriteTexture": {
+              "guid": "trees"
+            },
+            "seed": 312209,
+            "spriteCount": 61,
+            "minScale": 4,
+            "maxScale": 4.050000190734863,
+            "minDistance": 1.5,
             "sortingLayer": 0,
             "sortingOrder": 0,
+            "isLit": true,
+            "tintColor": {
+              "r": 0.2236286997795105,
+              "g": 0.2236286997795105,
+              "b": 0.2236286997795105,
+              "a": 1
+            },
             "anchor": {
               "x": 0.5,
-              "y": 0.5
+              "y": 0
             },
-            "visible": true,
-            "isLit": true,
-            "spriteRect": {
-              "x": 0,
-              "y": 0,
-              "width": 1652,
-              "height": 116
-            }
+            "additionalComponents": []
           }
         }
       ]
@@ -841,14 +742,21 @@
           "typeId": 9,
           "typeName": "Parent",
           "data": {
-            "id": 0
+            "id": 4
+          }
+        },
+        {
+          "typeId": 0,
+          "typeName": "Children",
+          "data": {
+            "ids": []
           }
         },
         {
           "typeId": 1,
           "typeName": "Name",
           "data": {
-            "name": "Ground"
+            "name": "Forest Tree MID"
           }
         },
         {
@@ -856,9 +764,9 @@
           "typeName": "Transform3D",
           "data": {
             "position": {
-              "x": 16.5,
-              "y": 0,
-              "z": 0
+              "x": 0,
+              "y": -0.5,
+              "z": -2
             },
             "rotation": {
               "x": 0,
@@ -877,9 +785,9 @@
           "typeName": "LocalTransform3D",
           "data": {
             "position": {
-              "x": 16.5,
-              "y": 0,
-              "z": 0
+              "x": 0,
+              "y": -0.5,
+              "z": -2
             },
             "rotation": {
               "x": 0,
@@ -894,38 +802,41 @@
           }
         },
         {
-          "typeId": 16,
-          "typeName": "Sprite2D",
+          "typeId": 14,
+          "typeName": "SpriteAreaGenerator",
           "data": {
-            "texture": {
-              "guid": "ground"
+            "boundsMin": {
+              "x": -25,
+              "y": 0,
+              "z": -0.10000000149011612
             },
-            "color": {
-              "r": 1,
-              "g": 1,
-              "b": 1,
-              "a": 1
+            "boundsMax": {
+              "x": 25,
+              "y": 0,
+              "z": 0
             },
-            "tileIndex": null,
-            "tileSize": null,
-            "tilesetSize": null,
-            "pixelsPerUnit": 100,
-            "flipX": false,
-            "flipY": false,
+            "spriteTexture": {
+              "guid": "trees"
+            },
+            "seed": 85653,
+            "spriteCount": 50,
+            "minScale": 3.299999952316284,
+            "maxScale": 3.305000066757202,
+            "minDistance": 2,
             "sortingLayer": 0,
             "sortingOrder": 0,
+            "isLit": true,
+            "tintColor": {
+              "r": 0.5316455364227295,
+              "g": 0.5316455364227295,
+              "b": 0.5316455364227295,
+              "a": 1
+            },
             "anchor": {
               "x": 0.5,
-              "y": 0.5
+              "y": 0
             },
-            "visible": true,
-            "isLit": true,
-            "spriteRect": {
-              "x": 0,
-              "y": 0,
-              "width": 1652,
-              "height": 116
-            }
+            "additionalComponents": []
           }
         }
       ]
@@ -938,14 +849,21 @@
           "typeId": 9,
           "typeName": "Parent",
           "data": {
-            "id": 0
+            "id": 4
+          }
+        },
+        {
+          "typeId": 0,
+          "typeName": "Children",
+          "data": {
+            "ids": []
           }
         },
         {
           "typeId": 1,
           "typeName": "Name",
           "data": {
-            "name": "Ground"
+            "name": "Forest Tree Close"
           }
         },
         {
@@ -953,8 +871,8 @@
           "typeName": "Transform3D",
           "data": {
             "position": {
-              "x": 33,
-              "y": 0,
+              "x": 0,
+              "y": 0.10000000149011612,
               "z": 0
             },
             "rotation": {
@@ -974,8 +892,8 @@
           "typeName": "LocalTransform3D",
           "data": {
             "position": {
-              "x": 33,
-              "y": 0,
+              "x": 0,
+              "y": 0.10000000149011612,
               "z": 0
             },
             "rotation": {
@@ -991,38 +909,41 @@
           }
         },
         {
-          "typeId": 16,
-          "typeName": "Sprite2D",
+          "typeId": 14,
+          "typeName": "SpriteAreaGenerator",
           "data": {
-            "texture": {
-              "guid": "ground"
+            "boundsMin": {
+              "x": -30,
+              "y": 0,
+              "z": -0.019999999552965164
             },
-            "color": {
+            "boundsMax": {
+              "x": 30,
+              "y": 0,
+              "z": -0.009999999776482582
+            },
+            "spriteTexture": {
+              "guid": "trees"
+            },
+            "seed": 288293,
+            "spriteCount": 50,
+            "minScale": 2,
+            "maxScale": 2,
+            "minDistance": 3,
+            "sortingLayer": 0,
+            "sortingOrder": 0,
+            "isLit": true,
+            "tintColor": {
               "r": 1,
               "g": 1,
               "b": 1,
               "a": 1
             },
-            "tileIndex": null,
-            "tileSize": null,
-            "tilesetSize": null,
-            "pixelsPerUnit": 100,
-            "flipX": false,
-            "flipY": false,
-            "sortingLayer": 0,
-            "sortingOrder": 0,
             "anchor": {
               "x": 0.5,
-              "y": 0.5
+              "y": 0
             },
-            "visible": true,
-            "isLit": true,
-            "spriteRect": {
-              "x": 0,
-              "y": 0,
-              "width": 1652,
-              "height": 116
-            }
+            "additionalComponents": []
           }
         }
       ]
@@ -1050,7 +971,7 @@
           "typeName": "Transform3D",
           "data": {
             "position": {
-              "x": -33,
+              "x": 0,
               "y": 0,
               "z": 0
             },
@@ -1071,7 +992,7 @@
           "typeName": "LocalTransform3D",
           "data": {
             "position": {
-              "x": -33,
+              "x": 0,
               "y": 0,
               "z": 0
             },
@@ -1088,7 +1009,7 @@
           }
         },
         {
-          "typeId": 16,
+          "typeId": 15,
           "typeName": "Sprite2D",
           "data": {
             "texture": {
@@ -1129,6 +1050,394 @@
       "generation": 0,
       "components": [
         {
+          "typeId": 9,
+          "typeName": "Parent",
+          "data": {
+            "id": 0
+          }
+        },
+        {
+          "typeId": 1,
+          "typeName": "Name",
+          "data": {
+            "name": "Ground"
+          }
+        },
+        {
+          "typeId": 2,
+          "typeName": "Transform3D",
+          "data": {
+            "position": {
+              "x": -16.5,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        },
+        {
+          "typeId": 10,
+          "typeName": "LocalTransform3D",
+          "data": {
+            "position": {
+              "x": -16.5,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        },
+        {
+          "typeId": 15,
+          "typeName": "Sprite2D",
+          "data": {
+            "texture": {
+              "guid": "ground"
+            },
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1,
+              "a": 1
+            },
+            "tileIndex": null,
+            "tileSize": null,
+            "tilesetSize": null,
+            "pixelsPerUnit": 100,
+            "flipX": false,
+            "flipY": false,
+            "sortingLayer": 0,
+            "sortingOrder": 0,
+            "anchor": {
+              "x": 0.5,
+              "y": 0.5
+            },
+            "visible": true,
+            "isLit": true,
+            "spriteRect": {
+              "x": 0,
+              "y": 0,
+              "width": 1652,
+              "height": 116
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "generation": 0,
+      "components": [
+        {
+          "typeId": 9,
+          "typeName": "Parent",
+          "data": {
+            "id": 0
+          }
+        },
+        {
+          "typeId": 1,
+          "typeName": "Name",
+          "data": {
+            "name": "Ground"
+          }
+        },
+        {
+          "typeId": 2,
+          "typeName": "Transform3D",
+          "data": {
+            "position": {
+              "x": 16.5,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        },
+        {
+          "typeId": 10,
+          "typeName": "LocalTransform3D",
+          "data": {
+            "position": {
+              "x": 16.5,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        },
+        {
+          "typeId": 15,
+          "typeName": "Sprite2D",
+          "data": {
+            "texture": {
+              "guid": "ground"
+            },
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1,
+              "a": 1
+            },
+            "tileIndex": null,
+            "tileSize": null,
+            "tilesetSize": null,
+            "pixelsPerUnit": 100,
+            "flipX": false,
+            "flipY": false,
+            "sortingLayer": 0,
+            "sortingOrder": 0,
+            "anchor": {
+              "x": 0.5,
+              "y": 0.5
+            },
+            "visible": true,
+            "isLit": true,
+            "spriteRect": {
+              "x": 0,
+              "y": 0,
+              "width": 1652,
+              "height": 116
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "generation": 0,
+      "components": [
+        {
+          "typeId": 9,
+          "typeName": "Parent",
+          "data": {
+            "id": 0
+          }
+        },
+        {
+          "typeId": 1,
+          "typeName": "Name",
+          "data": {
+            "name": "Ground"
+          }
+        },
+        {
+          "typeId": 2,
+          "typeName": "Transform3D",
+          "data": {
+            "position": {
+              "x": 33,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        },
+        {
+          "typeId": 10,
+          "typeName": "LocalTransform3D",
+          "data": {
+            "position": {
+              "x": 33,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        },
+        {
+          "typeId": 15,
+          "typeName": "Sprite2D",
+          "data": {
+            "texture": {
+              "guid": "ground"
+            },
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1,
+              "a": 1
+            },
+            "tileIndex": null,
+            "tileSize": null,
+            "tilesetSize": null,
+            "pixelsPerUnit": 100,
+            "flipX": false,
+            "flipY": false,
+            "sortingLayer": 0,
+            "sortingOrder": 0,
+            "anchor": {
+              "x": 0.5,
+              "y": 0.5
+            },
+            "visible": true,
+            "isLit": true,
+            "spriteRect": {
+              "x": 0,
+              "y": 0,
+              "width": 1652,
+              "height": 116
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "generation": 0,
+      "components": [
+        {
+          "typeId": 9,
+          "typeName": "Parent",
+          "data": {
+            "id": 0
+          }
+        },
+        {
+          "typeId": 1,
+          "typeName": "Name",
+          "data": {
+            "name": "Ground"
+          }
+        },
+        {
+          "typeId": 2,
+          "typeName": "Transform3D",
+          "data": {
+            "position": {
+              "x": -33,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        },
+        {
+          "typeId": 10,
+          "typeName": "LocalTransform3D",
+          "data": {
+            "position": {
+              "x": -33,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        },
+        {
+          "typeId": 15,
+          "typeName": "Sprite2D",
+          "data": {
+            "texture": {
+              "guid": "ground"
+            },
+            "color": {
+              "r": 1,
+              "g": 1,
+              "b": 1,
+              "a": 1
+            },
+            "tileIndex": null,
+            "tileSize": null,
+            "tilesetSize": null,
+            "pixelsPerUnit": 100,
+            "flipX": false,
+            "flipY": false,
+            "sortingLayer": 0,
+            "sortingOrder": 0,
+            "anchor": {
+              "x": 0.5,
+              "y": 0.5
+            },
+            "visible": true,
+            "isLit": true,
+            "spriteRect": {
+              "x": 0,
+              "y": 0,
+              "width": 1652,
+              "height": 116
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "generation": 0,
+      "components": [
+        {
           "typeId": 1,
           "typeName": "Name",
           "data": {
@@ -1157,7 +1466,7 @@
           }
         },
         {
-          "typeId": 16,
+          "typeId": 15,
           "typeName": "Sprite2D",
           "data": {
             "texture": null,
@@ -1191,7 +1500,7 @@
           }
         },
         {
-          "typeId": 17,
+          "typeId": 16,
           "typeName": "RigidBody2D",
           "data": {
             "bodyType": "kinematic",
@@ -1199,7 +1508,7 @@
           }
         },
         {
-          "typeId": 18,
+          "typeId": 17,
           "typeName": "Collider2D",
           "data": {
             "shape": {
@@ -1219,7 +1528,7 @@
           }
         },
         {
-          "typeId": 19,
+          "typeId": 18,
           "typeName": "CharacterController2D",
           "data": {
             "offset": 0.01,
@@ -1242,14 +1551,14 @@
           }
         },
         {
-          "typeId": 20,
+          "typeId": 19,
           "typeName": "Ccd",
           "data": {
             "enabled": false
           }
         },
         {
-          "typeId": 21,
+          "typeId": 20,
           "typeName": "AnimationController",
           "data": {
             "animations": [],
@@ -1261,7 +1570,7 @@
           }
         },
         {
-          "typeId": 22,
+          "typeId": 21,
           "typeName": "DesiredMovement2D",
           "data": {
             "translation": {
@@ -1271,14 +1580,14 @@
           }
         },
         {
-          "typeId": 23,
+          "typeId": 22,
           "typeName": "ActiveCollisionEvents2D",
           "data": {
             "events": 1
           }
         },
         {
-          "typeId": 24,
+          "typeId": 23,
           "typeName": "Player2D",
           "data": {
             "movementSpeed": 20
@@ -1287,7 +1596,7 @@
       ]
     },
     {
-      "id": 27,
+      "id": 16,
       "generation": 0,
       "components": [
         {
@@ -1319,7 +1628,7 @@
           }
         },
         {
-          "typeId": 25,
+          "typeId": 24,
           "typeName": "Light3D",
           "data": {
             "type": "directional",
@@ -1341,7 +1650,7 @@
           }
         },
         {
-          "typeId": 26,
+          "typeId": 25,
           "typeName": "SunLight",
           "data": {
             "isAmbient": false
@@ -1350,7 +1659,7 @@
       ]
     },
     {
-      "id": 28,
+      "id": 17,
       "generation": 0,
       "components": [
         {
@@ -1382,7 +1691,7 @@
           }
         },
         {
-          "typeId": 25,
+          "typeId": 24,
           "typeName": "Light3D",
           "data": {
             "type": "ambient",
@@ -1404,7 +1713,7 @@
           }
         },
         {
-          "typeId": 26,
+          "typeId": 25,
           "typeName": "SunLight",
           "data": {
             "isAmbient": true
@@ -1413,7 +1722,7 @@
       ]
     },
     {
-      "id": 29,
+      "id": 18,
       "generation": 0,
       "components": [
         {
@@ -1445,7 +1754,7 @@
           }
         },
         {
-          "typeId": 27,
+          "typeId": 26,
           "typeName": "SkyGradient2D",
           "data": {
             "stops": [
@@ -1487,7 +1796,7 @@
       ]
     },
     {
-      "id": 30,
+      "id": 19,
       "generation": 0,
       "components": [
         {
@@ -1519,7 +1828,7 @@
           }
         },
         {
-          "typeId": 28,
+          "typeId": 27,
           "typeName": "Fog2D",
           "data": {
             "baseSize": {
@@ -1547,16 +1856,210 @@
           }
         },
         {
-          "typeId": 29,
+          "typeId": 28,
           "typeName": "FogSkySync",
           "data": {
-            "skyEntity": 29
+            "skyEntity": 18
           }
         }
       ]
     },
     {
-      "id": 31,
+      "id": 20,
+      "generation": 0,
+      "components": [
+        {
+          "typeId": 9,
+          "typeName": "Parent",
+          "data": {
+            "id": 1
+          }
+        },
+        {
+          "typeId": 1,
+          "typeName": "Name",
+          "data": {
+            "name": "Forest Right Far Fog"
+          }
+        },
+        {
+          "typeId": 2,
+          "typeName": "Transform3D",
+          "data": {
+            "position": {
+              "x": 0,
+              "y": 3.5999999046325684,
+              "z": -2.990000009536743
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        },
+        {
+          "typeId": 10,
+          "typeName": "LocalTransform3D",
+          "data": {
+            "position": {
+              "x": 0,
+              "y": 3.5999999046325684,
+              "z": -2.990000009536743
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        },
+        {
+          "typeId": 27,
+          "typeName": "Fog2D",
+          "data": {
+            "baseSize": {
+              "x": 56.20000076293945,
+              "y": 16.200000762939453
+            },
+            "fogColor": {
+              "r": 0.658823549747467,
+              "g": 0.7686274647712708,
+              "b": 0.929411768913269
+            },
+            "fogOpacity": 1,
+            "fogType": "smooth",
+            "fogStart": 0,
+            "fogEnd": 1,
+            "noiseStrength": 0.15000000596046448,
+            "pixelResolution": {
+              "x": 3000,
+              "y": 3000
+            },
+            "sortingLayer": 0,
+            "sortingOrder": 0,
+            "visible": true,
+            "isLit": false
+          }
+        },
+        {
+          "typeId": 28,
+          "typeName": "FogSkySync",
+          "data": {
+            "skyEntity": 18
+          }
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "generation": 0,
+      "components": [
+        {
+          "typeId": 9,
+          "typeName": "Parent",
+          "data": {
+            "id": 1
+          }
+        },
+        {
+          "typeId": 1,
+          "typeName": "Name",
+          "data": {
+            "name": "Forest Right Mid Fog"
+          }
+        },
+        {
+          "typeId": 2,
+          "typeName": "Transform3D",
+          "data": {
+            "position": {
+              "x": 0,
+              "y": 3.5999999046325684,
+              "z": -1.9900000095367432
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        },
+        {
+          "typeId": 10,
+          "typeName": "LocalTransform3D",
+          "data": {
+            "position": {
+              "x": 0,
+              "y": 3.5999999046325684,
+              "z": -1.9900000095367432
+            },
+            "rotation": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            }
+          }
+        },
+        {
+          "typeId": 27,
+          "typeName": "Fog2D",
+          "data": {
+            "baseSize": {
+              "x": 56.20000076293945,
+              "y": 16.200000762939453
+            },
+            "fogColor": {
+              "r": 0.658823549747467,
+              "g": 0.7686274647712708,
+              "b": 0.929411768913269
+            },
+            "fogOpacity": 0.30000001192092896,
+            "fogType": "smooth",
+            "fogStart": 0,
+            "fogEnd": 1,
+            "noiseStrength": 0.15000000596046448,
+            "pixelResolution": {
+              "x": 3000,
+              "y": 3000
+            },
+            "sortingLayer": 0,
+            "sortingOrder": 0,
+            "visible": true,
+            "isLit": false
+          }
+        },
+        {
+          "typeId": 28,
+          "typeName": "FogSkySync",
+          "data": {
+            "skyEntity": 18
+          }
+        }
+      ]
+    },
+    {
+      "id": 22,
       "generation": 0,
       "components": [
         {
@@ -1588,7 +2091,7 @@
           }
         },
         {
-          "typeId": 30,
+          "typeId": 29,
           "typeName": "Rain2D",
           "data": {
             "baseSize": {
@@ -1648,7 +2151,7 @@
       ]
     },
     {
-      "id": 32,
+      "id": 23,
       "generation": 0,
       "components": [
         {
@@ -1680,7 +2183,7 @@
           }
         },
         {
-          "typeId": 31,
+          "typeId": 30,
           "typeName": "LightningField2D",
           "data": {
             "baseSize": {
@@ -1729,9 +2232,9 @@
     }
   ],
   "metadata": {
-    "createdAt": "2025-12-27T18:45:15.736Z",
-    "modifiedAt": "2025-12-27T18:45:15.736Z",
-    "entityCount": 33,
-    "archetypeCount": 51
+    "createdAt": "2025-12-28T14:53:17.780Z",
+    "modifiedAt": "2025-12-28T14:53:17.780Z",
+    "entityCount": 24,
+    "archetypeCount": 57
   }
 }
