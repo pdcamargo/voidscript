@@ -318,3 +318,13 @@ export class ProgressManager {
     if (population >= 25) this.unlock(ProgressFlag.Population25);
   }
 }
+
+// Register ProgressManager as a resource (internal state, not directly serializable via simple properties)
+import { registerResource } from '@voidscript/engine';
+registerResource(ProgressManager, false, {
+  path: 'kingdom/progress',
+  displayName: 'Progress Manager',
+  description: 'Manages player progress flags and statistics',
+  builtIn: false,
+  defaultValue: () => new ProgressManager(),
+});

@@ -1048,3 +1048,12 @@ export class Physics3DContext {
     return true;
   }
 }
+
+// Register Physics3DContext as a resource (internal, not serializable)
+import { registerResource } from '../../ecs/resource.js';
+registerResource(Physics3DContext, false, {
+  path: 'physics',
+  displayName: '3D Physics Context',
+  description: 'Manages 3D physics simulation (Rapier)',
+  builtIn: true,
+});

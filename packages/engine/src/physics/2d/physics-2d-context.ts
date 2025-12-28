@@ -1035,3 +1035,12 @@ export class Physics2DContext {
     return true;
   }
 }
+
+// Register Physics2DContext as a resource (internal, not serializable)
+import { registerResource } from '../../ecs/resource.js';
+registerResource(Physics2DContext, false, {
+  path: 'physics',
+  displayName: '2D Physics Context',
+  description: 'Manages 2D physics simulation (Rapier)',
+  builtIn: true,
+});

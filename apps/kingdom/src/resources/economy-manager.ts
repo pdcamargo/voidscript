@@ -71,21 +71,27 @@ export class EconomyManager {
   private _currentDay = 1;
 
   // ============================================================================
-  // Getters
+  // Getters/Setters
   // ============================================================================
 
   /**
-   * Get current coin balance.
+   * Get/set current coin balance.
    */
   get coins(): number {
     return this._coins;
   }
+  set coins(value: number) {
+    this._coins = Math.max(0, value);
+  }
 
   /**
-   * Get current diamond balance.
+   * Get/set current diamond balance.
    */
   get diamonds(): number {
     return this._diamonds;
+  }
+  set diamonds(value: number) {
+    this._diamonds = Math.max(0, value);
   }
 
   /**
@@ -363,3 +369,39 @@ export class EconomyManager {
     };
   }
 }
+
+// Register EconomyManager as a resource with serializable properties
+import { registerResource } from '@voidscript/engine';
+registerResource(EconomyManager, {
+  coins: {
+    serializable: true,
+    instanceType: Number,
+    tooltip: 'Current coin balance',
+  },
+  diamonds: {
+    serializable: true,
+    instanceType: Number,
+    tooltip: 'Current diamond balance',
+  },
+  totalEarned: {
+    serializable: true,
+    instanceType: Number,
+    tooltip: 'Total coins earned (lifetime)',
+  },
+  totalSpent: {
+    serializable: true,
+    instanceType: Number,
+    tooltip: 'Total coins spent (lifetime)',
+  },
+  maxHistorySize: {
+    serializable: true,
+    instanceType: Number,
+    tooltip: 'Maximum transactions to keep in history',
+  },
+}, {
+  path: 'kingdom/economy',
+  displayName: 'Economy Manager',
+  description: 'Manages coins, diamonds, and transactions',
+  builtIn: false,
+  defaultValue: () => new EconomyManager(),
+});

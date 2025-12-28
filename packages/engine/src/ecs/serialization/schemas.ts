@@ -50,6 +50,24 @@ export const WorldMetadataSchema = z
   .optional();
 
 /**
+ * Resource registry entry schema
+ * Stores resource type metadata for validation during deserialization
+ */
+export const ResourceRegistryEntrySchema = z.object({
+  id: z.number(),
+  name: z.string(),
+});
+
+/**
+ * Serialized resource schema
+ * Stores resource type info and data as unknown (validated by custom serializers)
+ */
+export const SerializedResourceSchema = z.object({
+  typeName: z.string(),
+  data: z.unknown(),
+});
+
+/**
  * Complete world serialization schema
  */
 export const WorldSchema = z.object({
@@ -57,6 +75,9 @@ export const WorldSchema = z.object({
   componentRegistry: z.array(ComponentRegistryEntrySchema),
   entities: z.array(SerializedEntitySchema),
   metadata: WorldMetadataSchema,
+  // Resources are optional for backward compatibility with old world files
+  resourceRegistry: z.array(ResourceRegistryEntrySchema).optional(),
+  resources: z.array(SerializedResourceSchema).optional(),
 });
 
 /**
@@ -68,4 +89,6 @@ export type ComponentRegistryEntry = z.infer<
 export type SerializedComponent = z.infer<typeof SerializedComponentSchema>;
 export type SerializedEntity = z.infer<typeof SerializedEntitySchema>;
 export type WorldMetadata = z.infer<typeof WorldMetadataSchema>;
+export type ResourceRegistryEntry = z.infer<typeof ResourceRegistryEntrySchema>;
+export type SerializedResource = z.infer<typeof SerializedResourceSchema>;
 export type WorldData = z.infer<typeof WorldSchema>;

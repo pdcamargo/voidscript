@@ -13,6 +13,8 @@ import type { World } from "../world.js";
 import type { Command } from "../command.js";
 import type { ComponentType } from "../component.js";
 import { globalComponentRegistry } from "../component.js";
+import { globalResourceRegistry } from "../resource.js";
+import type { ResourceSerializerConfig, ResourceType } from "../resource.js";
 import { Parent } from "../components/parent.js";
 import { Children } from "../components/children.js";
 import type { Entity } from "../entity.js";
@@ -32,6 +34,8 @@ import type {
   SerializedEntity,
   SerializedComponent,
   ComponentRegistryEntry,
+  ResourceRegistryEntry,
+  SerializedResource,
 } from "./schemas.js";
 import { WorldSchema } from "./schemas.js";
 import {
@@ -43,6 +47,7 @@ import { jsonToYaml, yamlToJson } from "./yaml-utils.js";
 import { isAssetRef } from "../asset-ref.js";
 import { isRuntimeAsset } from "../runtime-asset.js";
 import { RuntimeAssetManager } from "../runtime-asset-manager.js";
+import type { Application } from "../../app/application.js";
 
 /**
  * WorldSerializer - Orchestrates serialization/deserialization of ECS World
@@ -505,6 +510,185 @@ export class WorldSerializer {
   }
 
   /**
+   * Serialize a resource using property-level config
+   */
+  private serializeResourceWithConfig(
+    data: any,
+    config: ResourceSerializerConfig<any>,
+    context: SerializationContext
+  ): any {
+    const result: any = {};
+
+    for (const [propertyKey, propertyConfig] of Object.entries(config)) {
+      if (!propertyConfig || !propertyConfig.serializable) {
+        continue; // Skip non-serializable properties
+      }
+
+      const value = data[propertyKey];
+      const serializedValue = this.serializePropertyValue(value, propertyConfig, context);
+
+      // Skip if whenNullish is 'skip' and value is undefined
+      if (serializedValue === undefined && propertyConfig.whenNullish === "skip") {
+        continue;
+      }
+
+      // Use serializeAs name if provided, otherwise use original key
+      const outputKey = propertyConfig.serializeAs || propertyKey;
+      result[outputKey] = serializedValue;
+    }
+
+    return result;
+  }
+
+  /**
+   * Deserialize a resource using property-level config
+   */
+  private deserializeResourceWithConfig(
+    data: any,
+    config: ResourceSerializerConfig<any>,
+    context: DeserializationContext
+  ): any {
+    const result: any = {};
+
+    for (const [propertyKey, propertyConfig] of Object.entries(config)) {
+      if (!propertyConfig || !propertyConfig.serializable) {
+        continue; // Skip non-serializable properties
+      }
+
+      // Use serializeAs name if provided to read from data
+      const inputKey = propertyConfig.serializeAs || propertyKey;
+      const value = data[inputKey];
+
+      const deserializedValue = this.deserializePropertyValue(value, propertyConfig, context);
+
+      // Store under original property key
+      result[propertyKey] = deserializedValue;
+    }
+
+    return result;
+  }
+
+  /**
+   * Serialize resources from Application
+   */
+  serializeResources(
+    app: Application,
+    context: SerializationContext
+  ): { registry: ResourceRegistryEntry[]; resources: SerializedResource[] } {
+    const registry: ResourceRegistryEntry[] = [];
+    const resources: SerializedResource[] = [];
+
+    // Get all resources from Application
+    const allResources = app.getAllResources();
+    let typeId = 0;
+
+    for (const [ctor, instance] of allResources) {
+      // Check if this resource type is registered
+      const resourceType = globalResourceRegistry.getByCtor(ctor as new (...args: any[]) => any);
+      if (!resourceType) {
+        continue; // Not registered - skip serialization
+      }
+
+      // Skip non-serializable resources
+      if (resourceType.serializerConfig === false) {
+        continue;
+      }
+
+      // Skip resources without any serialization config (nothing to serialize)
+      if (!resourceType.serializerConfig) {
+        continue;
+      }
+
+      // Build registry entry
+      registry.push({ id: typeId, name: resourceType.name });
+
+      // Serialize resource data
+      const serializedData = this.serializeResourceWithConfig(
+        instance,
+        resourceType.serializerConfig,
+        context
+      );
+
+      resources.push({
+        typeName: resourceType.name,
+        data: serializedData,
+      });
+
+      typeId++;
+    }
+
+    return { registry, resources };
+  }
+
+  /**
+   * Deserialize resources into Application
+   */
+  deserializeResources(
+    app: Application,
+    resourceRegistry: ResourceRegistryEntry[],
+    resources: SerializedResource[],
+    context: DeserializationContext,
+    options: DeserializeOptions
+  ): void {
+    // Build resource type lookup by name
+    const resourceTypeByName = new Map<string, ResourceType<any>>();
+
+    for (const entry of resourceRegistry) {
+      const resourceType = globalResourceRegistry.getByName(entry.name);
+      if (resourceType) {
+        resourceTypeByName.set(entry.name, resourceType);
+      } else if (!options.skipMissingComponents) {
+        console.warn(`[WorldSerializer] Resource type "${entry.name}" not found in registry`);
+      }
+    }
+
+    // Deserialize each resource
+    for (const serializedResource of resources) {
+      const resourceType = resourceTypeByName.get(serializedResource.typeName);
+      if (!resourceType) {
+        continue;
+      }
+
+      // Skip resources without serialization config
+      if (!resourceType.serializerConfig) {
+        continue;
+      }
+
+      // Check if resource already exists in app
+      let instance = app.getResource(resourceType.ctor);
+
+      if (!instance) {
+        // Create new instance using defaultValue or constructor
+        if (resourceType.metadata?.defaultValue) {
+          instance = resourceType.metadata.defaultValue(app);
+        } else {
+          try {
+            instance = new resourceType.ctor();
+          } catch (error) {
+            console.warn(
+              `[WorldSerializer] Failed to create resource "${resourceType.name}": ${
+                error instanceof Error ? error.message : String(error)
+              }`
+            );
+            continue;
+          }
+        }
+        app.insertResource(instance);
+      }
+
+      // Deserialize properties into existing instance
+      const deserializedData = this.deserializeResourceWithConfig(
+        serializedResource.data,
+        resourceType.serializerConfig,
+        context
+      );
+
+      // Apply deserialized values to instance
+      Object.assign(instance, deserializedData);
+    }
+  }
+
+  /**
    * Recursively collect all descendant entities
    */
   private collectDescendants(
@@ -574,11 +758,13 @@ export class WorldSerializer {
    * @param world - World instance
    * @param commands - Command instance for queries
    * @param entityFilter - Optional set of entity IDs to serialize (defaults to all entities)
+   * @param app - Optional Application instance for resource serialization
    */
   serialize(
     world: World,
     commands: Command,
-    entityFilter?: Set<number>
+    entityFilter?: Set<number>,
+    app?: Application
   ): WorldData {
     const startTime = performance.now();
 
@@ -707,6 +893,16 @@ export class WorldSerializer {
       });
     });
 
+    // Serialize resources if app is provided
+    let resourceRegistry: ResourceRegistryEntry[] = [];
+    let resourcesData: SerializedResource[] = [];
+
+    if (app) {
+      const resourceResult = this.serializeResources(app, context);
+      resourceRegistry = resourceResult.registry;
+      resourcesData = resourceResult.resources;
+    }
+
     return {
       version: "1.0.0",
       componentRegistry,
@@ -717,6 +913,8 @@ export class WorldSerializer {
         entityCount: entities.length,
         archetypeCount: world.getArchetypeCount(),
       },
+      resourceRegistry: resourceRegistry.length > 0 ? resourceRegistry : undefined,
+      resources: resourcesData.length > 0 ? resourcesData : undefined,
     };
   }
 
@@ -725,12 +923,14 @@ export class WorldSerializer {
    * Two-pass:
    * 1. Create all entities and add components (simple data)
    * 2. Fix up entity references using entityMapping
+   * @param app - Optional Application instance for resource deserialization
    */
   deserialize(
     world: World,
     commands: Command,
     data: unknown,
-    options: DeserializeOptions = {}
+    options: DeserializeOptions = {},
+    app?: Application
   ): DeserializeResult {
     const startTime = performance.now();
     const {
@@ -955,6 +1155,17 @@ export class WorldSerializer {
     }
 
     const deserializeTime = performance.now() - startTime;
+
+    // Deserialize resources if app is provided and data has resources
+    if (app && worldData.resourceRegistry && worldData.resources) {
+      this.deserializeResources(
+        app,
+        worldData.resourceRegistry,
+        worldData.resources,
+        deserializationContext,
+        options
+      );
+    }
 
     return {
       success: true,

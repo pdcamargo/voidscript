@@ -57,3 +57,10 @@ export type {
   ParseResult,
 } from './entity-query-parser.js';
 export { evaluateQuery } from './entity-query-evaluator.js';
+
+// Resource Viewer - Resource editor panel
+export {
+  renderImGuiResourceViewer,
+  setSelectedResource,
+  getSelectedResource,
+} from './resource-viewer.js';

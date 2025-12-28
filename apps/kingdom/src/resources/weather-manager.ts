@@ -434,3 +434,69 @@ export class WeatherManager {
     };
   }
 }
+
+// Register WeatherManager as a resource with serializable properties
+import { registerResource } from '@voidscript/engine';
+registerResource(WeatherManager, {
+  currentConditions: {
+    serializable: true,
+    instanceType: Number,
+    tooltip: 'Current weather conditions (bitfield)',
+  },
+  intensity: {
+    serializable: true,
+    instanceType: Number,
+    tooltip: 'Current weather intensity (0.0 - 1.0)',
+  },
+  dayLightIntensity: {
+    serializable: true,
+    instanceType: Number,
+    tooltip: 'Light intensity during daytime',
+  },
+  nightLightIntensity: {
+    serializable: true,
+    instanceType: Number,
+    tooltip: 'Light intensity during nighttime',
+  },
+  forestLightIntensity: {
+    serializable: true,
+    instanceType: Number,
+    tooltip: 'Light intensity in forest areas',
+  },
+  dayAmbientLightIntensity: {
+    serializable: true,
+    instanceType: Number,
+    tooltip: 'Ambient light intensity during daytime',
+  },
+  nightAmbientLightIntensity: {
+    serializable: true,
+    instanceType: Number,
+    tooltip: 'Ambient light intensity during nighttime',
+  },
+  forestAmbientLightIntensity: {
+    serializable: true,
+    instanceType: Number,
+    tooltip: 'Ambient light intensity in forest areas',
+  },
+  rainyLightMultiplier: {
+    serializable: true,
+    instanceType: Number,
+    tooltip: 'Light multiplier during rain',
+  },
+  foggyLightMultiplier: {
+    serializable: true,
+    instanceType: Number,
+    tooltip: 'Light multiplier during fog',
+  },
+  stormyLightMultiplier: {
+    serializable: true,
+    instanceType: Number,
+    tooltip: 'Light multiplier during storms',
+  },
+}, {
+  path: 'kingdom/environment',
+  displayName: 'Weather Manager',
+  description: 'Manages weather conditions and light settings',
+  builtIn: false,
+  defaultValue: () => new WeatherManager(),
+});

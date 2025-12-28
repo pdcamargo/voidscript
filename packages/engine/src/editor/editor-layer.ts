@@ -70,6 +70,7 @@ import {
   openSpriteEditor,
   closeSpriteEditor,
 } from '../app/imgui/sprite-editor/index.js';
+import { renderImGuiResourceViewer } from '../app/imgui/resource-viewer.js';
 
 // ============================================================================
 // Editor Configuration
@@ -1066,6 +1067,10 @@ export class EditorLayer extends Layer {
         label: isPanelVisible('spriteEditor') ? '✓ Sprite Editor' : '   Sprite Editor',
         onClick: () => togglePanelVisibility('spriteEditor'),
       },
+      {
+        label: isPanelVisible('resources') ? '✓ Resources' : '   Resources',
+        onClick: () => togglePanelVisibility('resources'),
+      },
     ];
     const userWindowMenuItems = this.config.menuCallbacks?.windowMenuItems ?? [];
     const combinedWindowMenuItems = [...builtInWindowMenuItems, ...userWindowMenuItems];
@@ -1479,6 +1484,11 @@ export class EditorLayer extends Layer {
           renderer: app.getRenderer().getThreeRenderer(),
           assetsManifest: app.getAssetsManifestPath(),
         });
+      }
+
+      // Render resources panel if visible
+      if (isPanelVisible('resources')) {
+        renderImGuiResourceViewer(app);
       }
     } else {
       ImGui.PopStyleVar(3);

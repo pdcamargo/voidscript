@@ -92,4 +92,39 @@ export class AnimationManager {
     if (this._isPaused) return 0;
     return deltaTime * this._globalSpeed;
   }
+
+  // Public getters/setters for serialization
+  get globalSpeed(): number {
+    return this._globalSpeed;
+  }
+  set globalSpeed(value: number) {
+    this._globalSpeed = Math.max(0, value);
+  }
+
+  get isPaused(): boolean {
+    return this._isPaused;
+  }
+  set isPaused(value: boolean) {
+    this._isPaused = value;
+  }
 }
+
+// Register AnimationManager as a resource with serializable properties
+import { registerResource } from '../ecs/resource.js';
+registerResource(AnimationManager, {
+  globalSpeed: {
+    serializable: true,
+    instanceType: Number,
+    tooltip: 'Global speed multiplier for all animations (1.0 = normal)',
+  },
+  isPaused: {
+    serializable: true,
+    instanceType: Boolean,
+    tooltip: 'Whether all animations are globally paused',
+  },
+}, {
+  path: 'animation',
+  displayName: 'Animation Manager',
+  description: 'Global animation playback control',
+  builtIn: true,
+});

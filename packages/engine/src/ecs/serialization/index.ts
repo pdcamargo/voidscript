@@ -37,6 +37,8 @@ export type {
   SerializedEntity,
   WorldMetadata,
   WorldData,
+  ResourceRegistryEntry,
+  SerializedResource,
 } from "./schemas.js";
 export {
   ComponentRegistryEntrySchema,
@@ -44,6 +46,8 @@ export {
   SerializedEntitySchema,
   WorldMetadataSchema,
   WorldSchema,
+  ResourceRegistryEntrySchema,
+  SerializedResourceSchema,
 } from "./schemas.js";
 export {
   jsonToYaml,

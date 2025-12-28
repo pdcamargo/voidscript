@@ -82,6 +82,7 @@ import { EditorCameraManager } from "./editor-camera-manager.js";
 import { EditorManager } from "../editor/editor-manager.js";
 import { ConsoleLogger } from "./console-logger.js";
 import { PostProcessingManager } from "../post-processing/managers/post-processing-manager.js";
+import { isInitializableResource } from "../ecs/resource.js";
 
 // Physics systems (2D and 3D)
 import {
@@ -1508,6 +1509,12 @@ export class Application {
   insertResource<T extends object>(resource: T): this {
     const ctor = resource.constructor;
     this.resources.set(ctor, resource);
+
+    // Call lifecycle hook if resource implements InitializableResource
+    if (isInitializableResource(resource)) {
+      resource.onInitialize(this);
+    }
+
     return this;
   }
 

@@ -731,3 +731,25 @@ export {
   markClean,
 } from './app/imgui/sprite-editor/index.js';
 export type { SpriteEditorState } from './app/imgui/sprite-editor/index.js';
+
+// Resource System
+export {
+  ResourceType,
+  ResourceRegistry,
+  globalResourceRegistry,
+  registerResource,
+  isInitializableResource,
+} from "./ecs/resource.js";
+export type {
+  ResourceMetadata,
+  ResourceSerializerConfig,
+  ResourceEditorOptions,
+  InitializableResource,
+} from "./ecs/resource.js";
+
+// Resource Viewer
+export {
+  renderImGuiResourceViewer,
+  setSelectedResource,
+  getSelectedResource,
+} from './app/imgui/resource-viewer.js';

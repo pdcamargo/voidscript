@@ -406,3 +406,24 @@ export class PopulationManager {
     this._idCounter = 0;
   }
 }
+
+// Register PopulationManager as a resource with serializable properties
+import { registerResource } from '@voidscript/engine';
+registerResource(PopulationManager, {
+  maxPopulation: {
+    serializable: true,
+    instanceType: Number,
+    tooltip: 'Maximum population allowed (based on buildings)',
+  },
+  baseVillagerHp: {
+    serializable: true,
+    instanceType: Number,
+    tooltip: 'Base HP for new villagers',
+  },
+}, {
+  path: 'kingdom/population',
+  displayName: 'Population Manager',
+  description: 'Manages villagers and homeless NPCs',
+  builtIn: false,
+  defaultValue: () => new PopulationManager(),
+});

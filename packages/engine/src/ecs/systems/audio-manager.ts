@@ -510,3 +510,12 @@ export class AudioManager {
     this.isInitialized = false;
   }
 }
+
+// Register AudioManager as a resource (internal, not serializable)
+import { registerResource } from '../resource.js';
+registerResource(AudioManager, false, {
+  path: 'audio',
+  displayName: 'Audio Manager',
+  description: 'Manages Three.js audio objects for ECS entities',
+  builtIn: true,
+});

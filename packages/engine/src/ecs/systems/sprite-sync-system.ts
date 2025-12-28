@@ -601,3 +601,12 @@ export const spriteSyncSystem = system(({ commands }) => {
   }
 });
 
+// Register SpriteRenderManager as a resource (internal, not serializable)
+import { registerResource } from '../resource.js';
+registerResource(SpriteRenderManager, false, {
+  path: 'rendering',
+  displayName: 'Sprite Render Manager',
+  description: 'Manages 2D sprite rendering',
+  builtIn: true,
+});
+

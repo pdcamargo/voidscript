@@ -322,3 +322,34 @@ export class GameTimeManager {
     this._dayStartedThisFrame = false;
   }
 }
+
+// Register GameTimeManager as a resource with serializable properties
+import { registerResource } from '@voidscript/engine';
+registerResource(GameTimeManager, {
+  currentTime: {
+    serializable: true,
+    instanceType: Number,
+    tooltip: 'Current game time in hours (0.0 - 24.0)',
+  },
+  currentDay: {
+    serializable: true,
+    instanceType: Number,
+    tooltip: 'Current day number (1-indexed)',
+  },
+  timeSpeed: {
+    serializable: true,
+    instanceType: Number,
+    tooltip: 'Game hours per real second',
+  },
+  isPaused: {
+    serializable: true,
+    instanceType: Boolean,
+    tooltip: 'Whether time progression is paused',
+  },
+}, {
+  path: 'kingdom/time',
+  displayName: 'Game Time Manager',
+  description: 'Manages day/night cycle and time progression',
+  builtIn: false,
+  defaultValue: () => new GameTimeManager(),
+});

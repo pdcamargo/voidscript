@@ -955,3 +955,12 @@ export const render3DSyncSystem = system(({ commands }) => {
   }
 });
 
+// Register Render3DManager as a resource (internal, not serializable)
+import { registerResource } from '../resource.js';
+registerResource(Render3DManager, false, {
+  path: 'rendering',
+  displayName: '3D Render Manager',
+  description: 'Manages 3D mesh and light synchronization',
+  builtIn: true,
+});
+

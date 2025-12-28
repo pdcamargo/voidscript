@@ -179,3 +179,18 @@ export type {
   UnknownAssetMetadata,
   AssetMetadata,
 } from "./asset-metadata.js";
+
+// Resource System
+export {
+  ResourceType,
+  ResourceRegistry,
+  globalResourceRegistry,
+  registerResource,
+  isInitializableResource,
+} from "./resource.js";
+export type {
+  ResourceMetadata,
+  ResourceSerializerConfig,
+  ResourceEditorOptions,
+  InitializableResource,
+} from "./resource.js";

@@ -392,3 +392,13 @@ export class BuildingManager {
     this._idCounter = 0;
   }
 }
+
+// Register BuildingManager as a resource (internal state managed by configs)
+import { registerResource } from '@voidscript/engine';
+registerResource(BuildingManager, false, {
+  path: 'kingdom/buildings',
+  displayName: 'Building Manager',
+  description: 'Manages all buildings in the kingdom',
+  builtIn: false,
+  defaultValue: () => new BuildingManager(),
+});
