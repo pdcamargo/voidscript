@@ -1462,10 +1462,11 @@ export class EditorLayer extends Layer {
 
       // Render sprite editor panel if visible
       if (isPanelVisible('spriteEditor')) {
-        renderSpriteEditorPanel(
-          this.config.platform ?? null,
-          app.getRenderer().getThreeRenderer(),
-        );
+        renderSpriteEditorPanel({
+          platform: this.config.platform ?? null,
+          renderer: app.getRenderer().getThreeRenderer(),
+          assetsManifest: app.getAssetsManifestPath(),
+        });
       }
     } else {
       ImGui.PopStyleVar(3);

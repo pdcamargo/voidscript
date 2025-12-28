@@ -191,24 +191,64 @@ export function setupEditor(
 // ============================================================================
 
 /**
+ * Path utilities for Tauri platform
+ */
+export interface TauriPathUtils {
+  /** Get the application's resource directory (from @tauri-apps/api/path) */
+  resourceDir: () => Promise<string>;
+  /** Join path segments (from @tauri-apps/api/path) */
+  join: (...paths: string[]) => Promise<string>;
+}
+
+/**
+ * Options for creating a Tauri platform
+ */
+export interface TauriPlatformOptions {
+  /**
+   * Path utilities from @tauri-apps/api/path (resourceDir, join)
+   */
+  pathUtils?: TauriPathUtils;
+  /**
+   * The absolute path to the source assets directory (e.g., public/ folder).
+   * Used by editor tools to save files directly to source during development.
+   * Example: '/Users/dev/myproject/apps/game/public'
+   */
+  sourceAssetsDir?: string;
+}
+
+/**
  * Create a Tauri platform adapter
  *
  * @example
  * ```typescript
  * import { save, open } from '@tauri-apps/plugin-dialog';
  * import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
+ * import { resourceDir, join } from '@tauri-apps/api/path';
  *
- * const platform = createTauriPlatform(save, open, readTextFile, writeTextFile);
+ * const platform = createTauriPlatform(
+ *   save, open, readTextFile, writeTextFile,
+ *   {
+ *     pathUtils: { resourceDir, join },
+ *     sourceAssetsDir: '/absolute/path/to/public',
+ *   }
+ * );
  * ```
  */
 export function createTauriPlatform(
   save: (options?: { filters?: { name: string; extensions: string[] }[] }) => Promise<string | null>,
   open: (options?: { filters?: { name: string; extensions: string[] }[]; multiple?: boolean }) => Promise<string | string[] | null>,
   readTextFile: (path: string) => Promise<string>,
-  writeTextFile: (path: string, contents: string) => Promise<void>
+  writeTextFile: (path: string, contents: string) => Promise<void>,
+  options?: TauriPlatformOptions | TauriPathUtils
 ): EditorPlatform {
+  // Support both old signature (TauriPathUtils) and new signature (TauriPlatformOptions)
+  const isNewOptions = options && ('pathUtils' in options || 'sourceAssetsDir' in options);
+  const pathUtils = isNewOptions ? (options as TauriPlatformOptions).pathUtils : (options as TauriPathUtils | undefined);
+  const sourceAssetsDir = isNewOptions ? (options as TauriPlatformOptions).sourceAssetsDir : undefined;
+
   return {
     name: 'tauri',
+    sourceAssetsDir,
 
     async showSaveDialog(options?: SaveDialogOptions): Promise<string | null> {
       return save({
@@ -229,6 +269,21 @@ export function createTauriPlatform(
 
     async writeTextFile(path: string, contents: string): Promise<void> {
       return writeTextFile(path, contents);
+    },
+
+    async resourceDir(): Promise<string> {
+      if (pathUtils?.resourceDir) {
+        return pathUtils.resourceDir();
+      }
+      return '';
+    },
+
+    async joinPath(...paths: string[]): Promise<string> {
+      if (pathUtils?.join) {
+        return pathUtils.join(...paths);
+      }
+      // Fallback: simple join with /
+      return paths.join('/');
     },
   };
 }

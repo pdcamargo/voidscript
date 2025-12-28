@@ -51,4 +51,4 @@ export {
   createTauriPlatform,
   createWebPlatform,
 } from './setup-editor.js';
-export type { SetupEditorOptions, EditorContext } from './setup-editor.js';
+export type { SetupEditorOptions, EditorContext, TauriPathUtils, TauriPlatformOptions } from './setup-editor.js';

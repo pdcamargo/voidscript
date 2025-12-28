@@ -87,6 +87,31 @@ export interface EditorPlatform {
   exists?(path: string): Promise<boolean>;
 
   /**
+   * Get the application's resource directory (where assets are bundled).
+   * For Tauri, this uses @tauri-apps/api/path resourceDir().
+   * NOTE: This returns the BUNDLED resources path, not the source project path.
+   * For development, use sourceAssetsDir instead.
+   * @returns The resource directory path, or empty string if not supported
+   */
+  resourceDir?(): Promise<string>;
+
+  /**
+   * Join path segments using the platform-specific separator.
+   * For Tauri, this uses @tauri-apps/api/path join().
+   * @param paths Path segments to join
+   * @returns The joined path
+   */
+  joinPath?(...paths: string[]): Promise<string>;
+
+  /**
+   * The source assets directory path for development.
+   * This is the absolute path to the project's public/ folder where source assets live.
+   * Used by editor tools to save files directly to source (e.g., manifest.json).
+   * Example: '/Users/dev/myproject/apps/game/public'
+   */
+  sourceAssetsDir?: string;
+
+  /**
    * Get the platform name (for debugging)
    */
   readonly name: string;

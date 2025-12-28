@@ -559,6 +559,14 @@ export class Application {
   }
 
   /**
+   * Get the assets manifest path from config
+   * @returns The assets manifest path, or undefined if not set
+   */
+  getAssetsManifestPath(): string | undefined {
+    return this.config.assetsManifest;
+  }
+
+  /**
    * Main game loop
    */
   private gameLoop(): void {

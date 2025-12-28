@@ -236,13 +236,23 @@ export function toggleSpriteEditor(): void {
 // ============================================================================
 
 /**
+ * Options for the sprite editor panel
+ */
+export interface SpriteEditorPanelOptions {
+  /** Platform for file operations */
+  platform: EditorPlatform | null;
+  /** Three.js renderer */
+  renderer: THREE.WebGLRenderer;
+  /** Path to asset manifest (from ApplicationConfig.assetsManifest) */
+  assetsManifest?: string;
+}
+
+/**
  * Render the Sprite Editor panel
  * Note: Visibility is controlled by the calling code (editor-layer.ts) via isPanelVisible('spriteEditor')
  */
-export function renderSpriteEditorPanel(
-  platform: EditorPlatform | null,
-  renderer: THREE.WebGLRenderer,
-): void {
+export function renderSpriteEditorPanel(options: SpriteEditorPanelOptions): void {
+  const { platform, renderer, assetsManifest } = options;
   const state = getSpriteEditorState();
 
   ImGui.SetNextWindowSize({ x: 900, y: 600 }, ImGui.Cond.FirstUseEver);
@@ -256,7 +266,7 @@ export function renderSpriteEditorPanel(
   const open: [boolean] = [true];
   if (ImGui.Begin('Sprite Editor###SpriteEditor', open, windowFlags)) {
     // Menu bar
-    renderMenuBar(state, platform);
+    renderMenuBar(state, platform, assetsManifest);
 
     // Toolbar
     renderToolbar(state, renderer);
@@ -303,6 +313,7 @@ export function renderSpriteEditorPanel(
 function renderMenuBar(
   state: ReturnType<typeof getSpriteEditorState>,
   platform: EditorPlatform | null,
+  assetsManifest?: string,
 ): void {
   if (ImGui.BeginMenuBar()) {
     if (ImGui.BeginMenu('File')) {
@@ -314,7 +325,7 @@ function renderMenuBar(
           state.isDirty && !!platform,
         )
       ) {
-        saveManifest(state, platform!);
+        saveManifest(state, platform!, assetsManifest);
       }
       ImGui.EndMenu();
     }
@@ -529,6 +540,39 @@ function renderTextureViewer(
       ImGui.Button(`##right${i}`, { x: thickness, y: spriteDisplayH });
       ImGui.PopStyleVar(2);
       ImGui.PopStyleColor(3);
+
+      // Draw pivot point crosshair for selected sprite
+      if (isSelected) {
+        const pivot = sprite.pivot ?? { x: 0.5, y: 0.5 };
+        const pivotX = spriteDisplayX + spriteDisplayW * pivot.x;
+        const pivotY = spriteDisplayY + spriteDisplayH * pivot.y;
+
+        const pivotColor = { x: 1.0, y: 0.4, z: 0.0, w: 1.0 }; // Orange
+        const pivotSize = 6;
+        const pivotThickness = 2;
+
+        // Horizontal line of crosshair
+        ImGui.SetCursorPos({ x: pivotX - pivotSize, y: pivotY - pivotThickness / 2 });
+        ImGui.PushStyleColorImVec4(ImGui.Col.Button, pivotColor);
+        ImGui.PushStyleColorImVec4(ImGui.Col.ButtonHovered, pivotColor);
+        ImGui.PushStyleColorImVec4(ImGui.Col.ButtonActive, pivotColor);
+        ImGui.PushStyleVarImVec2(ImGui.StyleVar.FramePadding, { x: 0, y: 0 });
+        ImGui.PushStyleVar(ImGui.StyleVar.FrameRounding, 0);
+        ImGui.Button(`##pivotH${i}`, { x: pivotSize * 2, y: pivotThickness });
+        ImGui.PopStyleVar(2);
+        ImGui.PopStyleColor(3);
+
+        // Vertical line of crosshair
+        ImGui.SetCursorPos({ x: pivotX - pivotThickness / 2, y: pivotY - pivotSize });
+        ImGui.PushStyleColorImVec4(ImGui.Col.Button, pivotColor);
+        ImGui.PushStyleColorImVec4(ImGui.Col.ButtonHovered, pivotColor);
+        ImGui.PushStyleColorImVec4(ImGui.Col.ButtonActive, pivotColor);
+        ImGui.PushStyleVarImVec2(ImGui.StyleVar.FramePadding, { x: 0, y: 0 });
+        ImGui.PushStyleVar(ImGui.StyleVar.FrameRounding, 0);
+        ImGui.Button(`##pivotV${i}`, { x: pivotThickness, y: pivotSize * 2 });
+        ImGui.PopStyleVar(2);
+        ImGui.PopStyleColor(3);
+      }
     }
   }
 }
@@ -830,11 +874,27 @@ function renderSpriteProperties(
 async function saveManifest(
   state: ReturnType<typeof getSpriteEditorState>,
   platform: EditorPlatform,
+  assetsManifest?: string,
 ): Promise<void> {
   try {
-    // Get manifest path or ask for one
     let manifestPath = state.manifestPath;
 
+    // Try to resolve manifest path from source assets directory if not already set
+    if (!manifestPath && assetsManifest && platform.sourceAssetsDir && platform.joinPath) {
+      try {
+        // Strip leading / from web path to make it relative
+        const relativePath = assetsManifest.startsWith('/')
+          ? assetsManifest.slice(1)
+          : assetsManifest;
+        manifestPath = await platform.joinPath(platform.sourceAssetsDir, relativePath);
+        state.manifestPath = manifestPath;
+        console.log(`[SpriteEditor] Resolved manifest path: ${manifestPath}`);
+      } catch (error) {
+        console.warn('[SpriteEditor] Could not resolve manifest path from config:', error);
+      }
+    }
+
+    // Fall back to save dialog if path still not set
     if (!manifestPath) {
       manifestPath = await platform.showSaveDialog({
         title: 'Save Asset Manifest',

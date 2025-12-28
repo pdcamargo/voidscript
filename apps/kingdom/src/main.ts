@@ -8,6 +8,7 @@ import {
 } from '@voidscript/engine';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
+import { resourceDir, join } from '@tauri-apps/api/path';
 
 import { GameLayer } from './game-layer.js';
 import { openCloudGeneratorWindow } from './ui/cloud-generator-panel.js';
@@ -84,8 +85,12 @@ async function main() {
     // Load assets from JSON manifest file
     assetsManifest: '/assets/manifest.json',
 
-    // Platform for file operations (Tauri native dialogs)
-    platform: createTauriPlatform(save, open, readTextFile, writeTextFile),
+    // Platform for file operations (Tauri native dialogs + path utilities)
+    platform: createTauriPlatform(save, open, readTextFile, writeTextFile, {
+      pathUtils: { resourceDir, join },
+      // Source assets directory for saving manifest during development
+      sourceAssetsDir: '/Users/pdcamargo/dev/dreampact/apps/kingdom/public',
+    }),
 
     // defaultWorld: {
     //   source:

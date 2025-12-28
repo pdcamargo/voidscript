@@ -15,6 +15,7 @@ export {
   closeSpriteEditor,
   toggleSpriteEditor,
 } from './sprite-editor-panel.js';
+export type { SpriteEditorPanelOptions } from './sprite-editor-panel.js';
 
 export {
   getSpriteEditorState,

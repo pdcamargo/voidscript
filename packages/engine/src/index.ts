@@ -619,6 +619,8 @@ export type {
   // Setup types
   SetupEditorOptions,
   EditorContext,
+  TauriPathUtils,
+  TauriPlatformOptions,
 } from './editor/index.js';
 
 // UI module - three-mesh-ui based serializable UI system
