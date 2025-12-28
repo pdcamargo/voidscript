@@ -16,6 +16,7 @@
 
 import { component } from '../../../ecs/component.js';
 import * as THREE from 'three';
+import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 
 export interface Velocity3DData {
   /** Linear velocity in meters/second */
@@ -50,5 +51,38 @@ export const Velocity3D = component<Velocity3DData>(
     }),
     displayName: 'Velocity 3D',
     description: 'Linear and angular velocity for 3D physics',
+    customEditor: ({ componentData }) => {
+      EditorLayout.beginLabelsWidth(['Linear Velocity', 'Angular Velocity']);
+
+      const [linear, linearChanged] = EditorLayout.vector3Field(
+        'Linear Velocity',
+        componentData.linear,
+        {
+          speed: 0.1,
+          tooltip: 'Linear velocity in meters/second',
+        }
+      );
+      if (linearChanged) {
+        componentData.linear.x = linear.x;
+        componentData.linear.y = linear.y;
+        componentData.linear.z = linear.z;
+      }
+
+      const [angular, angularChanged] = EditorLayout.vector3Field(
+        'Angular Velocity',
+        componentData.angular,
+        {
+          speed: 0.1,
+          tooltip: 'Angular velocity in radians/second (axis-angle representation)',
+        }
+      );
+      if (angularChanged) {
+        componentData.angular.x = angular.x;
+        componentData.angular.y = angular.y;
+        componentData.angular.z = angular.z;
+      }
+
+      EditorLayout.endLabelsWidth();
+    },
   },
 );

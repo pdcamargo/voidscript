@@ -77,12 +77,36 @@ export interface ImGuiLayerConfig {
  * This layer is automatically added as an overlay by Application
  * unless ImGui is disabled in ApplicationConfig.
  */
+/**
+ * Set of keys that jsimgui's KEYBOARD_MAP handles.
+ * Characters NOT in this set need to be manually forwarded to ImGui.
+ */
+const JSIMGUI_HANDLED_KEYS = new Set([
+  '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+  'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+  'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+  'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+  "'", ',', '-', '.', '/', ';', '=', '[', '\\', ']', '`', ' ',
+  'Tab', 'Enter', 'Escape', 'Backspace', 'Delete', 'Insert',
+  'Home', 'End', 'PageUp', 'PageDown',
+  'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+  'Control', 'Shift', 'Alt', 'Super', 'Meta',
+  'CapsLock', 'ScrollLock', 'NumLock', 'PrintScreen', 'Pause',
+  'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12',
+  'F13', 'F14', 'F15', 'F16', 'F17', 'F18', 'F19', 'F20', 'F21', 'F22', 'F23', 'F24',
+  'Numpad0', 'Numpad1', 'Numpad2', 'Numpad3', 'Numpad4',
+  'Numpad5', 'Numpad6', 'Numpad7', 'Numpad8', 'Numpad9',
+  'NumpadDecimal', 'NumpadDivide', 'NumpadMultiply', 'NumpadSubtract', 'NumpadAdd', 'NumpadEnter', 'NumpadEqual',
+]);
+
 export class ImGuiLayer extends Layer {
   private initialized = false;
   private config: Required<ImGuiLayerConfig>;
   private blockEvents: boolean;
   private themeApplied = false;
   private currentPixelRatio = 1;
+  private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
 
   constructor(config: ImGuiLayerConfig = {}) {
     super('ImGuiLayer');
@@ -176,6 +200,22 @@ export class ImGuiLayer extends Layer {
     // Initialize pixel ratio from window.devicePixelRatio
     this.currentPixelRatio = window.devicePixelRatio ?? 1;
 
+    // Setup supplementary keyboard handler for characters jsimgui misses
+    // jsimgui's KEYBOARD_MAP doesn't include shifted characters like :, <, >, @, etc.
+    // We add our own listener to catch these and forward them to ImGui
+    this.keydownHandler = (e: KeyboardEvent) => {
+      // Only process if ImGui wants text input and it's a single printable character
+      if (!io.WantTextInput) return;
+      if (e.key.length !== 1) return;
+
+      // Skip keys that jsimgui already handles
+      if (JSIMGUI_HANDLED_KEYS.has(e.key)) return;
+
+      // Forward the character to ImGui
+      io.AddInputCharactersUTF8(e.key);
+    };
+    canvas.addEventListener('keydown', this.keydownHandler);
+
     this.initialized = true;
 
     // Theme will be applied in beginFrame() on first render
@@ -187,6 +227,14 @@ export class ImGuiLayer extends Layer {
    */
   override onDetach(): void {
     if (this.initialized) {
+      // Remove our supplementary keyboard handler
+      if (this.keydownHandler) {
+        const app = this.getApplication();
+        const canvas = app.getWindow().getCanvas();
+        canvas.removeEventListener('keydown', this.keydownHandler);
+        this.keydownHandler = null;
+      }
+
       // ImGuiImplWeb may not have a shutdown method in all versions
       if (
         'Shutdown' in ImGuiImplWeb &&

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { component } from "../../component.js";
+import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 
 export interface CameraClearColorData {
   /**
@@ -61,5 +62,30 @@ export const CameraClearColor = component<CameraClearColorData>(
     displayName: "Camera Clear Color",
     description: "Clear color for camera rendering",
     path: "rendering/camera",
+    customEditor: ({ componentData }) => {
+      EditorLayout.beginLabelsWidth(['Color', 'Alpha']);
+
+      const [color, colorChanged] = EditorLayout.colorField(
+        'Color',
+        { r: componentData.color.r, g: componentData.color.g, b: componentData.color.b },
+        { tooltip: 'Background color for camera rendering' }
+      );
+      if (colorChanged) {
+        componentData.color.r = color.r;
+        componentData.color.g = color.g;
+        componentData.color.b = color.b;
+      }
+
+      const [alpha, alphaChanged] = EditorLayout.numberField(
+        'Alpha',
+        componentData.alpha,
+        { speed: 0.01, min: 0, max: 1, tooltip: 'Background alpha (0 = transparent, 1 = opaque)' }
+      );
+      if (alphaChanged) {
+        componentData.alpha = alpha;
+      }
+
+      EditorLayout.endLabelsWidth();
+    },
   }
 );

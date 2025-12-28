@@ -20,6 +20,7 @@
 
 import { component } from '../../../ecs/component.js';
 import type { BodyType } from '../../types.js';
+import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 
 export interface RigidBody2DData {
   /** Body type: dynamic, static, or kinematic */
@@ -49,5 +50,36 @@ export const RigidBody2D = component<RigidBody2DData>(
     }),
     displayName: 'Rigid Body 2D',
     description: 'Physics rigid body for 2D simulation',
+    customEditor: ({ componentData }) => {
+      EditorLayout.beginLabelsWidth(['Body Type', 'Can Sleep']);
+
+      // Body Type dropdown
+      const bodyTypes = ['dynamic', 'static', 'kinematic'] as const;
+      const [bodyType, bodyTypeChanged] = EditorLayout.comboField(
+        'Body Type',
+        componentData.bodyType,
+        [...bodyTypes],
+        {
+          tooltip: 'dynamic: affected by forces/gravity, static: never moves, kinematic: moves via velocity only',
+        }
+      );
+      if (bodyTypeChanged) {
+        componentData.bodyType = bodyType as BodyType;
+      }
+
+      // Can Sleep checkbox
+      const [canSleep, canSleepChanged] = EditorLayout.checkboxField(
+        'Can Sleep',
+        componentData.canSleep,
+        {
+          tooltip: 'Performance optimization - allows body to sleep when inactive',
+        }
+      );
+      if (canSleepChanged) {
+        componentData.canSleep = canSleep;
+      }
+
+      EditorLayout.endLabelsWidth();
+    },
   },
 );

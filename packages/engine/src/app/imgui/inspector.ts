@@ -34,6 +34,7 @@ import {
   hasSelectedKeyframe,
   renderKeyframeEditor,
 } from './animation-editor/keyframe-editor.js';
+import { setEditorLayoutContext } from './editor-layout-context.js';
 
 // Selection state
 let selectedEntity: Entity | undefined = undefined;
@@ -56,6 +57,14 @@ export function renderImGuiInspector(app: Application, entity?: Entity): void {
   // Store renderer for nested functions (asset picker and sprite picker)
   currentRenderer = app.getRenderer().getThreeRenderer();
   setSpritePickerRenderer(currentRenderer);
+
+  // Set EditorLayout context for this frame
+  setEditorLayoutContext({
+    commands: app.getCommands(),
+    world: app.world,
+    renderer: currentRenderer,
+    idPrefix: 'inspector',
+  });
 
   // Setup window
   ImGui.SetNextWindowPos({ x: 320, y: 10 }, ImGui.Cond.FirstUseEver);
@@ -306,11 +315,21 @@ function renderProperty(
 
   // Detect type and render appropriate control
 
+  // Helper to render label with tooltip
+  const renderLabel = () => {
+    ImGui.Text(`${label}:`);
+    if (config.tooltip && ImGui.IsItemHovered()) {
+      ImGui.SetTooltip(config.tooltip);
+    }
+    ImGui.SameLine();
+  };
+
   // 1. Vector3 (instanceType check)
   if (config.instanceType === Vector3 || value instanceof Vector3) {
     const vec: [number, number, number] = [value.x, value.y, value.z];
 
-    if (ImGui.DragFloat3(`${label}##${uniqueId}`, vec, 0.1)) {
+    renderLabel();
+    if (ImGui.DragFloat3(`##${uniqueId}`, vec, 0.1)) {
       return new Vector3(vec[0], vec[1], vec[2]);
     }
     return undefined; // No change
@@ -320,6 +339,7 @@ function renderProperty(
   if (isColorObject(value)) {
     const isThreeColor = value instanceof THREE.Color;
 
+    renderLabel();
     if (value.a !== undefined) {
       // RGBA (plain object with alpha)
       const arr: [number, number, number, number] = [
@@ -328,13 +348,13 @@ function renderProperty(
         value.b,
         value.a,
       ];
-      if (ImGui.ColorEdit4(`${label}##${uniqueId}`, arr)) {
+      if (ImGui.ColorEdit4(`##${uniqueId}`, arr)) {
         return { r: arr[0], g: arr[1], b: arr[2], a: arr[3] };
       }
     } else {
       // RGB (THREE.Color or plain object)
       const arr: [number, number, number] = [value.r, value.g, value.b];
-      if (ImGui.ColorEdit3(`${label}##${uniqueId}`, arr)) {
+      if (ImGui.ColorEdit3(`##${uniqueId}`, arr)) {
         // Return same type as input - THREE.Color or plain object
         if (isThreeColor) {
           return new THREE.Color(arr[0], arr[1], arr[2]);
@@ -348,14 +368,19 @@ function renderProperty(
   // 3. Nested objects (like { x, y })
   if (typeof value === 'object' && !Array.isArray(value)) {
     ImGui.Text(`${label}:`);
+    if (config.tooltip && ImGui.IsItemHovered()) {
+      ImGui.SetTooltip(config.tooltip);
+    }
     ImGui.Indent();
     let changed = false;
     const newObj = { ...value };
 
     for (const [key, val] of Object.entries(value)) {
       if (typeof val === 'number') {
+        ImGui.Text(`${key}:`);
+        ImGui.SameLine();
         const arr: [number] = [val];
-        if (ImGui.DragFloat(`${key}##${uniqueId}_${key}`, arr, 0.1)) {
+        if (ImGui.DragFloat(`##${uniqueId}_${key}`, arr, 0.1)) {
           newObj[key] = arr[0];
           changed = true;
         }
@@ -369,22 +394,31 @@ function renderProperty(
 
   // 4. Primitives
   if (typeof value === 'number') {
+    renderLabel();
     const arr: [number] = [value];
-    if (ImGui.DragFloat(`${label}##${uniqueId}`, arr, 0.1)) {
+    if (ImGui.DragFloat(`##${uniqueId}`, arr, 0.1)) {
       return arr[0];
     }
   } else if (typeof value === 'boolean') {
+    // Checkbox: label naturally goes on the right in ImGui
     const arr: [boolean] = [value];
     if (ImGui.Checkbox(`${label}##${uniqueId}`, arr)) {
+      if (config.tooltip && ImGui.IsItemHovered()) {
+        ImGui.SetTooltip(config.tooltip);
+      }
       return arr[0];
+    }
+    if (config.tooltip && ImGui.IsItemHovered()) {
+      ImGui.SetTooltip(config.tooltip);
     }
   } else if (typeof value === 'string') {
     try {
+      renderLabel();
       // String input using InputText
       const bufferSize = 256; // Max string length
       const buffer: [string] = [value];
 
-      ImGui.InputText(`${label}##${uniqueId}`, buffer, bufferSize);
+      ImGui.InputText(`##${uniqueId}`, buffer, bufferSize);
 
       // Only commit changes when user finishes editing (press Enter or click away)
       // This prevents disrupting the game view while typing

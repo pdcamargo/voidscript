@@ -12,7 +12,7 @@
  */
 
 import { component } from '../../component.js';
-import { ImGui } from '@mori2003/jsimgui';
+import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 
 /**
  * Light color representation (RGB, 0-1 range)
@@ -203,209 +203,244 @@ export const Light3D = component<Light3DData>(
     customEditor: ({ componentData }) => {
       const lightData = componentData as Light3DData;
 
-      // Light type selector dropdown
-      ImGui.Text('Light Type:');
-      ImGui.SameLine();
-      if (ImGui.BeginCombo('##lightType', lightData.type)) {
-        const types: LightType[] = ['directional', 'point', 'spot', 'ambient'];
-        for (const type of types) {
-          const isSelected = lightData.type === type;
-          if (ImGui.Selectable(type, isSelected)) {
-            // Preserve common properties when switching types
-            const commonProps = {
-              color: lightData.color,
-              intensity: lightData.intensity,
-            };
+      EditorLayout.beginLabelsWidth(['Light Type']);
 
-            // Transform to new type with appropriate defaults
-            switch (type) {
-              case 'directional':
-                Object.assign(lightData, createDirectionalLight(commonProps));
-                break;
-              case 'point':
-                Object.assign(lightData, createPointLight(commonProps));
-                break;
-              case 'spot':
-                Object.assign(lightData, createSpotLight(commonProps));
-                break;
-              case 'ambient':
-                Object.assign(lightData, createAmbientLight(commonProps));
-                break;
-            }
-          }
-          if (isSelected) {
-            ImGui.SetItemDefaultFocus();
-          }
+      // Light type selector dropdown
+      const LightTypeEnum = {
+        directional: 'directional',
+        point: 'point',
+        spot: 'spot',
+        ambient: 'ambient',
+      } as const;
+
+      const [newType, typeChanged] = EditorLayout.enumField(
+        'Light Type',
+        lightData.type,
+        LightTypeEnum,
+        { tooltip: 'Type of light source' }
+      );
+
+      EditorLayout.endLabelsWidth();
+      if (typeChanged && newType !== lightData.type) {
+        // Preserve common properties when switching types
+        const commonProps = {
+          color: lightData.color,
+          intensity: lightData.intensity,
+        };
+
+        // Transform to new type with appropriate defaults
+        switch (newType) {
+          case 'directional':
+            Object.assign(lightData, createDirectionalLight(commonProps));
+            break;
+          case 'point':
+            Object.assign(lightData, createPointLight(commonProps));
+            break;
+          case 'spot':
+            Object.assign(lightData, createSpotLight(commonProps));
+            break;
+          case 'ambient':
+            Object.assign(lightData, createAmbientLight(commonProps));
+            break;
         }
-        ImGui.EndCombo();
       }
 
       // Transform usage hint
-      ImGui.Separator();
-      const hintColor = { x: 0.7, y: 0.7, z: 0.7, w: 1 };
+      EditorLayout.separator();
       if (lightData.type === 'directional') {
-        ImGui.TextColored(hintColor, 'Transform: Only rotation matters (light direction)');
+        EditorLayout.hint('Transform: Only rotation matters (light direction)');
       } else if (lightData.type === 'point') {
-        ImGui.TextColored(hintColor, 'Transform: Only position matters (light location)');
+        EditorLayout.hint('Transform: Only position matters (light location)');
       } else if (lightData.type === 'spot') {
-        ImGui.TextColored(hintColor, 'Transform: Position & rotation both matter');
+        EditorLayout.hint('Transform: Position & rotation both matter');
       } else if (lightData.type === 'ambient') {
-        ImGui.TextColored(hintColor, 'Transform: Neither position nor rotation matter');
+        EditorLayout.hint('Transform: Neither position nor rotation matter');
       }
 
-      ImGui.Separator();
+      EditorLayout.separator();
 
       // Common properties
-      ImGui.Text('Light Properties');
-      ImGui.Indent();
+      EditorLayout.header('Light Properties');
+      EditorLayout.beginIndent();
+      EditorLayout.beginLabelsWidth(['Color', 'Intensity']);
 
       // Color picker
-      const color: [number, number, number] = [
-        lightData.color.r,
-        lightData.color.g,
-        lightData.color.b,
-      ];
-      if (ImGui.ColorEdit3('Color##lightColor', color)) {
-        lightData.color.r = color[0];
-        lightData.color.g = color[1];
-        lightData.color.b = color[2];
+      const [color, colorChanged] = EditorLayout.colorField('Color', lightData.color, {
+        tooltip: 'Light color (RGB)',
+        id: 'lightColor',
+      });
+      if (colorChanged) {
+        lightData.color.r = color.r;
+        lightData.color.g = color.g;
+        lightData.color.b = color.b;
       }
 
       // Intensity
-      const intensity: [number] = [lightData.intensity];
       const maxIntensity = lightData.type === 'ambient' ? 2 : 10;
-      if (ImGui.DragFloat('Intensity##lightIntensity', intensity, 0.1, 0, maxIntensity)) {
-        lightData.intensity = Math.max(0, intensity[0]);
-      }
+      const [intensity, intensityChanged] = EditorLayout.numberField(
+        'Intensity',
+        lightData.intensity,
+        { min: 0, max: maxIntensity, speed: 0.1, tooltip: 'Light intensity' }
+      );
+      if (intensityChanged) lightData.intensity = intensity;
 
-      ImGui.Unindent();
+      EditorLayout.endLabelsWidth();
+      EditorLayout.endIndent();
 
       // Type-specific properties
       if (lightData.type === 'directional') {
-        ImGui.Separator();
-        ImGui.Text('Directional Properties');
-        ImGui.Indent();
+        EditorLayout.separator();
+        EditorLayout.header('Directional Properties');
+        EditorLayout.beginIndent();
+        EditorLayout.beginLabelsWidth(['Shadow Camera Size']);
 
         const dirLight = lightData as DirectionalLightData;
-        const shadowCameraSize: [number] = [dirLight.shadowCameraSize];
-        if (ImGui.DragFloat('Shadow Camera Size##shadowCameraSize', shadowCameraSize, 0.5, 1, 100)) {
-          dirLight.shadowCameraSize = Math.max(1, shadowCameraSize[0]);
-        }
+        const [shadowCameraSize, shadowCameraSizeChanged] = EditorLayout.numberField(
+          'Shadow Camera Size',
+          dirLight.shadowCameraSize,
+          { min: 1, max: 100, speed: 0.5, tooltip: 'Orthographic frustum half-size for shadow camera' }
+        );
+        if (shadowCameraSizeChanged) dirLight.shadowCameraSize = shadowCameraSize;
 
-        ImGui.Unindent();
+        EditorLayout.endLabelsWidth();
+        EditorLayout.endIndent();
       } else if (lightData.type === 'point') {
-        ImGui.Separator();
-        ImGui.Text('Point Light Properties');
-        ImGui.Indent();
+        EditorLayout.separator();
+        EditorLayout.header('Point Light Properties');
+        EditorLayout.beginIndent();
+        EditorLayout.beginLabelsWidth(['Distance', 'Decay']);
 
         const pointLight = lightData as PointLightData;
 
-        const distance: [number] = [pointLight.distance];
-        if (ImGui.DragFloat('Distance##pointDistance', distance, 1, 0, 1000)) {
-          pointLight.distance = Math.max(0, distance[0]);
-        }
-        ImGui.TextColored(hintColor, '(0 = infinite range)');
+        const [distance, distanceChanged] = EditorLayout.numberField(
+          'Distance',
+          pointLight.distance,
+          { min: 0, max: 1000, speed: 1, tooltip: 'Maximum distance for light influence (0 = infinite)' }
+        );
+        if (distanceChanged) pointLight.distance = distance;
+        EditorLayout.textDisabled('(0 = infinite range)');
 
-        const decay: [number] = [pointLight.decay];
-        if (ImGui.DragFloat('Decay##pointDecay', decay, 0.1, 0, 5)) {
-          pointLight.decay = Math.max(0, decay[0]);
-        }
+        const [decay, decayChanged] = EditorLayout.numberField(
+          'Decay',
+          pointLight.decay,
+          { min: 0, max: 5, speed: 0.1, tooltip: 'Light decay rate (realistic = 2)' }
+        );
+        if (decayChanged) pointLight.decay = decay;
 
-        ImGui.Unindent();
+        EditorLayout.endLabelsWidth();
+        EditorLayout.endIndent();
       } else if (lightData.type === 'spot') {
-        ImGui.Separator();
-        ImGui.Text('Spot Light Properties');
-        ImGui.Indent();
+        EditorLayout.separator();
+        EditorLayout.header('Spot Light Properties');
+        EditorLayout.beginIndent();
+        EditorLayout.beginLabelsWidth(['Distance', 'Decay', 'Angle (degrees)', 'Penumbra']);
 
         const spotLight = lightData as SpotLightData;
 
-        const distance: [number] = [spotLight.distance];
-        if (ImGui.DragFloat('Distance##spotDistance', distance, 1, 0, 1000)) {
-          spotLight.distance = Math.max(0, distance[0]);
-        }
-        ImGui.TextColored(hintColor, '(0 = infinite range)');
+        const [distance, distanceChanged] = EditorLayout.numberField(
+          'Distance',
+          spotLight.distance,
+          { min: 0, max: 1000, speed: 1, tooltip: 'Maximum distance for light influence (0 = infinite)' }
+        );
+        if (distanceChanged) spotLight.distance = distance;
+        EditorLayout.textDisabled('(0 = infinite range)');
 
-        const decay: [number] = [spotLight.decay];
-        if (ImGui.DragFloat('Decay##spotDecay', decay, 0.1, 0, 5)) {
-          spotLight.decay = Math.max(0, decay[0]);
-        }
+        const [decay, decayChanged] = EditorLayout.numberField(
+          'Decay',
+          spotLight.decay,
+          { min: 0, max: 5, speed: 0.1, tooltip: 'Light decay rate (realistic = 2)' }
+        );
+        if (decayChanged) spotLight.decay = decay;
 
         // Angle in degrees for user-friendly input
-        const angleDeg: [number] = [(spotLight.angle * 180) / Math.PI];
-        if (ImGui.SliderFloat('Angle (degrees)##spotAngle', angleDeg, 0, 180)) {
-          spotLight.angle = (angleDeg[0] * Math.PI) / 180;
-        }
+        const angleDeg = (spotLight.angle * 180) / Math.PI;
+        const [newAngleDeg, angleChanged] = EditorLayout.numberField(
+          'Angle (degrees)',
+          angleDeg,
+          { min: 0, max: 180, useSlider: true, tooltip: 'Maximum angle of light spread' }
+        );
+        if (angleChanged) spotLight.angle = (newAngleDeg * Math.PI) / 180;
 
-        const penumbra: [number] = [spotLight.penumbra];
-        if (ImGui.SliderFloat('Penumbra##spotPenumbra', penumbra, 0, 1)) {
-          spotLight.penumbra = Math.max(0, Math.min(1, penumbra[0]));
-        }
-        ImGui.TextColored(hintColor, '(0 = sharp edge, 1 = smooth)');
+        const [penumbra, penumbraChanged] = EditorLayout.numberField(
+          'Penumbra',
+          spotLight.penumbra,
+          { min: 0, max: 1, useSlider: true, tooltip: 'Percentage of cone where light fades (0 = sharp, 1 = smooth)' }
+        );
+        if (penumbraChanged) spotLight.penumbra = penumbra;
+        EditorLayout.textDisabled('(0 = sharp edge, 1 = smooth)');
 
-        ImGui.Unindent();
+        EditorLayout.endLabelsWidth();
+        EditorLayout.endIndent();
       }
 
       // Shadow settings (for directional, point, spot)
       if (lightData.type !== 'ambient') {
-        ImGui.Separator();
+        EditorLayout.separator();
 
         const shadowLight = lightData as DirectionalLightData | PointLightData | SpotLightData;
 
-        if (ImGui.CollapsingHeader('Shadow Settings##shadowSettings')) {
-          ImGui.Indent();
+        if (EditorLayout.beginGroup('Shadow Settings', false)) {
+          EditorLayout.beginLabelsWidth(['Enable Shadows', 'Map Size', 'Camera Near', 'Camera Far', 'Bias', 'Normal Bias']);
 
           // Shadow enabled checkbox
-          const enabled: [boolean] = [shadowLight.shadow.enabled];
-          if (ImGui.Checkbox('Enable Shadows##shadowEnabled', enabled)) {
-            shadowLight.shadow.enabled = enabled[0];
-          }
+          const [enabled, enabledChanged] = EditorLayout.checkboxField(
+            'Enable Shadows',
+            shadowLight.shadow.enabled,
+            { tooltip: 'Enable shadow casting for this light' }
+          );
+          if (enabledChanged) shadowLight.shadow.enabled = enabled;
 
           if (shadowLight.shadow.enabled) {
-            ImGui.Separator();
+            EditorLayout.separator();
 
             // Shadow map size dropdown
-            ImGui.Text('Map Size:');
-            ImGui.SameLine();
-            const currentMapSize = shadowLight.shadow.mapSize.toString();
-            if (ImGui.BeginCombo('##shadowMapSize', currentMapSize)) {
-              const mapSizes = [512, 1024, 2048, 4096];
-              for (const size of mapSizes) {
-                const sizeStr = size.toString();
-                const isSelected = shadowLight.shadow.mapSize === size;
-                if (ImGui.Selectable(sizeStr, isSelected)) {
-                  shadowLight.shadow.mapSize = size;
-                }
-                if (isSelected) {
-                  ImGui.SetItemDefaultFocus();
-                }
-              }
-              ImGui.EndCombo();
-            }
+            const MapSizeEnum = {
+              '512': 512,
+              '1024': 1024,
+              '2048': 2048,
+              '4096': 4096,
+            } as const;
+            const [mapSize, mapSizeChanged] = EditorLayout.enumField(
+              'Map Size',
+              shadowLight.shadow.mapSize as 512 | 1024 | 2048 | 4096,
+              MapSizeEnum,
+              { tooltip: 'Shadow map resolution (power of 2)' }
+            );
+            if (mapSizeChanged) shadowLight.shadow.mapSize = mapSize;
 
             // Camera near/far
-            const cameraNear: [number] = [shadowLight.shadow.cameraNear];
-            if (ImGui.DragFloat('Camera Near##shadowNear', cameraNear, 0.1, 0.001, 10)) {
-              shadowLight.shadow.cameraNear = Math.max(0.001, cameraNear[0]);
-            }
+            const [cameraNear, cameraNearChanged] = EditorLayout.numberField(
+              'Camera Near',
+              shadowLight.shadow.cameraNear,
+              { min: 0.001, max: 10, speed: 0.1, tooltip: 'Shadow camera near plane' }
+            );
+            if (cameraNearChanged) shadowLight.shadow.cameraNear = cameraNear;
 
-            const cameraFar: [number] = [shadowLight.shadow.cameraFar];
-            if (ImGui.DragFloat('Camera Far##shadowFar', cameraFar, 1, 1, 10000)) {
-              shadowLight.shadow.cameraFar = Math.max(1, cameraFar[0]);
-            }
+            const [cameraFar, cameraFarChanged] = EditorLayout.numberField(
+              'Camera Far',
+              shadowLight.shadow.cameraFar,
+              { min: 1, max: 10000, speed: 1, tooltip: 'Shadow camera far plane' }
+            );
+            if (cameraFarChanged) shadowLight.shadow.cameraFar = cameraFar;
 
             // Bias settings
-            const bias: [number] = [shadowLight.shadow.bias];
-            if (ImGui.DragFloat('Bias##shadowBias', bias, 0.0001, -0.01, 0.01, '%.5f')) {
-              shadowLight.shadow.bias = bias[0];
-            }
+            const [bias, biasChanged] = EditorLayout.numberField(
+              'Bias',
+              shadowLight.shadow.bias,
+              { min: -0.01, max: 0.01, speed: 0.0001, tooltip: 'Shadow bias to reduce artifacts' }
+            );
+            if (biasChanged) shadowLight.shadow.bias = bias;
 
-            const normalBias: [number] = [shadowLight.shadow.normalBias];
-            if (ImGui.DragFloat('Normal Bias##shadowNormalBias', normalBias, 0.001, 0, 0.1, '%.4f')) {
-              shadowLight.shadow.normalBias = Math.max(0, normalBias[0]);
-            }
+            const [normalBias, normalBiasChanged] = EditorLayout.numberField(
+              'Normal Bias',
+              shadowLight.shadow.normalBias,
+              { min: 0, max: 0.1, speed: 0.001, tooltip: 'Normal bias for additional artifact reduction' }
+            );
+            if (normalBiasChanged) shadowLight.shadow.normalBias = normalBias;
           }
 
-          ImGui.Unindent();
+          EditorLayout.endLabelsWidth();
+          EditorLayout.endGroup();
         }
       }
     },

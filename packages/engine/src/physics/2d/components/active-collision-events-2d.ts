@@ -20,6 +20,7 @@
  */
 
 import { component } from '../../../ecs/component.js';
+import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 
 /**
  * Flags for which collision events to generate
@@ -57,5 +58,37 @@ export const ActiveCollisionEvents2D = component<ActiveCollisionEvents2DData>(
     }),
     displayName: 'Active Collision Events 2D',
     description: 'Enable collision event generation for this entity',
+    customEditor: ({ componentData }) => {
+      EditorLayout.beginLabelsWidth(['Collision Events', 'Contact Force Events']);
+
+      // Check individual flags
+      const hasCollisionEvents = (componentData.events & ActiveCollisionEventsFlags2D.COLLISION_EVENTS) !== 0;
+      const hasContactForce = (componentData.events & ActiveCollisionEventsFlags2D.CONTACT_FORCE_EVENTS) !== 0;
+
+      const [collisionEvents, collisionChanged] = EditorLayout.checkboxField(
+        'Collision Events',
+        hasCollisionEvents,
+        { tooltip: 'Generate CollisionStarted2D/CollisionEnded2D events' }
+      );
+
+      const [contactForce, contactChanged] = EditorLayout.checkboxField(
+        'Contact Force Events',
+        hasContactForce,
+        { tooltip: 'Generate ContactForce2D events (requires Collision Events)' }
+      );
+
+      if (collisionChanged || contactChanged) {
+        let newFlags = ActiveCollisionEventsFlags2D.NONE;
+        if (collisionChanged ? collisionEvents : hasCollisionEvents) {
+          newFlags |= ActiveCollisionEventsFlags2D.COLLISION_EVENTS;
+        }
+        if (contactChanged ? contactForce : hasContactForce) {
+          newFlags |= ActiveCollisionEventsFlags2D.CONTACT_FORCE_EVENTS;
+        }
+        componentData.events = newFlags;
+      }
+
+      EditorLayout.endLabelsWidth();
+    },
   },
 );

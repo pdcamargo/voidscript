@@ -22,6 +22,7 @@
 
 import { component } from '../../../ecs/component.js';
 import * as THREE from 'three';
+import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 
 export interface CharacterController2DData {
   /**
@@ -114,6 +115,187 @@ const serializeVector2 = {
   deserialize: (val: any) => new THREE.Vector2(val.x, val.y),
 };
 
+// ============================================================================
+// Custom Editor Helper Functions
+// ============================================================================
+
+function renderBasicSettingsSection(data: CharacterController2DData): void {
+  if (EditorLayout.beginGroup('Basic Settings', true)) {
+    EditorLayout.beginLabelsWidth(['Offset', 'Up Direction', 'Slide Enabled', 'Normal Nudge']);
+
+    const [offset, offsetChanged] = EditorLayout.numberField('Offset', data.offset, {
+      speed: 0.001,
+      min: 0,
+      max: 1,
+      tooltip: 'Gap between character and obstacles for numerical stability',
+    });
+    if (offsetChanged) data.offset = offset;
+
+    const [up, upChanged] = EditorLayout.vector2Field('Up Direction', data.up, {
+      speed: 0.1,
+      tooltip: 'Vertical axis direction (determines floor/ceiling)',
+    });
+    if (upChanged) {
+      data.up.x = up.x;
+      data.up.y = up.y;
+    }
+
+    const [slideEnabled, slideChanged] = EditorLayout.checkboxField('Slide Enabled', data.slideEnabled, {
+      tooltip: 'Enable sliding along surfaces on contact',
+    });
+    if (slideChanged) data.slideEnabled = slideEnabled;
+
+    const [normalNudge, nudgeChanged] = EditorLayout.numberField('Normal Nudge', data.normalNudgeFactor, {
+      speed: 0.001,
+      min: 0,
+      max: 0.1,
+      tooltip: 'Increase slightly if character gets stuck on surfaces',
+    });
+    if (nudgeChanged) data.normalNudgeFactor = normalNudge;
+
+    EditorLayout.endLabelsWidth();
+    EditorLayout.endGroup();
+  }
+}
+
+function renderSlopeSettingsSection2D(data: CharacterController2DData): void {
+  if (EditorLayout.beginGroup('Slope Settings', false)) {
+    EditorLayout.beginLabelsWidth(['Max Climb Angle', 'Min Slide Angle']);
+
+    const [maxClimb, maxClimbChanged] = EditorLayout.numberField('Max Climb Angle', data.maxSlopeClimbAngle, {
+      speed: 0.01,
+      min: 0,
+      max: Math.PI / 2,
+      tooltip: 'Maximum slope angle character can climb (radians)',
+    });
+    if (maxClimbChanged) data.maxSlopeClimbAngle = maxClimb;
+
+    const [minSlide, minSlideChanged] = EditorLayout.numberField('Min Slide Angle', data.minSlopeSlideAngle, {
+      speed: 0.01,
+      min: 0,
+      max: Math.PI / 2,
+      tooltip: 'Minimum slope angle before sliding starts (radians)',
+    });
+    if (minSlideChanged) data.minSlopeSlideAngle = minSlide;
+
+    EditorLayout.endLabelsWidth();
+    EditorLayout.endGroup();
+  }
+}
+
+function renderAutostepSection2D(data: CharacterController2DData): void {
+  if (EditorLayout.beginGroup('Auto-Step', false)) {
+    EditorLayout.beginLabelsWidth(['Enabled']);
+
+    const [autostepEnabled, enabledChanged] = EditorLayout.checkboxField('Enabled', data.autostepEnabled, {
+      tooltip: 'Enable automatic step climbing for stairs and obstacles',
+    });
+    if (enabledChanged) data.autostepEnabled = autostepEnabled;
+
+    EditorLayout.endLabelsWidth();
+
+    if (data.autostepEnabled) {
+      EditorLayout.beginIndent();
+      EditorLayout.beginLabelsWidth(['Max Height', 'Min Width', 'Include Dynamic']);
+
+      const [maxHeight, maxHeightChanged] = EditorLayout.numberField('Max Height', data.autostepMaxHeight, {
+        speed: 0.01,
+        min: 0,
+        max: 2,
+        tooltip: 'Maximum step height to climb',
+      });
+      if (maxHeightChanged) data.autostepMaxHeight = maxHeight;
+
+      const [minWidth, minWidthChanged] = EditorLayout.numberField('Min Width', data.autostepMinWidth, {
+        speed: 0.01,
+        min: 0,
+        max: 1,
+        tooltip: 'Minimum step width required',
+      });
+      if (minWidthChanged) data.autostepMinWidth = minWidth;
+
+      const [includeDynamic, dynamicChanged] = EditorLayout.checkboxField('Include Dynamic', data.autostepIncludesDynamicBodies, {
+        tooltip: 'Allow stepping onto moving objects',
+      });
+      if (dynamicChanged) data.autostepIncludesDynamicBodies = includeDynamic;
+
+      EditorLayout.endLabelsWidth();
+      EditorLayout.endIndent();
+    }
+
+    EditorLayout.endGroup();
+  }
+}
+
+function renderSnapToGroundSection2D(data: CharacterController2DData): void {
+  if (EditorLayout.beginGroup('Snap to Ground', false)) {
+    EditorLayout.beginLabelsWidth(['Enabled']);
+
+    const [snapEnabled, enabledChanged] = EditorLayout.checkboxField('Enabled', data.snapToGroundEnabled, {
+      tooltip: 'Force character downward when moving downhill',
+    });
+    if (enabledChanged) data.snapToGroundEnabled = snapEnabled;
+
+    EditorLayout.endLabelsWidth();
+
+    if (data.snapToGroundEnabled) {
+      EditorLayout.beginIndent();
+      EditorLayout.beginLabelsWidth(['Snap Distance']);
+
+      const [snapDist, distChanged] = EditorLayout.numberField('Snap Distance', data.snapToGroundDistance, {
+        speed: 0.01,
+        min: 0,
+        max: 1,
+        tooltip: 'Maximum distance to snap downward',
+      });
+      if (distChanged) data.snapToGroundDistance = snapDist;
+
+      EditorLayout.endLabelsWidth();
+      EditorLayout.endIndent();
+    }
+
+    EditorLayout.endGroup();
+  }
+}
+
+function renderPushSettingsSection2D(data: CharacterController2DData): void {
+  if (EditorLayout.beginGroup('Push Settings', false)) {
+    EditorLayout.beginLabelsWidth(['Apply Impulses']);
+
+    const [applyImpulses, impulsesChanged] = EditorLayout.checkboxField('Apply Impulses', data.applyImpulsesToDynamicBodies, {
+      tooltip: 'Apply impulses to dynamic bodies when pushing them',
+    });
+    if (impulsesChanged) data.applyImpulsesToDynamicBodies = applyImpulses;
+
+    EditorLayout.endLabelsWidth();
+
+    if (data.applyImpulsesToDynamicBodies) {
+      EditorLayout.beginIndent();
+      EditorLayout.beginLabelsWidth(['Character Mass']);
+
+      const massValue = data.characterMass ?? 0;
+      const [mass, massChanged] = EditorLayout.numberField('Character Mass', massValue, {
+        speed: 0.1,
+        min: 0,
+        max: 1000,
+        tooltip: 'Character mass for push force calculation (0 = auto from rigid body)',
+      });
+      if (massChanged) {
+        data.characterMass = mass > 0 ? mass : null;
+      }
+
+      EditorLayout.endLabelsWidth();
+      EditorLayout.endIndent();
+    }
+
+    EditorLayout.endGroup();
+  }
+}
+
+// ============================================================================
+// Component Definition
+// ============================================================================
+
 /**
  * Character controller component for kinematic character movement.
  * Provides move-and-slide functionality with collision resolution.
@@ -156,5 +338,12 @@ export const CharacterController2D = component<CharacterController2DData>(
     }),
     displayName: 'Character Controller 2D',
     description: 'Kinematic character controller with move-and-slide',
+    customEditor: ({ componentData }) => {
+      renderBasicSettingsSection(componentData);
+      renderSlopeSettingsSection2D(componentData);
+      renderAutostepSection2D(componentData);
+      renderSnapToGroundSection2D(componentData);
+      renderPushSettingsSection2D(componentData);
+    },
   },
 );

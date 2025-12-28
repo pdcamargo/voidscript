@@ -39,6 +39,7 @@ import {
   SetSerializer,
 } from "./custom-serializers.js";
 import { AssetRefSerializer } from "./asset-ref-serializer.js";
+import { jsonToYaml, yamlToJson } from "./yaml-utils.js";
 import { isAssetRef } from "../asset-ref.js";
 import { isRuntimeAsset } from "../runtime-asset.js";
 import { RuntimeAssetManager } from "../runtime-asset-manager.js";
@@ -991,6 +992,38 @@ export class WorldSerializer {
         entitiesSkipped: 0,
         warnings: [],
         error: `JSON parse error: ${error instanceof Error ? error.message : String(error)}`,
+        entityMapping: new Map(),
+      };
+    }
+  }
+
+  /**
+   * Serialize to YAML string
+   */
+  serializeToYaml(world: World, commands: Command): string {
+    const json = this.serializeToString(world, commands, false);
+    return jsonToYaml(json);
+  }
+
+  /**
+   * Deserialize from YAML string
+   */
+  deserializeFromYaml(
+    world: World,
+    commands: Command,
+    yaml: string,
+    options?: DeserializeOptions
+  ): DeserializeResult {
+    try {
+      const json = yamlToJson(yaml);
+      return this.deserializeFromString(world, commands, json, options);
+    } catch (error) {
+      return {
+        success: false,
+        entitiesCreated: 0,
+        entitiesSkipped: 0,
+        warnings: [],
+        error: `YAML parse error: ${error instanceof Error ? error.message : String(error)}`,
         entityMapping: new Map(),
       };
     }

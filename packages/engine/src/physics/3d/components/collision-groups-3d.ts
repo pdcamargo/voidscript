@@ -22,6 +22,7 @@
  */
 
 import { component } from '../../../ecs/component.js';
+import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 
 /**
  * Predefined collision group constants for 3D physics.
@@ -115,5 +116,70 @@ export const CollisionGroups3D = component<CollisionGroups3DData>(
     }),
     displayName: 'Collision Groups 3D',
     description: 'Collision layer membership and filtering',
+    customEditor: ({ componentData }) => {
+      // Memberships section
+      if (EditorLayout.beginGroup('Memberships', true)) {
+        EditorLayout.beginLabelsWidth(['Group 1', 'Group 2', 'Group 3', 'Group 4', 'Group 5']);
+
+        const groups = [
+          { name: 'Group 1 (Player)', bit: CollisionGroup3D.GROUP_1 },
+          { name: 'Group 2 (Enemy)', bit: CollisionGroup3D.GROUP_2 },
+          { name: 'Group 3 (Environment)', bit: CollisionGroup3D.GROUP_3 },
+          { name: 'Group 4 (Projectile)', bit: CollisionGroup3D.GROUP_4 },
+          { name: 'Group 5 (Trigger)', bit: CollisionGroup3D.GROUP_5 },
+        ];
+
+        for (const group of groups) {
+          const hasMembership = (componentData.memberships & group.bit) !== 0;
+          const [checked, changed] = EditorLayout.checkboxField(
+            group.name,
+            hasMembership,
+            { tooltip: `Entity belongs to ${group.name}` }
+          );
+          if (changed) {
+            if (checked) {
+              componentData.memberships |= group.bit;
+            } else {
+              componentData.memberships &= ~group.bit;
+            }
+          }
+        }
+
+        EditorLayout.endLabelsWidth();
+        EditorLayout.endGroup();
+      }
+
+      // Filter section
+      if (EditorLayout.beginGroup('Filter (Collides With)', false)) {
+        EditorLayout.beginLabelsWidth(['Group 1', 'Group 2', 'Group 3', 'Group 4', 'Group 5']);
+
+        const groups = [
+          { name: 'Group 1 (Player)', bit: CollisionGroup3D.GROUP_1 },
+          { name: 'Group 2 (Enemy)', bit: CollisionGroup3D.GROUP_2 },
+          { name: 'Group 3 (Environment)', bit: CollisionGroup3D.GROUP_3 },
+          { name: 'Group 4 (Projectile)', bit: CollisionGroup3D.GROUP_4 },
+          { name: 'Group 5 (Trigger)', bit: CollisionGroup3D.GROUP_5 },
+        ];
+
+        for (const group of groups) {
+          const hasFilter = (componentData.filter & group.bit) !== 0;
+          const [checked, changed] = EditorLayout.checkboxField(
+            group.name,
+            hasFilter,
+            { tooltip: `Entity can collide with ${group.name}` }
+          );
+          if (changed) {
+            if (checked) {
+              componentData.filter |= group.bit;
+            } else {
+              componentData.filter &= ~group.bit;
+            }
+          }
+        }
+
+        EditorLayout.endLabelsWidth();
+        EditorLayout.endGroup();
+      }
+    },
   },
 );

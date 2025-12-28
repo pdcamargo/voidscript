@@ -53,11 +53,9 @@
  * ```
  */
 
-import { ImGui } from '@mori2003/jsimgui';
 import { component } from '../../component.js';
 import { Events } from '../../events.js';
-import { renderEventNamePicker } from '../../../app/imgui/event-name-picker.js';
-import { renderComponentNamePicker } from '../../../app/imgui/component-name-picker.js';
+import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 import type { TriggerFilterMode } from '../../systems/trigger/trigger-utils.js';
 
 export interface TriggerZone3DData {
@@ -94,28 +92,6 @@ export interface TriggerZone3DData {
   enabled: boolean;
 }
 
-/**
- * Helper to render a list of names with remove buttons
- */
-function renderNameList(
-  names: string[],
-  idPrefix: string,
-  onRemove: (index: number) => void
-): void {
-  if (names.length === 0) {
-    ImGui.TextDisabled('(None)');
-    return;
-  }
-
-  for (let i = 0; i < names.length; i++) {
-    const name = names[i]!;
-    ImGui.Text(`  - ${name}`);
-    ImGui.SameLine();
-    if (ImGui.SmallButton(`X##remove_${idPrefix}_${i}`)) {
-      onRemove(i);
-    }
-  }
-}
 
 export const TriggerZone3D = component<TriggerZone3DData>(
   'TriggerZone3D',
@@ -160,109 +136,77 @@ export const TriggerZone3D = component<TriggerZone3DData>(
     customEditor: ({ componentData, commands }) => {
       const events = commands.tryGetResource(Events);
 
-      // Enabled checkbox
-      const enabled: [boolean] = [componentData.enabled];
-      if (ImGui.Checkbox('Enabled', enabled)) {
-        componentData.enabled = enabled[0];
-      }
+      EditorLayout.beginLabelsWidth(['Enabled', 'Filter Mode']);
 
-      ImGui.Separator();
-      ImGui.Spacing();
+      // Enabled checkbox
+      const [enabled, enabledChanged] = EditorLayout.checkboxField('Enabled', componentData.enabled, {
+        tooltip: 'Whether this trigger zone is active'
+      });
+      if (enabledChanged) componentData.enabled = enabled;
+
+      EditorLayout.endLabelsWidth();
+
+      EditorLayout.separator();
+      EditorLayout.spacing();
 
       // On Enter Events section
-      ImGui.Text('On Enter Events:');
-      renderNameList(
-        componentData.onEnterEventNames,
-        'enter3d',
-        (index) => {
-          componentData.onEnterEventNames.splice(index, 1);
-        }
-      );
-      if (ImGui.Button('Add Enter Event##enter3d')) {
-        ImGui.OpenPopup('EventPicker##enter3d');
-      }
       if (events) {
-        renderEventNamePicker({
-          popupId: 'EventPicker##enter3d',
-          selectedNames: componentData.onEnterEventNames,
-          multiSelect: true,
-          onSelect: (names) => {
-            componentData.onEnterEventNames = names;
-          },
-          events,
-        });
+        const [enterEvents, enterChanged] = EditorLayout.eventNamesField(
+          'On Enter Events',
+          componentData.onEnterEventNames,
+          { events, tooltip: 'Events fired when entities enter this zone', id: '3d_enter' }
+        );
+        if (enterChanged) componentData.onEnterEventNames = enterEvents;
+      } else {
+        EditorLayout.text('On Enter Events:');
+        EditorLayout.textDisabled('(Events resource not available)');
       }
 
-      ImGui.Spacing();
-      ImGui.Separator();
-      ImGui.Spacing();
+      EditorLayout.spacing();
+      EditorLayout.separator();
+      EditorLayout.spacing();
 
       // On Leave Events section
-      ImGui.Text('On Leave Events:');
-      renderNameList(
-        componentData.onLeaveEventNames,
-        'leave3d',
-        (index) => {
-          componentData.onLeaveEventNames.splice(index, 1);
-        }
-      );
-      if (ImGui.Button('Add Leave Event##leave3d')) {
-        ImGui.OpenPopup('EventPicker##leave3d');
-      }
       if (events) {
-        renderEventNamePicker({
-          popupId: 'EventPicker##leave3d',
-          selectedNames: componentData.onLeaveEventNames,
-          multiSelect: true,
-          onSelect: (names) => {
-            componentData.onLeaveEventNames = names;
-          },
-          events,
-        });
+        const [leaveEvents, leaveChanged] = EditorLayout.eventNamesField(
+          'On Leave Events',
+          componentData.onLeaveEventNames,
+          { events, tooltip: 'Events fired when entities leave this zone', id: '3d_leave' }
+        );
+        if (leaveChanged) componentData.onLeaveEventNames = leaveEvents;
+      } else {
+        EditorLayout.text('On Leave Events:');
+        EditorLayout.textDisabled('(Events resource not available)');
       }
 
-      ImGui.Spacing();
-      ImGui.Separator();
-      ImGui.Spacing();
+      EditorLayout.spacing();
+      EditorLayout.separator();
+      EditorLayout.spacing();
 
       // Required Components section
-      ImGui.Text('Required Components:');
-      renderNameList(
+      const [requiredComps, compsChanged] = EditorLayout.componentNamesField(
+        'Required Components',
         componentData.requiredComponentNames,
-        'comp3d',
-        (index) => {
-          componentData.requiredComponentNames.splice(index, 1);
-        }
+        { tooltip: 'Components that triggering entities must have', id: '3d_comps' }
       );
-      if (ImGui.Button('Add Component Filter##filter3d')) {
-        ImGui.OpenPopup('ComponentPicker##filter3d');
-      }
-      renderComponentNamePicker({
-        popupId: 'ComponentPicker##filter3d',
-        selectedNames: componentData.requiredComponentNames,
-        multiSelect: true,
-        onSelect: (names) => {
-          componentData.requiredComponentNames = names;
-        },
-      });
+      if (compsChanged) componentData.requiredComponentNames = requiredComps;
 
-      ImGui.Spacing();
+      EditorLayout.spacing();
+
+      EditorLayout.beginLabelsWidth(['Filter Mode']);
 
       // Filter Mode
-      ImGui.Text('Filter Mode:');
-      ImGui.SameLine();
+      const [filterMode, filterModeChanged] = EditorLayout.filterModeField(
+        'Filter Mode',
+        componentData.filterMode,
+        { tooltip: 'How to match required components', id: '3d_filter' }
+      );
+      if (filterModeChanged) componentData.filterMode = filterMode;
 
-      const isAnd = componentData.filterMode === 'and';
-      if (ImGui.RadioButton('ALL (AND)##3d', isAnd)) {
-        componentData.filterMode = 'and';
-      }
-      ImGui.SameLine();
-      if (ImGui.RadioButton('ANY (OR)##3d', !isAnd)) {
-        componentData.filterMode = 'or';
-      }
+      EditorLayout.endLabelsWidth();
 
-      ImGui.TextDisabled(
-        isAnd
+      EditorLayout.textDisabled(
+        filterMode === 'and'
           ? 'Entity must have ALL listed components'
           : 'Entity must have at least ONE of the listed components'
       );

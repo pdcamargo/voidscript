@@ -30,7 +30,7 @@
  */
 
 import { component } from '../../component.js';
-import { ImGui } from '@mori2003/jsimgui';
+import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 
 /**
  * Rain 2D component data
@@ -364,40 +364,44 @@ let lastAppliedPresetData: Partial<Rain2DData> | null = null;
 // ============================================================================
 
 function renderPresetSelector(data: Rain2DData): void {
-  ImGui.TextColored({ x: 0.4, y: 0.8, z: 1.0, w: 1.0 }, 'Rain Preset');
-  ImGui.SameLine();
+  EditorLayout.header('Rain Preset', { r: 0.4, g: 0.8, b: 1.0 });
+  EditorLayout.sameLine();
 
-  const presetMap: Record<RainPreset, string> = {
-    custom: 'Custom',
+  const presetOptions = ['Custom', 'Light Drizzle', 'Steady Rain', 'Heavy Downpour', 'Thunderstorm'];
+  const presetMap: Record<string, RainPreset> = {
+    'Custom': 'custom',
+    'Light Drizzle': 'light-drizzle',
+    'Steady Rain': 'steady-rain',
+    'Heavy Downpour': 'heavy-downpour',
+    'Thunderstorm': 'thunderstorm',
+  };
+  const reverseMap: Record<RainPreset, string> = {
+    'custom': 'Custom',
     'light-drizzle': 'Light Drizzle',
     'steady-rain': 'Steady Rain',
     'heavy-downpour': 'Heavy Downpour',
-    thunderstorm: 'Thunderstorm',
+    'thunderstorm': 'Thunderstorm',
   };
 
-  const presetLabel = presetMap[currentPreset];
+  const currentLabel = reverseMap[currentPreset];
 
-  if (ImGui.BeginCombo('##rainPreset', presetLabel)) {
-    for (const [preset, label] of Object.entries(presetMap)) {
-      const isSelected = currentPreset === preset;
-      if (ImGui.Selectable(label, isSelected)) {
-        if (preset !== 'custom') {
-          // Apply preset
-          const presetData =
-            RAIN_PRESETS[preset as Exclude<RainPreset, 'custom'>];
-          Object.assign(data, presetData);
-          lastAppliedPresetData = { ...presetData };
-          currentPreset = preset as RainPreset;
-        } else {
-          currentPreset = 'custom';
-          lastAppliedPresetData = null;
-        }
-      }
-      if (isSelected) {
-        ImGui.SetItemDefaultFocus();
-      }
+  const [selectedLabel, changed] = EditorLayout.comboField('', currentLabel, presetOptions, {
+    id: 'rainPreset',
+    tooltip: 'Select a rain preset or customize settings',
+  });
+
+  if (changed) {
+    const selectedPreset = presetMap[selectedLabel];
+    if (selectedPreset && selectedPreset !== 'custom') {
+      // Apply preset
+      const presetData = RAIN_PRESETS[selectedPreset as Exclude<RainPreset, 'custom'>];
+      Object.assign(data, presetData);
+      lastAppliedPresetData = { ...presetData };
+      currentPreset = selectedPreset;
+    } else {
+      currentPreset = 'custom';
+      lastAppliedPresetData = null;
     }
-    ImGui.EndCombo();
   }
 
   // Auto-detect custom changes
@@ -428,376 +432,383 @@ function renderPresetSelector(data: Rain2DData): void {
 }
 
 function renderSizeSection(data: Rain2DData): void {
-  if (ImGui.CollapsingHeader('Size & Visibility##rainSize')) {
-    ImGui.Indent();
+  if (EditorLayout.beginGroup('Size & Visibility', false)) {
+    EditorLayout.beginLabelsWidth(['Base Size', 'Tile Size', 'Visible', 'Sorting Layer', 'Sorting Order']);
 
-    // baseSize Vec2 inline
-    ImGui.Text('Base Size:');
-    const baseX: [number] = [data.baseSize.x];
-    const baseY: [number] = [data.baseSize.y];
-    ImGui.SetNextItemWidth(100);
-    ImGui.DragFloat('##baseSizeX', baseX, 0.01, 0.1, 100);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Base size of rain area before transform scaling');
+    // baseSize Vec2
+    const [baseSize, baseSizeChanged] = EditorLayout.vector2Field('Base Size', data.baseSize, {
+      speed: 0.01,
+      min: 0.1,
+      max: 100,
+      tooltip: 'Base size of rain area before transform scaling',
+    });
+    if (baseSizeChanged) {
+      data.baseSize.x = baseSize.x;
+      data.baseSize.y = baseSize.y;
     }
-    ImGui.SameLine();
-    ImGui.Text('x');
-    ImGui.SameLine();
-    ImGui.SetNextItemWidth(100);
-    ImGui.DragFloat('##baseSizeY', baseY, 0.01, 0.1, 100);
-    data.baseSize.x = baseX[0];
-    data.baseSize.y = baseY[0];
 
-    ImGui.Spacing();
+    EditorLayout.spacing();
 
     // tileSize
-    ImGui.Text('Tile Size:');
-    const tileSize: [number] = [data.tileSize];
-    ImGui.DragFloat('##tileSize', tileSize, 1, 1, 500);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip(
-        'World units between pattern repetitions (larger = less dense)',
-      );
-    }
-    data.tileSize = tileSize[0];
+    const [tileSize, tileSizeChanged] = EditorLayout.numberField('Tile Size', data.tileSize, {
+      speed: 1,
+      min: 1,
+      max: 500,
+      tooltip: 'World units between pattern repetitions (larger = less dense)',
+    });
+    if (tileSizeChanged) data.tileSize = tileSize;
 
-    ImGui.Spacing();
+    EditorLayout.spacing();
 
     // visible checkbox
-    const visible: [boolean] = [data.visible];
-    ImGui.Checkbox('Visible', visible);
-    data.visible = visible[0];
+    const [visible, visibleChanged] = EditorLayout.checkboxField('Visible', data.visible);
+    if (visibleChanged) data.visible = visible;
 
-    ImGui.Spacing();
+    EditorLayout.spacing();
 
     // sortingLayer and sortingOrder
-    ImGui.Text('Sorting Layer:');
-    const sortingLayer: [number] = [data.sortingLayer];
-    ImGui.DragInt('##sortingLayer', sortingLayer, 1, -1000, 1000);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Z-ordering for layered rendering (higher = on top)');
-    }
-    data.sortingLayer = sortingLayer[0];
+    const [sortingLayer, layerChanged] = EditorLayout.integerField('Sorting Layer', data.sortingLayer, {
+      speed: 1,
+      min: -1000,
+      max: 1000,
+      tooltip: 'Z-ordering for layered rendering (higher = on top)',
+    });
+    if (layerChanged) data.sortingLayer = sortingLayer;
 
-    ImGui.Text('Sorting Order:');
-    const sortingOrder: [number] = [data.sortingOrder];
-    ImGui.DragInt('##sortingOrder', sortingOrder, 1, -1000, 1000);
-    data.sortingOrder = sortingOrder[0];
+    const [sortingOrder, orderChanged] = EditorLayout.integerField('Sorting Order', data.sortingOrder, {
+      speed: 1,
+      min: -1000,
+      max: 1000,
+    });
+    if (orderChanged) data.sortingOrder = sortingOrder;
 
-    ImGui.Unindent();
+    EditorLayout.endLabelsWidth();
+    EditorLayout.endGroup();
   }
 }
 
 function renderDropletSection(data: Rain2DData): void {
-  if (ImGui.CollapsingHeader('Droplet Properties##rainDroplet')) {
-    ImGui.Indent();
+  if (EditorLayout.beginGroup('Droplet Properties', false)) {
+    EditorLayout.beginLabelsWidth(['Density', 'Fall Speed', 'Speed Variation', 'Angle', 'Wind Strength', 'Wind Speed', 'Droplet Min Length', 'Droplet Max Length', 'Droplet Width', 'Seed', 'Droplet Color', 'Droplet Opacity']);
 
     // density
-    ImGui.Text('Density:');
-    const density: [number] = [data.density];
-    ImGui.SliderFloat('##density', density, 10, 500);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Number of droplets (higher = more rain)');
-    }
-    data.density = density[0];
+    const [density, densityChanged] = EditorLayout.numberField('Density', data.density, {
+      min: 10,
+      max: 500,
+      useSlider: true,
+      tooltip: 'Number of droplets (higher = more rain)',
+    });
+    if (densityChanged) data.density = density;
 
     // fallSpeed
-    ImGui.Text('Fall Speed:');
-    const fallSpeed: [number] = [data.fallSpeed];
-    ImGui.SliderFloat('##fallSpeed', fallSpeed, 100, 2000);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Base falling speed in world units/second');
-    }
-    data.fallSpeed = fallSpeed[0];
+    const [fallSpeed, fallSpeedChanged] = EditorLayout.numberField('Fall Speed', data.fallSpeed, {
+      min: 100,
+      max: 2000,
+      useSlider: true,
+      tooltip: 'Base falling speed in world units/second',
+    });
+    if (fallSpeedChanged) data.fallSpeed = fallSpeed;
 
     // speedVariation
-    ImGui.Text('Speed Variation:');
-    const speedVariation: [number] = [data.speedVariation];
-    ImGui.SliderFloat('##speedVariation', speedVariation, 0, 1);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('How much individual droplet speeds vary');
-    }
-    data.speedVariation = speedVariation[0];
+    const [speedVariation, speedVarChanged] = EditorLayout.numberField('Speed Variation', data.speedVariation, {
+      min: 0,
+      max: 1,
+      useSlider: true,
+      tooltip: 'How much individual droplet speeds vary',
+    });
+    if (speedVarChanged) data.speedVariation = speedVariation;
 
-    ImGui.Spacing();
+    EditorLayout.spacing();
 
     // angle
-    ImGui.Text('Angle:');
-    const angle: [number] = [data.angle];
-    ImGui.SliderFloat('##angle', angle, -0.5, 0.5);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Rain slant in radians (0 = vertical)');
-    }
-    data.angle = angle[0];
+    const [angle, angleChanged] = EditorLayout.numberField('Angle', data.angle, {
+      min: -0.5,
+      max: 0.5,
+      useSlider: true,
+      tooltip: 'Rain slant in radians (0 = vertical)',
+    });
+    if (angleChanged) data.angle = angle;
 
     // windStrength
-    ImGui.Text('Wind Strength:');
-    const windStrength: [number] = [data.windStrength];
-    ImGui.SliderFloat('##windStrength', windStrength, 0, 1);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Oscillating wind effect intensity');
-    }
-    data.windStrength = windStrength[0];
+    const [windStrength, windStrengthChanged] = EditorLayout.numberField('Wind Strength', data.windStrength, {
+      min: 0,
+      max: 1,
+      useSlider: true,
+      tooltip: 'Oscillating wind effect intensity',
+    });
+    if (windStrengthChanged) data.windStrength = windStrength;
 
     // windSpeed
-    ImGui.Text('Wind Speed:');
-    const windSpeed: [number] = [data.windSpeed];
-    ImGui.SliderFloat('##windSpeed', windSpeed, 0, 5);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Speed of wind direction changes');
-    }
-    data.windSpeed = windSpeed[0];
+    const [windSpeed, windSpeedChanged] = EditorLayout.numberField('Wind Speed', data.windSpeed, {
+      min: 0,
+      max: 5,
+      useSlider: true,
+      tooltip: 'Speed of wind direction changes',
+    });
+    if (windSpeedChanged) data.windSpeed = windSpeed;
 
-    ImGui.Spacing();
+    EditorLayout.spacing();
 
     // droplet dimensions
-    ImGui.Text('Droplet Min Length:');
-    const dropletMinLength: [number] = [data.dropletMinLength];
-    ImGui.SliderFloat('##dropletMinLength', dropletMinLength, 1, 20);
-    data.dropletMinLength = dropletMinLength[0];
+    const [dropletMinLength, minLenChanged] = EditorLayout.numberField('Droplet Min Length', data.dropletMinLength, {
+      min: 1,
+      max: 20,
+      useSlider: true,
+    });
+    if (minLenChanged) data.dropletMinLength = dropletMinLength;
 
-    ImGui.Text('Droplet Max Length:');
-    const dropletMaxLength: [number] = [data.dropletMaxLength];
-    ImGui.SliderFloat('##dropletMaxLength', dropletMaxLength, 1, 30);
-    data.dropletMaxLength = dropletMaxLength[0];
+    const [dropletMaxLength, maxLenChanged] = EditorLayout.numberField('Droplet Max Length', data.dropletMaxLength, {
+      min: 1,
+      max: 30,
+      useSlider: true,
+    });
+    if (maxLenChanged) data.dropletMaxLength = dropletMaxLength;
 
-    ImGui.Text('Droplet Width:');
-    const dropletWidth: [number] = [data.dropletWidth];
-    ImGui.SliderFloat('##dropletWidth', dropletWidth, 0.5, 5);
-    data.dropletWidth = dropletWidth[0];
+    const [dropletWidth, widthChanged] = EditorLayout.numberField('Droplet Width', data.dropletWidth, {
+      min: 0.5,
+      max: 5,
+      useSlider: true,
+    });
+    if (widthChanged) data.dropletWidth = dropletWidth;
 
-    ImGui.Spacing();
+    EditorLayout.spacing();
 
     // seed
-    ImGui.Text('Seed:');
-    const seed: [number] = [data.seed];
-    ImGui.DragInt('##seed', seed, 1, 0, 999999);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Random seed for deterministic droplet placement');
-    }
-    data.seed = seed[0];
+    const [seed, seedChanged] = EditorLayout.integerField('Seed', data.seed, {
+      speed: 1,
+      min: 0,
+      max: 999999,
+      tooltip: 'Random seed for deterministic droplet placement',
+    });
+    if (seedChanged) data.seed = seed;
 
-    ImGui.Spacing();
+    EditorLayout.spacing();
 
     // dropletColor
-    ImGui.Text('Droplet Color:');
-    const dropletColor: [number, number, number] = [
-      data.dropletColor.r,
-      data.dropletColor.g,
-      data.dropletColor.b,
-    ];
-    if (ImGui.ColorEdit3('##dropletColor', dropletColor)) {
-      data.dropletColor.r = dropletColor[0];
-      data.dropletColor.g = dropletColor[1];
-      data.dropletColor.b = dropletColor[2];
+    const [dropletColor, colorChanged] = EditorLayout.colorField('Droplet Color', data.dropletColor, {
+      tooltip: 'Droplet color (RGB)',
+    });
+    if (colorChanged) {
+      data.dropletColor.r = dropletColor.r;
+      data.dropletColor.g = dropletColor.g;
+      data.dropletColor.b = dropletColor.b;
     }
 
     // dropletOpacity
-    ImGui.Text('Droplet Opacity:');
-    const dropletOpacity: [number] = [data.dropletOpacity];
-    ImGui.SliderFloat('##dropletOpacity', dropletOpacity, 0, 1);
-    data.dropletOpacity = dropletOpacity[0];
+    const [dropletOpacity, opacityChanged] = EditorLayout.numberField('Droplet Opacity', data.dropletOpacity, {
+      min: 0,
+      max: 1,
+      useSlider: true,
+    });
+    if (opacityChanged) data.dropletOpacity = dropletOpacity;
 
-    ImGui.Unindent();
+    EditorLayout.endLabelsWidth();
+    EditorLayout.endGroup();
   }
 }
 
 function renderLayerSection(data: Rain2DData): void {
-  if (ImGui.CollapsingHeader('Layer Depth##rainLayer')) {
-    ImGui.Indent();
+  if (EditorLayout.beginGroup('Layer Depth', false)) {
+    EditorLayout.beginLabelsWidth(['Enable Multi-Layer']);
 
-    const enableLayers: [boolean] = [data.enableLayers];
-    ImGui.Checkbox('Enable Multi-Layer', enableLayers);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip(
-        'Enable near/mid/far parallax layers for depth effect',
-      );
-    }
-    data.enableLayers = enableLayers[0];
+    const [enableLayers, enableLayersChanged] = EditorLayout.checkboxField('Enable Multi-Layer', data.enableLayers, {
+      tooltip: 'Enable near/mid/far parallax layers for depth effect',
+    });
+    if (enableLayersChanged) data.enableLayers = enableLayers;
+
+    EditorLayout.endLabelsWidth();
 
     if (data.enableLayers) {
-      ImGui.Indent();
-      ImGui.Spacing();
+      EditorLayout.beginIndent();
+      EditorLayout.spacing();
 
       // Near layer
-      ImGui.TextColored({ x: 1.0, y: 0.8, z: 0.4, w: 1.0 }, 'Near Layer');
-      ImGui.Text('Speed:');
-      const nearSpeed: [number] = [data.nearLayerSpeed];
-      ImGui.SliderFloat('##nearSpeed', nearSpeed, 0.5, 3);
-      data.nearLayerSpeed = nearSpeed[0];
+      EditorLayout.header('Near Layer', { r: 1.0, g: 0.8, b: 0.4 });
 
-      ImGui.Text('Opacity:');
-      const nearOpacity: [number] = [data.nearLayerOpacity];
-      ImGui.SliderFloat('##nearOpacity', nearOpacity, 0, 1);
-      data.nearLayerOpacity = nearOpacity[0];
+      EditorLayout.beginLabelsWidth(['Speed', 'Opacity', 'Scale']);
 
-      ImGui.Text('Scale:');
-      const nearScale: [number] = [data.nearLayerScale];
-      ImGui.SliderFloat('##nearScale', nearScale, 0.5, 2);
-      data.nearLayerScale = nearScale[0];
+      const [nearSpeed, nearSpeedChanged] = EditorLayout.numberField('Speed', data.nearLayerSpeed, {
+        min: 0.5, max: 3, useSlider: true, id: 'nearSpeed',
+      });
+      if (nearSpeedChanged) data.nearLayerSpeed = nearSpeed;
 
-      ImGui.Spacing();
+      const [nearOpacity, nearOpacityChanged] = EditorLayout.numberField('Opacity', data.nearLayerOpacity, {
+        min: 0, max: 1, useSlider: true, id: 'nearOpacity',
+      });
+      if (nearOpacityChanged) data.nearLayerOpacity = nearOpacity;
+
+      const [nearScale, nearScaleChanged] = EditorLayout.numberField('Scale', data.nearLayerScale, {
+        min: 0.5, max: 2, useSlider: true, id: 'nearScale',
+      });
+      if (nearScaleChanged) data.nearLayerScale = nearScale;
+
+      EditorLayout.endLabelsWidth();
+
+      EditorLayout.spacing();
 
       // Mid layer
-      ImGui.TextColored({ x: 0.8, y: 0.8, z: 1.0, w: 1.0 }, 'Mid Layer');
-      ImGui.Text('Speed:');
-      const midSpeed: [number] = [data.midLayerSpeed];
-      ImGui.SliderFloat('##midSpeed', midSpeed, 0.5, 3);
-      data.midLayerSpeed = midSpeed[0];
+      EditorLayout.header('Mid Layer', { r: 0.8, g: 0.8, b: 1.0 });
 
-      ImGui.Text('Opacity:');
-      const midOpacity: [number] = [data.midLayerOpacity];
-      ImGui.SliderFloat('##midOpacity', midOpacity, 0, 1);
-      data.midLayerOpacity = midOpacity[0];
+      EditorLayout.beginLabelsWidth(['Speed', 'Opacity', 'Scale']);
 
-      ImGui.Text('Scale:');
-      const midScale: [number] = [data.midLayerScale];
-      ImGui.SliderFloat('##midScale', midScale, 0.5, 2);
-      data.midLayerScale = midScale[0];
+      const [midSpeed, midSpeedChanged] = EditorLayout.numberField('Speed', data.midLayerSpeed, {
+        min: 0.5, max: 3, useSlider: true, id: 'midSpeed',
+      });
+      if (midSpeedChanged) data.midLayerSpeed = midSpeed;
 
-      ImGui.Spacing();
+      const [midOpacity, midOpacityChanged] = EditorLayout.numberField('Opacity', data.midLayerOpacity, {
+        min: 0, max: 1, useSlider: true, id: 'midOpacity',
+      });
+      if (midOpacityChanged) data.midLayerOpacity = midOpacity;
+
+      const [midScale, midScaleChanged] = EditorLayout.numberField('Scale', data.midLayerScale, {
+        min: 0.5, max: 2, useSlider: true, id: 'midScale',
+      });
+      if (midScaleChanged) data.midLayerScale = midScale;
+
+      EditorLayout.endLabelsWidth();
+
+      EditorLayout.spacing();
 
       // Far layer
-      ImGui.TextColored({ x: 0.6, y: 0.6, z: 0.8, w: 1.0 }, 'Far Layer');
-      ImGui.Text('Speed:');
-      const farSpeed: [number] = [data.farLayerSpeed];
-      ImGui.SliderFloat('##farSpeed', farSpeed, 0.2, 2);
-      data.farLayerSpeed = farSpeed[0];
+      EditorLayout.header('Far Layer', { r: 0.6, g: 0.6, b: 0.8 });
 
-      ImGui.Text('Opacity:');
-      const farOpacity: [number] = [data.farLayerOpacity];
-      ImGui.SliderFloat('##farOpacity', farOpacity, 0, 1);
-      data.farLayerOpacity = farOpacity[0];
+      EditorLayout.beginLabelsWidth(['Speed', 'Opacity', 'Scale']);
 
-      ImGui.Text('Scale:');
-      const farScale: [number] = [data.farLayerScale];
-      ImGui.SliderFloat('##farScale', farScale, 0.3, 1.5);
-      data.farLayerScale = farScale[0];
+      const [farSpeed, farSpeedChanged] = EditorLayout.numberField('Speed', data.farLayerSpeed, {
+        min: 0.2, max: 2, useSlider: true, id: 'farSpeed',
+      });
+      if (farSpeedChanged) data.farLayerSpeed = farSpeed;
 
-      ImGui.Unindent();
+      const [farOpacity, farOpacityChanged] = EditorLayout.numberField('Opacity', data.farLayerOpacity, {
+        min: 0, max: 1, useSlider: true, id: 'farOpacity',
+      });
+      if (farOpacityChanged) data.farLayerOpacity = farOpacity;
+
+      const [farScale, farScaleChanged] = EditorLayout.numberField('Scale', data.farLayerScale, {
+        min: 0.3, max: 1.5, useSlider: true, id: 'farScale',
+      });
+      if (farScaleChanged) data.farLayerScale = farScale;
+
+      EditorLayout.endLabelsWidth();
+
+      EditorLayout.endIndent();
     }
 
-    ImGui.Unindent();
+    EditorLayout.endGroup();
   }
 }
 
 function renderWetnessTintSection(data: Rain2DData): void {
-  if (ImGui.CollapsingHeader('Wetness Tint##rainWetness')) {
-    ImGui.Indent();
+  if (EditorLayout.beginGroup('Wetness Tint', false)) {
+    EditorLayout.beginLabelsWidth(['Enable Wetness Tint']);
 
-    const enableWetnessTint: [boolean] = [data.enableWetnessTint];
-    ImGui.Checkbox('Enable Wetness Tint', enableWetnessTint);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Add a subtle color overlay simulating wetness');
-    }
-    data.enableWetnessTint = enableWetnessTint[0];
+    const [enableWetnessTint, enableChanged] = EditorLayout.checkboxField('Enable Wetness Tint', data.enableWetnessTint, {
+      tooltip: 'Add a subtle color overlay simulating wetness',
+    });
+    if (enableChanged) data.enableWetnessTint = enableWetnessTint;
+
+    EditorLayout.endLabelsWidth();
 
     if (data.enableWetnessTint) {
-      ImGui.Indent();
-      ImGui.Spacing();
+      EditorLayout.beginIndent();
+      EditorLayout.spacing();
 
-      ImGui.Text('Tint Color:');
-      const wetnessTintColor: [number, number, number] = [
-        data.wetnessTintColor.r,
-        data.wetnessTintColor.g,
-        data.wetnessTintColor.b,
-      ];
-      if (ImGui.ColorEdit3('##wetnessTintColor', wetnessTintColor)) {
-        data.wetnessTintColor.r = wetnessTintColor[0];
-        data.wetnessTintColor.g = wetnessTintColor[1];
-        data.wetnessTintColor.b = wetnessTintColor[2];
+      EditorLayout.beginLabelsWidth(['Tint Color', 'Intensity']);
+
+      const [tintColor, colorChanged] = EditorLayout.colorField('Tint Color', data.wetnessTintColor, {
+        tooltip: 'Color of the wetness overlay',
+      });
+      if (colorChanged) {
+        data.wetnessTintColor.r = tintColor.r;
+        data.wetnessTintColor.g = tintColor.g;
+        data.wetnessTintColor.b = tintColor.b;
       }
 
-      ImGui.Text('Intensity:');
-      const wetnessTintIntensity: [number] = [data.wetnessTintIntensity];
-      ImGui.SliderFloat('##wetnessTintIntensity', wetnessTintIntensity, 0, 0.5);
-      data.wetnessTintIntensity = wetnessTintIntensity[0];
+      const [intensity, intensityChanged] = EditorLayout.numberField('Intensity', data.wetnessTintIntensity, {
+        min: 0, max: 0.5, useSlider: true,
+        tooltip: 'Strength of the wetness effect',
+      });
+      if (intensityChanged) data.wetnessTintIntensity = intensity;
 
-      ImGui.Unindent();
+      EditorLayout.endLabelsWidth();
+      EditorLayout.endIndent();
     }
 
-    ImGui.Unindent();
+    EditorLayout.endGroup();
   }
 }
 
 function renderLightningSection(data: Rain2DData): void {
-  if (ImGui.CollapsingHeader('Lightning##rainLightning')) {
-    ImGui.Indent();
+  if (EditorLayout.beginGroup('Lightning', false)) {
+    EditorLayout.beginLabelsWidth(['Enable Lightning']);
 
-    const enableLightning: [boolean] = [data.enableLightning];
-    ImGui.Checkbox('Enable Lightning', enableLightning);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Enable random lightning flash effects');
-    }
-    data.enableLightning = enableLightning[0];
+    const [enableLightning, enableChanged] = EditorLayout.checkboxField('Enable Lightning', data.enableLightning, {
+      tooltip: 'Enable random lightning flash effects',
+    });
+    if (enableChanged) data.enableLightning = enableLightning;
+
+    EditorLayout.endLabelsWidth();
 
     if (data.enableLightning) {
-      ImGui.Indent();
-      ImGui.Spacing();
+      EditorLayout.beginIndent();
+      EditorLayout.spacing();
 
-      ImGui.Text('Flash Color:');
-      const lightningColor: [number, number, number] = [
-        data.lightningColor.r,
-        data.lightningColor.g,
-        data.lightningColor.b,
-      ];
-      if (ImGui.ColorEdit3('##lightningColor', lightningColor)) {
-        data.lightningColor.r = lightningColor[0];
-        data.lightningColor.g = lightningColor[1];
-        data.lightningColor.b = lightningColor[2];
+      EditorLayout.beginLabelsWidth(['Flash Color', 'Min Interval', 'Max Interval', 'Flash Duration', 'Flash Intensity']);
+
+      const [flashColor, colorChanged] = EditorLayout.colorField('Flash Color', data.lightningColor, {
+        tooltip: 'Color of the lightning flash',
+      });
+      if (colorChanged) {
+        data.lightningColor.r = flashColor.r;
+        data.lightningColor.g = flashColor.g;
+        data.lightningColor.b = flashColor.b;
       }
 
-      ImGui.Text('Min Interval:');
-      const lightningMinInterval: [number] = [data.lightningMinInterval];
-      ImGui.SliderFloat('##lightningMinInterval', lightningMinInterval, 1, 30);
-      if (ImGui.IsItemHovered()) {
-        ImGui.SetTooltip('Minimum seconds between lightning strikes');
-      }
-      data.lightningMinInterval = lightningMinInterval[0];
+      const [minInterval, minIntervalChanged] = EditorLayout.numberField('Min Interval', data.lightningMinInterval, {
+        min: 1, max: 30, useSlider: true,
+        tooltip: 'Minimum seconds between lightning strikes',
+      });
+      if (minIntervalChanged) data.lightningMinInterval = minInterval;
 
-      ImGui.Text('Max Interval:');
-      const lightningMaxInterval: [number] = [data.lightningMaxInterval];
-      ImGui.SliderFloat('##lightningMaxInterval', lightningMaxInterval, 1, 60);
-      if (ImGui.IsItemHovered()) {
-        ImGui.SetTooltip('Maximum seconds between lightning strikes');
-      }
-      data.lightningMaxInterval = lightningMaxInterval[0];
+      const [maxInterval, maxIntervalChanged] = EditorLayout.numberField('Max Interval', data.lightningMaxInterval, {
+        min: 1, max: 60, useSlider: true,
+        tooltip: 'Maximum seconds between lightning strikes',
+      });
+      if (maxIntervalChanged) data.lightningMaxInterval = maxInterval;
 
-      ImGui.Text('Flash Duration:');
-      const lightningDuration: [number] = [data.lightningDuration];
-      ImGui.SliderFloat('##lightningDuration', lightningDuration, 0.05, 0.5);
-      if (ImGui.IsItemHovered()) {
-        ImGui.SetTooltip('Duration of lightning flash in seconds');
-      }
-      data.lightningDuration = lightningDuration[0];
+      const [duration, durationChanged] = EditorLayout.numberField('Flash Duration', data.lightningDuration, {
+        min: 0.05, max: 0.5, useSlider: true,
+        tooltip: 'Duration of lightning flash in seconds',
+      });
+      if (durationChanged) data.lightningDuration = duration;
 
-      ImGui.Text('Flash Intensity:');
-      const lightningIntensity: [number] = [data.lightningIntensity];
-      ImGui.SliderFloat('##lightningIntensity', lightningIntensity, 0, 1);
-      data.lightningIntensity = lightningIntensity[0];
+      const [intensity, intensityChanged] = EditorLayout.numberField('Flash Intensity', data.lightningIntensity, {
+        min: 0, max: 1, useSlider: true,
+        tooltip: 'Brightness of the lightning flash',
+      });
+      if (intensityChanged) data.lightningIntensity = intensity;
 
-      ImGui.Unindent();
+      EditorLayout.endLabelsWidth();
+      EditorLayout.endIndent();
     }
 
-    ImGui.Unindent();
+    EditorLayout.endGroup();
   }
 }
 
 function renderStormIntensitySection(data: Rain2DData): void {
-  if (ImGui.CollapsingHeader('Storm Intensity##rainStorm')) {
-    ImGui.Indent();
+  if (EditorLayout.beginGroup('Storm Intensity', false)) {
+    EditorLayout.beginLabelsWidth(['Storm Intensity']);
 
-    ImGui.Text('Storm Intensity:');
-    const stormIntensity: [number] = [data.stormIntensity];
-    ImGui.SliderFloat('##stormIntensity', stormIntensity, 0, 1);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip(
-        'Master intensity control - scales density and all effects',
-      );
-    }
-    data.stormIntensity = stormIntensity[0];
+    const [stormIntensity, intensityChanged] = EditorLayout.numberField('Storm Intensity', data.stormIntensity, {
+      min: 0, max: 1, useSlider: true,
+      tooltip: 'Master intensity control - scales density and all effects',
+    });
+    if (intensityChanged) data.stormIntensity = stormIntensity;
 
-    ImGui.Unindent();
+    EditorLayout.endLabelsWidth();
+    EditorLayout.endGroup();
   }
 }
 
@@ -888,8 +899,8 @@ export const Rain2D = component<Rain2DData>(
     customEditor: ({ componentData }) => {
       // Preset selector at top
       renderPresetSelector(componentData);
-      ImGui.Separator();
-      ImGui.Spacing();
+      EditorLayout.separator();
+      EditorLayout.spacing();
 
       // Collapsible sections
       renderSizeSection(componentData);

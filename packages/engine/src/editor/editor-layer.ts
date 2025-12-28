@@ -27,6 +27,7 @@ import { EditorManager } from './editor-manager.js';
 import { EditorCameraManager } from '../app/editor-camera-manager.js';
 import { HelperManager } from '../app/helper-manager.js';
 import { WorldSerializer } from '../ecs/serialization/world-serializer.js';
+import { isYamlFile } from '../ecs/serialization/yaml-utils.js';
 import { AssetDatabase } from '../ecs/asset-database.js';
 import { renderImGuiHierarchy } from '../app/imgui/hierarchy-viewer.js';
 import { renderImGuiInspector, setSelectedEntity, getSelectedEntity } from '../app/imgui/inspector.js';
@@ -251,7 +252,7 @@ export class EditorLayer extends Layer {
     }
 
     try {
-      const json = await platform.readTextFile(filePath);
+      const fileContent = await platform.readTextFile(filePath);
       const app = this.getApplication();
 
       // Clear selected entity before loading (it will become invalid)
@@ -264,15 +265,26 @@ export class EditorLayer extends Layer {
       // Clear post-processing entity tracking (scene is being replaced)
       this.lastPostProcessingEntity = null;
 
-      const loadResult = this.worldSerializer.deserializeFromString(
-        app.world,
-        app.getCommands(),
-        json,
-        {
-          mode: 'replace',
-          assetMetadataResolver: (guid) => AssetDatabase.getMetadata(guid),
-        }
-      );
+      // Deserialize based on file extension
+      const loadResult = isYamlFile(filePath)
+        ? this.worldSerializer.deserializeFromYaml(
+            app.world,
+            app.getCommands(),
+            fileContent,
+            {
+              mode: 'replace',
+              assetMetadataResolver: (guid) => AssetDatabase.getMetadata(guid),
+            }
+          )
+        : this.worldSerializer.deserializeFromString(
+            app.world,
+            app.getCommands(),
+            fileContent,
+            {
+              mode: 'replace',
+              assetMetadataResolver: (guid) => AssetDatabase.getMetadata(guid),
+            }
+          );
 
       if (loadResult.success) {
         // Update current path and cache it
@@ -1749,13 +1761,13 @@ export class EditorLayer extends Layer {
     }
 
     const app = this.getApplication();
-    const json = this.worldSerializer.serializeToString(
-      app.world,
-      app.getCommands(),
-      true
-    );
 
-    await platform.writeTextFile(filePath, json);
+    // Serialize based on file extension
+    const content = isYamlFile(filePath)
+      ? this.worldSerializer.serializeToYaml(app.world, app.getCommands())
+      : this.worldSerializer.serializeToString(app.world, app.getCommands(), true);
+
+    await platform.writeTextFile(filePath, content);
 
     // Update current path and cache
     this.currentScenePath = filePath;
@@ -1776,7 +1788,10 @@ export class EditorLayer extends Layer {
 
     const filePath = await platform.showSaveDialog({
       title: 'Save World As',
-      filters: [{ name: 'World Files', extensions: ['json'] }],
+      filters: [
+        { name: 'YAML World Files', extensions: ['yaml', 'yml'] },
+        { name: 'JSON World Files', extensions: ['json'] },
+      ],
     });
 
     if (!filePath) {
@@ -1797,7 +1812,9 @@ export class EditorLayer extends Layer {
 
     const result = await platform.showOpenDialog({
       title: 'Load World',
-      filters: [{ name: 'World Files', extensions: ['json'] }],
+      filters: [
+        { name: 'World Files', extensions: ['yaml', 'yml', 'json'] },
+      ],
     });
 
     if (!result) {
@@ -1831,7 +1848,10 @@ export class EditorLayer extends Layer {
     // Show save dialog to pick location for new world
     const filePath = await platform.showSaveDialog({
       title: 'New World',
-      filters: [{ name: 'World Files', extensions: ['json'] }],
+      filters: [
+        { name: 'YAML World Files', extensions: ['yaml', 'yml'] },
+        { name: 'JSON World Files', extensions: ['json'] },
+      ],
     });
 
     if (!filePath) {

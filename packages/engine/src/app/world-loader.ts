@@ -17,6 +17,7 @@ import type { World } from '../ecs/world.js';
 import type { Command } from '../ecs/command.js';
 import type { EditorPlatform } from '../editor/editor-platform.js';
 import { WorldSerializer } from '../ecs/serialization/world-serializer.js';
+import { isYamlFile } from '../ecs/serialization/yaml-utils.js';
 import type { WorldData } from '../ecs/serialization/schemas.js';
 import type { DeserializeResult, DeserializeOptions } from '../ecs/serialization/types.js';
 
@@ -76,6 +77,7 @@ export class WorldLoader {
    * Load world from a file path
    *
    * Uses platform.readTextFile if available, otherwise falls back to native fetch.
+   * Supports both JSON and YAML formats (detected by file extension).
    */
   private async loadFromPath(
     world: World,
@@ -83,12 +85,12 @@ export class WorldLoader {
     path: string,
     options: Partial<DeserializeOptions> = {}
   ): Promise<DeserializeResult> {
-    let json: string;
+    let content: string;
 
     try {
       if (this.platform) {
         // Use platform for file operations (Tauri, Electron, etc.)
-        json = await this.platform.readTextFile(path);
+        content = await this.platform.readTextFile(path);
       } else {
         // Fall back to native fetch for web
         const response = await fetch(path);
@@ -97,18 +99,24 @@ export class WorldLoader {
             `Failed to fetch world: ${response.status} ${response.statusText}`
           );
         }
-        json = await response.text();
+        content = await response.text();
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       return this.createErrorResult(`Failed to load world from ${path}: ${message}`);
     }
 
-    return this.worldSerializer.deserializeFromString(world, commands, json, {
-      mode: 'replace',
+    const deserializeOptions = {
+      mode: 'replace' as const,
       assetMetadataResolver: this.assetMetadataResolver,
       ...options,
-    });
+    };
+
+    // Use YAML or JSON deserializer based on file extension
+    if (isYamlFile(path)) {
+      return this.worldSerializer.deserializeFromYaml(world, commands, content, deserializeOptions);
+    }
+    return this.worldSerializer.deserializeFromString(world, commands, content, deserializeOptions);
   }
 
   /**

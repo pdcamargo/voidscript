@@ -24,7 +24,7 @@
  */
 
 import { component } from '../../component.js';
-import { ImGui } from '@mori2003/jsimgui';
+import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 
 /**
  * Gradient stop defining a color at a specific position
@@ -160,185 +160,241 @@ export interface SkyGradient2DData {
  * - Texture is only regenerated when dirty flag is true
  * - Use lower `height` values (64-256) for pixel art style
  */
+// ============================================================================
+// Custom Editor - Helper Functions
+// ============================================================================
+
+function renderGradientStopsSection(data: SkyGradient2DData): void {
+  if (EditorLayout.beginGroup('Gradient Stops', true)) {
+    let changed = false;
+    let stopToRemove = -1;
+
+    // Render each gradient stop
+    for (let i = 0; i < data.stops.length; i++) {
+      const stop = data.stops[i];
+      if (!stop) continue;
+
+      // Stop header with remove button
+      EditorLayout.text(`Stop ${i}`);
+      EditorLayout.sameLine();
+      if (EditorLayout.smallButton(`X##stop_remove_${i}`)) {
+        stopToRemove = i;
+      }
+
+      EditorLayout.beginLabelsWidth(['Color', 'Position']);
+
+      // Color picker
+      const [color, colorChanged] = EditorLayout.colorField('Color', stop.color, {
+        hasAlpha: true,
+        id: `stop_color_${i}`,
+        tooltip: 'Color at this gradient stop',
+      });
+      if (colorChanged) {
+        stop.color.r = color.r;
+        stop.color.g = color.g;
+        stop.color.b = color.b;
+        stop.color.a = color.a ?? 1;
+        changed = true;
+      }
+
+      // Position slider
+      const [position, positionChanged] = EditorLayout.numberField('Position', stop.position, {
+        min: 0,
+        max: 1,
+        useSlider: true,
+        id: `stop_position_${i}`,
+        tooltip: 'Position along gradient (0 = bottom, 1 = top)',
+      });
+      if (positionChanged) {
+        stop.position = position;
+        changed = true;
+      }
+
+      EditorLayout.endLabelsWidth();
+      EditorLayout.separator();
+    }
+
+    // Add stop button
+    if (EditorLayout.button('Add Stop##gradient_stops')) {
+      const newStop: GradientStop = {
+        color: { r: 0.5, g: 0.5, b: 0.5, a: 1 },
+        position: 0.5,
+      };
+      data.stops.push(newStop);
+      changed = true;
+    }
+
+    // Handle removal after iteration
+    if (stopToRemove >= 0) {
+      data.stops.splice(stopToRemove, 1);
+      changed = true;
+    }
+
+    // Set dirty flag to regenerate gradient texture
+    if (changed) {
+      data.dirty = true;
+    }
+
+    EditorLayout.endGroup();
+  }
+}
+
+function renderVisibilitySection(data: SkyGradient2DData): void {
+  if (EditorLayout.beginGroup('Visibility & Rendering', false)) {
+    EditorLayout.beginLabelsWidth(['Visible', 'Is Lit', 'Sorting Layer', 'Sorting Order']);
+
+    const [visible, visibleChanged] = EditorLayout.checkboxField('Visible', data.visible, {
+      tooltip: 'Whether the sky gradient is visible',
+    });
+    if (visibleChanged) data.visible = visible;
+
+    const [isLit, isLitChanged] = EditorLayout.checkboxField('Is Lit', data.isLit, {
+      tooltip: 'Whether the sky responds to scene lighting',
+    });
+    if (isLitChanged) data.isLit = isLit;
+
+    const [sortingLayer, layerChanged] = EditorLayout.integerField('Sorting Layer', data.sortingLayer, {
+      speed: 1,
+      min: -1000,
+      max: 1000,
+      tooltip: 'Sorting layer for render order (use negative values for backgrounds)',
+    });
+    if (layerChanged) data.sortingLayer = sortingLayer;
+
+    const [sortingOrder, orderChanged] = EditorLayout.integerField('Sorting Order', data.sortingOrder, {
+      speed: 1,
+      min: -1000,
+      max: 1000,
+      tooltip: 'Sorting order within the layer',
+    });
+    if (orderChanged) data.sortingOrder = sortingOrder;
+
+    EditorLayout.endLabelsWidth();
+    EditorLayout.endGroup();
+  }
+}
+
+function renderTextureSection(data: SkyGradient2DData): void {
+  if (EditorLayout.beginGroup('Texture Settings', false)) {
+    EditorLayout.beginLabelsWidth(['Height']);
+
+    const [height, heightChanged] = EditorLayout.integerField('Height', data.height, {
+      speed: 1,
+      min: 16,
+      max: 1024,
+      tooltip: 'Height of the gradient texture in pixels (higher = smoother)',
+    });
+    if (heightChanged) {
+      data.height = height;
+      data.dirty = true;
+    }
+
+    EditorLayout.endLabelsWidth();
+    EditorLayout.endGroup();
+  }
+}
+
+function renderStarsSection(data: SkyGradient2DData): void {
+  if (EditorLayout.beginGroup('Stars', false)) {
+    EditorLayout.beginLabelsWidth(['Enable Stars']);
+
+    const [enableStars, enableChanged] = EditorLayout.checkboxField('Enable Stars', data.enableStars, {
+      tooltip: 'Enable procedural star rendering',
+    });
+    if (enableChanged) data.enableStars = enableStars;
+
+    EditorLayout.endLabelsWidth();
+
+    if (data.enableStars) {
+      EditorLayout.beginIndent();
+      EditorLayout.beginLabelsWidth(['Star Count', 'Seed', 'Min Size', 'Max Size', 'Height Range', 'Flicker Speed', 'Flicker Intensity']);
+
+      const [starCount, countChanged] = EditorLayout.integerField('Star Count', data.starCount, {
+        speed: 10,
+        min: 0,
+        max: 2000,
+        tooltip: 'Number of stars to generate',
+      });
+      if (countChanged) data.starCount = starCount;
+
+      const [seed, seedChanged] = EditorLayout.integerField('Seed', data.starSeed, {
+        speed: 1,
+        min: 0,
+        max: 999999,
+        tooltip: 'Random seed for deterministic star placement',
+      });
+      if (seedChanged) data.starSeed = seed;
+
+      const [minSize, minSizeChanged] = EditorLayout.numberField('Min Size', data.starMinSize, {
+        speed: 0.1,
+        min: 0.5,
+        max: 10,
+        tooltip: 'Minimum star size',
+      });
+      if (minSizeChanged) data.starMinSize = minSize;
+
+      const [maxSize, maxSizeChanged] = EditorLayout.numberField('Max Size', data.starMaxSize, {
+        speed: 0.1,
+        min: 0.5,
+        max: 10,
+        tooltip: 'Maximum star size',
+      });
+      if (maxSizeChanged) data.starMaxSize = maxSize;
+
+      const [heightRange, heightRangeChanged] = EditorLayout.numberField('Height Range', data.starHeightRange, {
+        min: 0,
+        max: 1,
+        useSlider: true,
+        tooltip: 'Height range for stars (0-1, where 0.5 = bottom half)',
+      });
+      if (heightRangeChanged) data.starHeightRange = heightRange;
+
+      const [flickerSpeed, flickerSpeedChanged] = EditorLayout.numberField('Flicker Speed', data.flickerSpeed, {
+        min: 0,
+        max: 10,
+        useSlider: true,
+        tooltip: 'Flicker animation speed',
+      });
+      if (flickerSpeedChanged) data.flickerSpeed = flickerSpeed;
+
+      const [flickerIntensity, flickerIntensityChanged] = EditorLayout.numberField('Flicker Intensity', data.flickerIntensity, {
+        min: 0,
+        max: 1,
+        useSlider: true,
+        tooltip: 'How much stars vary in brightness (0-1)',
+      });
+      if (flickerIntensityChanged) data.flickerIntensity = flickerIntensity;
+
+      EditorLayout.endLabelsWidth();
+      EditorLayout.endIndent();
+    }
+
+    EditorLayout.endGroup();
+  }
+}
+
+// ============================================================================
+// Component Definition
+// ============================================================================
+
 export const SkyGradient2D = component<SkyGradient2DData>(
   'SkyGradient2D',
   {
-    stops: {
-      serializable: true,
-      customEditor: ({ label, value, onChange, componentData }) => {
-        ImGui.Text(`${label}:`);
-        ImGui.Indent();
-
-        let changed = false;
-        let stopToRemove = -1;
-
-        // Render each gradient stop
-        for (let i = 0; i < value.length; i++) {
-          const stop = value[i];
-          if (!stop) continue;
-
-          ImGui.PushID(`stop_${i}`);
-
-          // Stop header with remove button
-          ImGui.AlignTextToFramePadding();
-          ImGui.Text(`Stop ${i}`);
-          ImGui.SameLine();
-          if (ImGui.SmallButton('X')) {
-            stopToRemove = i;
-          }
-
-          // Color picker
-          const colorArr: [number, number, number, number] = [
-            stop.color.r,
-            stop.color.g,
-            stop.color.b,
-            stop.color.a,
-          ];
-          if (ImGui.ColorEdit4(`Color##${i}`, colorArr)) {
-            stop.color.r = colorArr[0];
-            stop.color.g = colorArr[1];
-            stop.color.b = colorArr[2];
-            stop.color.a = colorArr[3];
-            changed = true;
-          }
-
-          // Position slider
-          const posArr: [number] = [stop.position];
-          if (ImGui.SliderFloat(`Position##${i}`, posArr, 0, 1)) {
-            stop.position = posArr[0];
-            changed = true;
-          }
-
-          ImGui.PopID();
-          ImGui.Separator();
-        }
-
-        // Add stop button
-        if (ImGui.Button('Add Stop')) {
-          // Add new stop at middle position
-          const newStop: GradientStop = {
-            color: { r: 0.5, g: 0.5, b: 0.5, a: 1 },
-            position: 0.5,
-          };
-          value.push(newStop);
-          changed = true;
-        }
-
-        ImGui.Unindent();
-
-        // Handle removal after iteration
-        if (stopToRemove >= 0) {
-          value.splice(stopToRemove, 1);
-          changed = true;
-        }
-
-        // Trigger onChange if any modifications were made
-        if (changed) {
-          onChange([...value]); // Create new array reference to trigger reactivity
-          // Set dirty flag to regenerate gradient texture
-          if (componentData) {
-            componentData.dirty = true;
-          }
-        }
-      },
-    },
-    height: {
-      serializable: true,
-    },
-    sortingLayer: {
-      serializable: true,
-    },
-    sortingOrder: {
-      serializable: true,
-    },
-    visible: {
-      serializable: true,
-    },
-    isLit: {
-      serializable: true,
-    },
-    dirty: {
-      serializable: true,
-    },
-    enableStars: {
-      serializable: true,
-      customEditor: ({ label, value, onChange, componentData }) => {
-        const checkboxValue: [boolean] = [value];
-        if (ImGui.Checkbox(label, checkboxValue)) {
-          onChange(checkboxValue[0]);
-        }
-
-        // Show star configuration when enabled
-        if (value && componentData) {
-          ImGui.Indent();
-
-          // Star Count
-          const countArr: [number] = [componentData.starCount];
-          if (ImGui.DragInt('Star Count', countArr, 10, 0, 2000)) {
-            componentData.starCount = countArr[0];
-          }
-
-          // Seed
-          const seedArr: [number] = [componentData.starSeed];
-          if (ImGui.DragInt('Seed', seedArr, 1, 0, 999999)) {
-            componentData.starSeed = seedArr[0];
-          }
-
-          // Min Size
-          const minSizeArr: [number] = [componentData.starMinSize];
-          if (ImGui.DragFloat('Min Size', minSizeArr, 0.1, 0.5, 10)) {
-            componentData.starMinSize = minSizeArr[0];
-          }
-
-          // Max Size
-          const maxSizeArr: [number] = [componentData.starMaxSize];
-          if (ImGui.DragFloat('Max Size', maxSizeArr, 0.1, 0.5, 10)) {
-            componentData.starMaxSize = maxSizeArr[0];
-          }
-
-          // Height Range
-          const heightRangeArr: [number] = [componentData.starHeightRange];
-          if (ImGui.SliderFloat('Height Range', heightRangeArr, 0, 1)) {
-            componentData.starHeightRange = heightRangeArr[0];
-          }
-
-          // Flicker Speed
-          const flickerSpeedArr: [number] = [componentData.flickerSpeed];
-          if (ImGui.SliderFloat('Flicker Speed', flickerSpeedArr, 0, 10)) {
-            componentData.flickerSpeed = flickerSpeedArr[0];
-          }
-
-          // Flicker Intensity
-          const flickerIntensityArr: [number] = [componentData.flickerIntensity];
-          if (ImGui.SliderFloat('Flicker Intensity', flickerIntensityArr, 0, 1)) {
-            componentData.flickerIntensity = flickerIntensityArr[0];
-          }
-
-          ImGui.Unindent();
-        }
-      },
-    },
-    starCount: {
-      serializable: true,
-    },
-    starMinSize: {
-      serializable: true,
-    },
-    starMaxSize: {
-      serializable: true,
-    },
-    starHeightRange: {
-      serializable: true,
-    },
-    starSeed: {
-      serializable: true,
-    },
-    flickerSpeed: {
-      serializable: true,
-    },
-    flickerIntensity: {
-      serializable: true,
-    },
+    stops: { serializable: true },
+    height: { serializable: true },
+    sortingLayer: { serializable: true },
+    sortingOrder: { serializable: true },
+    visible: { serializable: true },
+    isLit: { serializable: true },
+    dirty: { serializable: true },
+    enableStars: { serializable: true },
+    starCount: { serializable: true },
+    starMinSize: { serializable: true },
+    starMaxSize: { serializable: true },
+    starHeightRange: { serializable: true },
+    starSeed: { serializable: true },
+    flickerSpeed: { serializable: true },
+    flickerIntensity: { serializable: true },
   },
   {
     path: 'rendering/2d',
@@ -352,7 +408,7 @@ export const SkyGradient2D = component<SkyGradient2DData>(
       sortingOrder: 0,
       visible: true,
       isLit: false,
-      dirty: true, // Start dirty to generate initial texture
+      dirty: true,
       enableStars: false,
       starCount: 500,
       starMinSize: 1.0,
@@ -364,5 +420,11 @@ export const SkyGradient2D = component<SkyGradient2DData>(
     }),
     displayName: 'Sky Gradient 2D',
     description: 'Vertical gradient background for 2D scenes',
+    customEditor: ({ componentData }) => {
+      renderGradientStopsSection(componentData);
+      renderVisibilitySection(componentData);
+      renderTextureSection(componentData);
+      renderStarsSection(componentData);
+    },
   },
 );

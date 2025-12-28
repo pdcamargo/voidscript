@@ -35,9 +35,8 @@
 
 import { component } from '../../component.js';
 import { RuntimeAsset } from '../../runtime-asset.js';
-import { AssetDatabase } from '../../asset-database.js';
-import { isAudioAssetMetadata, type AudioAssetMetadata, AssetType } from '../../asset-metadata.js';
-import { ImGui } from '@mori2003/jsimgui';
+import { AssetType } from '../../asset-metadata.js';
+import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 
 /**
  * Distance model for audio attenuation
@@ -199,188 +198,99 @@ export const PositionalAudioSource = component<PositionalAudioSourceData>(
       coneOuterGain: 0,
     }),
     customEditor: ({ componentData }) => {
+      EditorLayout.beginLabelsWidth(['Audio Clip', 'Volume', 'Loop', 'Play on Awake', 'Playback Rate']);
+
       // Audio Clip picker
-      ImGui.Text('Audio Clip:');
-      ImGui.SameLine();
-
-      const audioClip = componentData.audioClip;
-      if (audioClip && audioClip.guid) {
-        const metadata = AssetDatabase.getMetadata(audioClip.guid);
-        if (metadata) {
-          ImGui.Text(metadata.path.split('/').pop() || 'Unknown');
-        } else {
-          ImGui.Text('Unknown Asset');
+      const [audioClip, audioClipChanged] = EditorLayout.runtimeAssetField(
+        'Audio Clip',
+        componentData.audioClip,
+        {
+          assetTypes: [AssetType.Audio],
+          allowClear: true,
+          tooltip: 'Audio asset to play'
         }
-      } else {
-        ImGui.TextDisabled('(None)');
-      }
+      );
+      if (audioClipChanged) componentData.audioClip = audioClip;
 
-      ImGui.SameLine();
-      const popupId = 'AudioClipPicker##PositionalAudioSource';
-      if (ImGui.Button('Pick##audioClip')) {
-        ImGui.OpenPopup(popupId);
-      }
-
-      // Asset picker modal (same as AudioSource)
-      ImGui.SetNextWindowSize({ x: 500, y: 400 }, ImGui.Cond.FirstUseEver);
-      if (ImGui.BeginPopupModal(popupId, null, ImGui.WindowFlags.None)) {
-        ImGui.Text('Select an audio clip:');
-        ImGui.Separator();
-
-        const allGuids = AssetDatabase.getAllGuids();
-        const audioAssets: { guid: string; metadata: AudioAssetMetadata }[] = [];
-
-        for (const guid of allGuids) {
-          const metadata = AssetDatabase.getMetadata(guid);
-          if (metadata && isAudioAssetMetadata(metadata)) {
-            audioAssets.push({ guid, metadata });
-          }
-        }
-
-        if (audioAssets.length === 0) {
-          ImGui.TextColored({ x: 1, y: 0.5, z: 0, w: 1 }, 'No audio assets found.');
-        } else {
-          ImGui.BeginChild('AudioAssetGrid', { x: 0, y: -40 }, ImGui.WindowFlags.None);
-
-          const itemsPerRow = 3;
-          for (let i = 0; i < audioAssets.length; i++) {
-            const asset = audioAssets[i];
-            if (!asset) continue;
-
-            if (i > 0 && i % itemsPerRow !== 0) {
-              ImGui.SameLine();
-            }
-
-            ImGui.BeginGroup();
-
-            const isSelected = audioClip?.guid === asset.guid;
-            if (isSelected) {
-              ImGui.PushStyleColorImVec4(ImGui.Col.Button, { x: 0.2, y: 0.5, z: 0.8, w: 1.0 });
-            }
-
-            const fileName = asset.metadata.path.split('/').pop() || 'Unknown';
-            if (ImGui.Button(`${fileName}##${asset.guid}`, { x: 150, y: 60 })) {
-              import('../../runtime-asset-manager.js').then(({ RuntimeAssetManager }) => {
-                const runtimeAsset = RuntimeAssetManager.get().getOrCreate(asset.guid, asset.metadata);
-                componentData.audioClip = runtimeAsset;
-              });
-              ImGui.CloseCurrentPopup();
-            }
-
-            if (isSelected) {
-              ImGui.PopStyleColor();
-            }
-
-            if (asset.metadata.duration !== undefined) {
-              ImGui.TextDisabled(`${asset.metadata.duration.toFixed(1)}s`);
-            }
-
-            ImGui.EndGroup();
-          }
-
-          ImGui.EndChild();
-        }
-
-        ImGui.Separator();
-        if (ImGui.Button('Clear', { x: 80, y: 0 })) {
-          componentData.audioClip = null;
-          ImGui.CloseCurrentPopup();
-        }
-        ImGui.SameLine();
-        if (ImGui.Button('Cancel', { x: 80, y: 0 })) {
-          ImGui.CloseCurrentPopup();
-        }
-
-        ImGui.EndPopup();
-      }
-
-      ImGui.Separator();
+      EditorLayout.separator();
 
       // Basic playback settings
-      ImGui.Text('Volume:');
-      const volume: [number] = [componentData.volume];
-      if (ImGui.SliderFloat('##volume_PositionalAudioSource', volume, 0.0, 1.0)) {
-        componentData.volume = Math.max(0, Math.min(1, volume[0]));
-      }
+      const [volume, volumeChanged] = EditorLayout.numberField('Volume', componentData.volume, {
+        min: 0, max: 1, useSlider: true, tooltip: 'Playback volume (0-1)'
+      });
+      if (volumeChanged) componentData.volume = volume;
 
-      const loop: [boolean] = [componentData.loop];
-      if (ImGui.Checkbox('Loop##loop_PositionalAudioSource', loop)) {
-        componentData.loop = loop[0];
-      }
+      const [loop, loopChanged] = EditorLayout.checkboxField('Loop', componentData.loop, {
+        tooltip: 'Whether the audio loops continuously'
+      });
+      if (loopChanged) componentData.loop = loop;
 
-      const playOnAwake: [boolean] = [componentData.playOnAwake];
-      if (ImGui.Checkbox('Play on Awake##playOnAwake_PositionalAudioSource', playOnAwake)) {
-        componentData.playOnAwake = playOnAwake[0];
-      }
+      const [playOnAwake, playOnAwakeChanged] = EditorLayout.checkboxField('Play on Awake', componentData.playOnAwake, {
+        tooltip: 'Auto-play when entering play mode'
+      });
+      if (playOnAwakeChanged) componentData.playOnAwake = playOnAwake;
 
-      ImGui.Text('Playback Rate:');
-      const playbackRate: [number] = [componentData.playbackRate];
-      if (ImGui.SliderFloat('##playbackRate_PositionalAudioSource', playbackRate, 0.1, 3.0)) {
-        componentData.playbackRate = Math.max(0.1, Math.min(3, playbackRate[0]));
-      }
+      const [playbackRate, playbackRateChanged] = EditorLayout.numberField('Playback Rate', componentData.playbackRate, {
+        min: 0.1, max: 3, useSlider: true, tooltip: 'Playback speed (1 = normal, 0.5 = half, 2 = double)'
+      });
+      if (playbackRateChanged) componentData.playbackRate = playbackRate;
 
-      ImGui.Separator();
-      ImGui.Text('3D Spatial Settings');
+      EditorLayout.endLabelsWidth();
+
+      EditorLayout.separator();
+      EditorLayout.header('3D Spatial Settings', { r: 0.6, g: 0.8, b: 1 });
+
+      EditorLayout.beginLabelsWidth(['Distance Model', 'Ref Distance', 'Max Distance', 'Rolloff Factor']);
 
       // Distance model dropdown
-      ImGui.Text('Distance Model:');
-      ImGui.SameLine();
-      const distanceModels: DistanceModel[] = ['linear', 'inverse', 'exponential'];
-      if (ImGui.BeginCombo('##distanceModel_PositionalAudioSource', componentData.distanceModel)) {
-        for (const model of distanceModels) {
-          const isSelected = componentData.distanceModel === model;
-          if (ImGui.Selectable(model, isSelected)) {
-            componentData.distanceModel = model;
-          }
-          if (isSelected) {
-            ImGui.SetItemDefaultFocus();
-          }
-        }
-        ImGui.EndCombo();
-      }
+      const DistanceModelEnum = { linear: 'linear', inverse: 'inverse', exponential: 'exponential' } as const;
+      const [distanceModel, distanceModelChanged] = EditorLayout.enumField('Distance Model', componentData.distanceModel, DistanceModelEnum, {
+        tooltip: 'Algorithm for volume attenuation over distance'
+      });
+      if (distanceModelChanged) componentData.distanceModel = distanceModel;
 
       // Distance parameters
-      ImGui.Text('Ref Distance:');
-      const refDistance: [number] = [componentData.refDistance];
-      if (ImGui.DragFloat('##refDistance_PositionalAudioSource', refDistance, 0.1, 0.1, 100)) {
-        componentData.refDistance = Math.max(0.1, refDistance[0]);
-      }
+      const [refDistance, refDistanceChanged] = EditorLayout.numberField('Ref Distance', componentData.refDistance, {
+        min: 0.1, max: 100, speed: 0.1, tooltip: 'Distance at which volume is full (before rolloff)'
+      });
+      if (refDistanceChanged) componentData.refDistance = refDistance;
 
-      ImGui.Text('Max Distance:');
-      const maxDistance: [number] = [componentData.maxDistance];
-      if (ImGui.DragFloat('##maxDistance_PositionalAudioSource', maxDistance, 1, 1, 100000)) {
-        componentData.maxDistance = Math.max(1, maxDistance[0]);
-      }
+      const [maxDistance, maxDistanceChanged] = EditorLayout.numberField('Max Distance', componentData.maxDistance, {
+        min: 1, max: 100000, speed: 1, tooltip: 'Maximum audible distance'
+      });
+      if (maxDistanceChanged) componentData.maxDistance = maxDistance;
 
-      ImGui.Text('Rolloff Factor:');
-      const rolloffFactor: [number] = [componentData.rolloffFactor];
-      if (ImGui.DragFloat('##rolloffFactor_PositionalAudioSource', rolloffFactor, 0.1, 0, 10)) {
-        componentData.rolloffFactor = Math.max(0, rolloffFactor[0]);
-      }
+      const [rolloffFactor, rolloffFactorChanged] = EditorLayout.numberField('Rolloff Factor', componentData.rolloffFactor, {
+        min: 0, max: 10, speed: 0.1, tooltip: 'Speed of volume falloff with distance'
+      });
+      if (rolloffFactorChanged) componentData.rolloffFactor = rolloffFactor;
 
-      ImGui.Separator();
-      ImGui.Text('Directional Audio (Cone)');
+      EditorLayout.endLabelsWidth();
 
-      ImGui.Text('Inner Cone Angle:');
-      const coneInnerAngle: [number] = [componentData.coneInnerAngle];
-      if (ImGui.SliderFloat('##coneInnerAngle_PositionalAudioSource', coneInnerAngle, 0, 360)) {
-        componentData.coneInnerAngle = Math.max(0, Math.min(360, coneInnerAngle[0]));
-      }
+      EditorLayout.separator();
+      EditorLayout.header('Directional Audio (Cone)', { r: 0.6, g: 0.8, b: 1 });
 
-      ImGui.Text('Outer Cone Angle:');
-      const coneOuterAngle: [number] = [componentData.coneOuterAngle];
-      if (ImGui.SliderFloat('##coneOuterAngle_PositionalAudioSource', coneOuterAngle, 0, 360)) {
-        componentData.coneOuterAngle = Math.max(0, Math.min(360, coneOuterAngle[0]));
-      }
+      EditorLayout.beginLabelsWidth(['Inner Cone Angle', 'Outer Cone Angle', 'Outer Gain']);
 
-      ImGui.Text('Outer Gain:');
-      const coneOuterGain: [number] = [componentData.coneOuterGain];
-      if (ImGui.SliderFloat('##coneOuterGain_PositionalAudioSource', coneOuterGain, 0.0, 1.0)) {
-        componentData.coneOuterGain = Math.max(0, Math.min(1, coneOuterGain[0]));
-      }
+      const [coneInnerAngle, coneInnerAngleChanged] = EditorLayout.numberField('Inner Cone Angle', componentData.coneInnerAngle, {
+        min: 0, max: 360, useSlider: true, tooltip: 'Full volume within this cone (degrees)'
+      });
+      if (coneInnerAngleChanged) componentData.coneInnerAngle = coneInnerAngle;
 
-      ImGui.Separator();
-      ImGui.TextColored({ x: 0.7, y: 0.7, z: 0.7, w: 1.0 }, 'Audio only plays during Play Mode.');
+      const [coneOuterAngle, coneOuterAngleChanged] = EditorLayout.numberField('Outer Cone Angle', componentData.coneOuterAngle, {
+        min: 0, max: 360, useSlider: true, tooltip: 'Volume transitions to outer gain between inner and outer cone'
+      });
+      if (coneOuterAngleChanged) componentData.coneOuterAngle = coneOuterAngle;
+
+      const [coneOuterGain, coneOuterGainChanged] = EditorLayout.numberField('Outer Gain', componentData.coneOuterGain, {
+        min: 0, max: 1, useSlider: true, tooltip: 'Volume multiplier outside outer cone'
+      });
+      if (coneOuterGainChanged) componentData.coneOuterGain = coneOuterGain;
+
+      EditorLayout.endLabelsWidth();
+
+      EditorLayout.separator();
+      EditorLayout.hint('Audio only plays during Play Mode.');
     },
   },
 );

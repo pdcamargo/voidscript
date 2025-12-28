@@ -8,7 +8,7 @@
 import { component } from '../../component.js';
 import type { AnimationClip } from '../../../animation/animation-clip.js';
 import { isRuntimeAsset, type RuntimeAsset } from '../../runtime-asset.js';
-import { ImGui } from '@mori2003/jsimgui';
+import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 
 // ============================================================================
 // Types
@@ -105,43 +105,34 @@ export const AnimationController = component<AnimationControllerData>(
           }
         }
 
+        // Build options array with None option first
+        const options = ['(None)', ...availableIds];
+
         // Current selection display
         const currentDisplay = value || '(None)';
 
-        ImGui.Text(`${label}:`);
-        ImGui.SameLine();
+        EditorLayout.beginLabelsWidth(['Current Animation']);
 
-        // Combo box for selecting animation
-        if (ImGui.BeginCombo(`##${label}`, currentDisplay)) {
-          // None option
-          if (ImGui.Selectable('(None)', value === null)) {
-            onChange(null);
-          }
+        // Use comboField for selecting animation
+        const [selected, changed] = EditorLayout.comboField(label, currentDisplay, options, {
+          tooltip: 'Currently playing animation clip',
+        });
 
-          // Available animations
-          for (const animId of availableIds) {
-            const isSelected = value === animId;
-            if (ImGui.Selectable(animId, isSelected)) {
-              onChange(animId);
-            }
-            if (isSelected) {
-              ImGui.SetItemDefaultFocus();
-            }
-          }
-
-          ImGui.EndCombo();
+        if (changed) {
+          onChange(selected === '(None)' ? null : selected);
         }
 
         // Show warning if no animations available
         if (availableIds.length === 0) {
-          ImGui.SameLine();
-          ImGui.TextColored(
-            { x: 1, y: 0.5, z: 0, w: 1 },
+          EditorLayout.sameLine();
+          EditorLayout.warning(
             animations && animations.length > 0
               ? '(Not loaded)'
               : '(No animations)'
           );
         }
+
+        EditorLayout.endLabelsWidth();
       },
     },
     isPlaying: { serializable: true },

@@ -14,6 +14,7 @@
  */
 
 import { component } from '../../ecs/component.js';
+import { EditorLayout } from '../../app/imgui/editor-layout.js';
 
 export interface CcdData {
   /** Enable continuous collision detection (prevents tunneling at high speeds) */
@@ -33,5 +34,21 @@ export const Ccd = component<CcdData>(
     defaultValue: () => ({ enabled: false }),
     displayName: 'Continuous Collision Detection',
     description: 'Prevents fast-moving objects from tunneling through colliders',
+    customEditor: ({ componentData }) => {
+      EditorLayout.beginLabelsWidth(['Enabled']);
+
+      const [enabled, changed] = EditorLayout.checkboxField(
+        'Enabled',
+        componentData.enabled,
+        {
+          tooltip: 'Enable CCD for projectiles and fast-moving objects (higher CPU cost)',
+        }
+      );
+      if (changed) {
+        componentData.enabled = enabled;
+      }
+
+      EditorLayout.endLabelsWidth();
+    },
   },
 );

@@ -37,11 +37,9 @@
  */
 
 import { component } from "../../component.js";
-import { ImGui } from "@mori2003/jsimgui";
 import type { Entity } from "../../entity.js";
-import { entityPicker } from "../../../app/imgui/entity-picker.js";
+import { EditorLayout } from "../../../app/imgui/editor-layout.js";
 import { VirtualCameraBounds } from "./virtual-camera-bounds.js";
-import { Name } from "../name.js";
 
 export interface VirtualCameraData {
   /**
@@ -156,109 +154,110 @@ export const VirtualCamera = component<VirtualCameraData>(
     path: "rendering/camera",
     customEditor: ({ componentData, commands }) => {
       // Priority (prominent at top)
-      ImGui.TextColored(
-        { x: 0.2, y: 0.8, z: 0.4, w: 1 },
-        "Virtual Camera Settings"
-      );
+      EditorLayout.header("Virtual Camera Settings", { r: 0.2, g: 0.8, b: 0.4 });
 
-      const priority: [number] = [componentData.priority];
-      if (ImGui.DragInt("Priority##priority", priority, 1, 0, 100)) {
-        componentData.priority = priority[0];
-      }
+      EditorLayout.beginLabelsWidth(['Priority', 'Enabled', 'Projection Type', 'Dutch Angle']);
 
-      const enabled: [boolean] = [componentData.enabled];
-      if (ImGui.Checkbox("Enabled##enabled", enabled)) {
-        componentData.enabled = enabled[0];
-      }
+      const [priority, priorityChanged] = EditorLayout.integerField("Priority", componentData.priority, {
+        min: 0, max: 100, tooltip: "Higher priority cameras take precedence"
+      });
+      if (priorityChanged) componentData.priority = priority;
 
-      ImGui.Separator();
+      const [enabled, enabledChanged] = EditorLayout.checkboxField("Enabled", componentData.enabled, {
+        tooltip: "Disabled cameras are ignored during selection"
+      });
+      if (enabledChanged) componentData.enabled = enabled;
+
+      EditorLayout.separator();
 
       // Camera projection type
-      ImGui.Text("Projection Type:");
-      const typeOptions: Array<"perspective" | "orthographic"> = [
-        "perspective",
-        "orthographic",
-      ];
-      if (ImGui.BeginCombo("##type", componentData.type)) {
-        for (const option of typeOptions) {
-          const isSelected = componentData.type === option;
-          if (ImGui.Selectable(option, isSelected)) {
-            componentData.type = option;
-          }
-          if (isSelected) {
-            ImGui.SetItemDefaultFocus();
-          }
-        }
-        ImGui.EndCombo();
-      }
+      const ProjectionType = { perspective: "perspective", orthographic: "orthographic" } as const;
+      const [newType, typeChanged] = EditorLayout.enumField("Projection Type", componentData.type, ProjectionType, {
+        tooltip: "Camera projection mode"
+      });
+      if (typeChanged) componentData.type = newType;
 
-      ImGui.Separator();
+      EditorLayout.endLabelsWidth();
+
+      EditorLayout.separator();
 
       // Conditional perspective properties
       if (componentData.type === "perspective") {
-        ImGui.Text("Perspective Properties");
-        ImGui.Indent();
-        const fov: [number] = [componentData.fov];
-        if (ImGui.SliderFloat("Field of View##fov", fov, 10, 150)) {
-          componentData.fov = fov[0];
+        if (EditorLayout.beginGroup("Perspective Properties")) {
+          EditorLayout.beginLabelsWidth(['Field of View']);
+
+          const [fov, fovChanged] = EditorLayout.numberField("Field of View", componentData.fov, {
+            min: 10, max: 150, useSlider: true, tooltip: "Vertical field of view in degrees"
+          });
+          if (fovChanged) componentData.fov = fov;
+
+          EditorLayout.endLabelsWidth();
+          EditorLayout.endGroup();
         }
-        ImGui.Unindent();
       }
 
       // Conditional orthographic properties
       if (componentData.type === "orthographic") {
-        ImGui.Text("Orthographic Properties");
-        ImGui.Indent();
-        const size: [number] = [componentData.size];
-        if (ImGui.DragFloat("Size##size", size, 0.1, 0.1, 100)) {
-          componentData.size = size[0];
+        if (EditorLayout.beginGroup("Orthographic Properties")) {
+          EditorLayout.beginLabelsWidth(['Size', 'Zoom']);
+
+          const [size, sizeChanged] = EditorLayout.numberField("Size", componentData.size, {
+            min: 0.1, max: 100, speed: 0.1, tooltip: "Half-height of the camera view in world units"
+          });
+          if (sizeChanged) componentData.size = size;
+
+          const [zoom, zoomChanged] = EditorLayout.numberField("Zoom", componentData.zoom, {
+            min: 0.01, max: 10, speed: 0.01, tooltip: "Zoom multiplier (2 = half the view)"
+          });
+          if (zoomChanged) componentData.zoom = zoom;
+
+          EditorLayout.endLabelsWidth();
+          EditorLayout.endGroup();
         }
-        const zoom: [number] = [componentData.zoom];
-        if (ImGui.DragFloat("Zoom##zoom", zoom, 0.01, 0.01, 10)) {
-          componentData.zoom = zoom[0];
-        }
-        ImGui.Unindent();
       }
 
-      ImGui.Separator();
+      EditorLayout.separator();
 
       // Clipping planes
-      ImGui.Text("Clipping Planes");
-      ImGui.Indent();
-      const near: [number] = [componentData.near];
-      const far: [number] = [componentData.far];
+      if (EditorLayout.beginGroup("Clipping Planes")) {
+        EditorLayout.beginLabelsWidth(['Near', 'Far']);
 
-      ImGui.DragFloat("Near##near", near, 0.01, 0.001, 10);
-      ImGui.DragFloat("Far##far", far, 0.1, 1, 10000);
+        const [near, nearChanged] = EditorLayout.numberField("Near", componentData.near, {
+          min: 0.001, max: 10, speed: 0.01, tooltip: "Near clipping plane distance"
+        });
+        const [far, farChanged] = EditorLayout.numberField("Far", componentData.far, {
+          min: 1, max: 10000, speed: 0.1, tooltip: "Far clipping plane distance"
+        });
 
-      // Validation
-      if (near[0] >= far[0]) {
-        ImGui.TextColored(
-          { x: 1, y: 0.5, z: 0, w: 1 },
-          "Warning: Near must be less than Far"
-        );
-        near[0] = Math.min(near[0], far[0] - 0.1);
+        // Validation
+        if (near >= far) {
+          EditorLayout.warning("Near must be less than Far");
+          componentData.near = Math.min(near, far - 0.1);
+        } else if (nearChanged) {
+          componentData.near = near;
+        }
+        if (farChanged) componentData.far = far;
+
+        EditorLayout.endLabelsWidth();
+        EditorLayout.endGroup();
       }
 
-      componentData.near = near[0];
-      componentData.far = far[0];
-      ImGui.Unindent();
+      EditorLayout.separator();
 
-      ImGui.Separator();
+      EditorLayout.beginLabelsWidth(['Dutch Angle']);
 
       // Dutch angle
-      const dutch: [number] = [componentData.dutch];
-      if (ImGui.SliderFloat("Dutch Angle##dutch", dutch, -45, 45)) {
-        componentData.dutch = dutch[0];
-      }
+      const [dutch, dutchChanged] = EditorLayout.numberField("Dutch Angle", componentData.dutch, {
+        min: -45, max: 45, useSlider: true, tooltip: "Camera roll in degrees"
+      });
+      if (dutchChanged) componentData.dutch = dutch;
 
-      ImGui.Separator();
+      EditorLayout.endLabelsWidth();
+
+      EditorLayout.separator();
 
       // Camera Bounds
-      ImGui.TextColored(
-        { x: 0.2, y: 0.8, z: 0.4, w: 1 },
-        "Camera Bounds"
-      );
+      EditorLayout.header("Camera Bounds", { r: 0.2, g: 0.8, b: 0.4 });
 
       // Handle undefined for components that were serialized before bounds existed
       if (componentData.enableCameraBounds === undefined) {
@@ -272,28 +271,27 @@ export const VirtualCamera = component<VirtualCameraData>(
         componentData.boundsEntity = null;
       }
 
-      const enableBounds: [boolean] = [componentData.enableCameraBounds];
-      if (ImGui.Checkbox("Enable Bounds##enableBounds", enableBounds)) {
-        componentData.enableCameraBounds = enableBounds[0];
-      }
+      EditorLayout.beginLabelsWidth(['Enable Bounds', 'Bounds Entity']);
+
+      const [enableBounds, enableBoundsChanged] = EditorLayout.checkboxField("Enable Bounds", componentData.enableCameraBounds, {
+        tooltip: "Constrain camera position within bounds"
+      });
+      if (enableBoundsChanged) componentData.enableCameraBounds = enableBounds;
 
       if (componentData.enableCameraBounds) {
-        ImGui.Indent();
+        EditorLayout.beginIndent();
 
         // Entity picker for bounds entity
-        ImGui.Text("Bounds Entity:");
-
-        const result = entityPicker({
-          label: "boundsEntity",
-          currentEntity: componentData.boundsEntity,
-          commands,
-          allowNone: true,
-          requiredComponents: [VirtualCameraBounds as unknown as import("../../component.js").ComponentType<unknown>],
-        });
-
-        if (result.changed) {
-          componentData.boundsEntity = result.entity;
-        }
+        const [boundsEntity, boundsEntityChanged] = EditorLayout.entityField(
+          "Bounds Entity",
+          componentData.boundsEntity,
+          {
+            allowNone: true,
+            requiredComponents: [VirtualCameraBounds as unknown as import("../../component.js").ComponentType<unknown>],
+            tooltip: "Entity with VirtualCameraBounds component"
+          }
+        );
+        if (boundsEntityChanged) componentData.boundsEntity = boundsEntity;
 
         // Show info about selected bounds entity
         if (componentData.boundsEntity !== null) {
@@ -302,22 +300,18 @@ export const VirtualCamera = component<VirtualCameraData>(
             VirtualCameraBounds
           );
           if (boundsComp) {
-            ImGui.Spacing();
-            ImGui.TextColored(
-              { x: 0.6, y: 0.6, z: 0.6, w: 1 },
-              `Size: ${boundsComp.size.x.toFixed(1)} x ${boundsComp.size.y.toFixed(1)}`
-            );
+            EditorLayout.spacing();
+            EditorLayout.textDisabled(`Size: ${boundsComp.size.x.toFixed(1)} x ${boundsComp.size.y.toFixed(1)}`);
           }
         } else {
-          ImGui.Spacing();
-          ImGui.TextColored(
-            { x: 1, y: 0.6, z: 0, w: 1 },
-            "No bounds entity selected"
-          );
+          EditorLayout.spacing();
+          EditorLayout.warning("No bounds entity selected");
         }
 
-        ImGui.Unindent();
+        EditorLayout.endIndent();
       }
+
+      EditorLayout.endLabelsWidth();
     },
   }
 );

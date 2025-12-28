@@ -34,7 +34,7 @@
  */
 
 import { component } from "../../component.js";
-import { ImGui } from "@mori2003/jsimgui";
+import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 
 export interface VirtualCameraBoundsData {
   /**
@@ -59,38 +59,31 @@ export const VirtualCameraBounds = component<VirtualCameraBoundsData>(
       "Defines a 2D boundary region that constrains camera movement. Place on an entity with Transform3D.",
     path: "rendering/camera",
     customEditor: ({ componentData }) => {
-      ImGui.TextColored(
-        { x: 0.2, y: 0.8, z: 0.4, w: 1 },
-        "Camera Bounds Region"
-      );
+      EditorLayout.header('Camera Bounds Region', { r: 0.2, g: 0.8, b: 0.4 });
 
-      ImGui.Text("Size (Width, Height):");
-      const size: [number, number] = [componentData.size.x, componentData.size.y];
-      if (ImGui.DragFloat2("##boundsSize", size, 0.5, 0.1, 1000)) {
-        componentData.size = {
-          x: Math.max(0.1, size[0]),
-          y: Math.max(0.1, size[1]),
-        };
+      EditorLayout.beginLabelsWidth(['Size']);
+
+      const [size, sizeChanged] = EditorLayout.vector2Field('Size', componentData.size, {
+        speed: 0.5, min: 0.1, tooltip: 'Bounds size in world units (width, height)',
+      });
+      if (sizeChanged) {
+        componentData.size = { x: Math.max(0.1, size.x), y: Math.max(0.1, size.y) };
       }
 
-      ImGui.Spacing();
-      ImGui.TextColored(
-        { x: 0.6, y: 0.6, z: 0.6, w: 1 },
-        "Bounds extend from -size/2 to +size/2"
-      );
-      ImGui.TextColored(
-        { x: 0.6, y: 0.6, z: 0.6, w: 1 },
-        "relative to the entity's position."
-      );
+      EditorLayout.endLabelsWidth();
+
+      EditorLayout.spacing();
+      EditorLayout.hint('Bounds extend from -size/2 to +size/2');
+      EditorLayout.hint('relative to the entity\'s position.');
 
       // Show calculated world bounds
-      ImGui.Spacing();
-      ImGui.Separator();
-      ImGui.Text("Local Bounds:");
-      ImGui.Indent();
-      ImGui.Text(`Min: (${(-componentData.size.x / 2).toFixed(1)}, ${(-componentData.size.y / 2).toFixed(1)})`);
-      ImGui.Text(`Max: (${(componentData.size.x / 2).toFixed(1)}, ${(componentData.size.y / 2).toFixed(1)})`);
-      ImGui.Unindent();
+      EditorLayout.spacing();
+      EditorLayout.separator();
+      EditorLayout.text('Local Bounds:');
+      EditorLayout.beginIndent();
+      EditorLayout.text(`Min: (${(-componentData.size.x / 2).toFixed(1)}, ${(-componentData.size.y / 2).toFixed(1)})`);
+      EditorLayout.text(`Max: (${(componentData.size.x / 2).toFixed(1)}, ${(componentData.size.y / 2).toFixed(1)})`);
+      EditorLayout.endIndent();
     },
   }
 );

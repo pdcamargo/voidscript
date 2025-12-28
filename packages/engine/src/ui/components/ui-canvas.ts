@@ -8,6 +8,7 @@
  */
 
 import { component } from '../../ecs/component.js';
+import { EditorLayout } from '../../app/imgui/editor-layout.js';
 import type ThreeMeshUI from 'three-mesh-ui';
 
 /**
@@ -86,5 +87,39 @@ export const UICanvas = component<UICanvasData>(
       _root: undefined,
       _dirty: true,
     }),
+    customEditor: ({ componentData }) => {
+      EditorLayout.beginLabelsWidth(['Render Mode', 'Sort Order', 'Enabled']);
+
+      const renderModes = ['screen-space-overlay'] as const;
+      const [renderMode, modeChanged] = EditorLayout.comboField(
+        'Render Mode',
+        componentData.renderMode,
+        [...renderModes],
+        { tooltip: 'How the canvas is rendered (only screen-space-overlay is currently supported)' }
+      );
+      if (modeChanged) {
+        componentData.renderMode = renderMode as UICanvasRenderMode;
+      }
+
+      const [sortOrder, orderChanged] = EditorLayout.integerField(
+        'Sort Order',
+        componentData.sortOrder,
+        { speed: 1, tooltip: 'Render order for multiple canvases (higher = on top)' }
+      );
+      if (orderChanged) {
+        componentData.sortOrder = sortOrder;
+      }
+
+      const [enabled, enabledChanged] = EditorLayout.checkboxField(
+        'Enabled',
+        componentData.enabled,
+        { tooltip: 'Whether this canvas is active' }
+      );
+      if (enabledChanged) {
+        componentData.enabled = enabled;
+      }
+
+      EditorLayout.endLabelsWidth();
+    },
   }
 );

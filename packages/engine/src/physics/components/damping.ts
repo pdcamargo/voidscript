@@ -12,6 +12,7 @@
  */
 
 import { component } from '../../ecs/component.js';
+import { EditorLayout } from '../../app/imgui/editor-layout.js';
 
 export interface DampingData {
   /** Linear damping (0-1, reduces linear velocity over time) */
@@ -41,5 +42,36 @@ export const Damping = component<DampingData>(
     }),
     displayName: 'Damping',
     description: 'Linear and angular damping for physics bodies',
+    customEditor: ({ componentData }) => {
+      EditorLayout.beginLabelsWidth(['Linear', 'Angular']);
+
+      const [linear, linearChanged] = EditorLayout.numberField(
+        'Linear',
+        componentData.linear,
+        {
+          speed: 0.01,
+          min: 0,
+          tooltip: 'Linear damping (0 = no slowdown, 1+ = heavy slowdown)',
+        }
+      );
+      if (linearChanged) {
+        componentData.linear = linear;
+      }
+
+      const [angular, angularChanged] = EditorLayout.numberField(
+        'Angular',
+        componentData.angular,
+        {
+          speed: 0.01,
+          min: 0,
+          tooltip: 'Angular damping (0 = no slowdown, 1+ = heavy slowdown)',
+        }
+      );
+      if (angularChanged) {
+        componentData.angular = angular;
+      }
+
+      EditorLayout.endLabelsWidth();
+    },
   },
 );

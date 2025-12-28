@@ -23,3 +23,37 @@ export {
   clearComponentPickerState,
 } from './component-name-picker.js';
 export type { ComponentNamePickerOptions } from './component-name-picker.js';
+
+// EditorLayout - Standardized component UI rendering
+export { EditorLayout } from './editor-layout.js';
+export type {
+  FieldResult,
+  BaseFieldOptions,
+  NumberFieldOptions,
+  IntegerFieldOptions,
+  StringFieldOptions,
+  Vector2FieldOptions,
+  Vector3FieldOptions,
+  ColorFieldOptions,
+  RuntimeAssetFieldOptions,
+  SpriteFieldOptions,
+  EntityFieldOptions,
+  EnumFieldOptions,
+} from './editor-layout.js';
+export {
+  setEditorLayoutContext,
+  getEditorLayoutContext,
+  tryGetEditorLayoutContext,
+} from './editor-layout-context.js';
+export type { EditorLayoutContext } from './editor-layout-context.js';
+
+// Entity Query Parser - Advanced hierarchy search
+export { parseQuery } from './entity-query-parser.js';
+export type {
+  QueryFilter,
+  QueryTerm,
+  AndExpression,
+  ParsedQuery,
+  ParseResult,
+} from './entity-query-parser.js';
+export { evaluateQuery } from './entity-query-evaluator.js';

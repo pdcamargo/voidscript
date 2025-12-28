@@ -48,6 +48,13 @@ export interface WindowConfig {
 
   /** Keys that should NOT have their default behavior prevented */
   allowDefaultKeys?: string[];
+
+  /**
+   * Callback to check if keyboard events should allow default behavior.
+   * If this returns true, preventDefault() will NOT be called even if preventDefaultKeys is true.
+   * Useful for allowing text input in ImGui when WantTextInput is true.
+   */
+  shouldAllowKeyboardDefault?: () => boolean;
 }
 
 /**
@@ -61,6 +68,7 @@ export class Window {
   private fullscreen: boolean;
   private preventDefaultKeys: boolean;
   private allowDefaultKeys: Set<string>;
+  private shouldAllowKeyboardDefault: (() => boolean) | null;
 
   private input: Input;
   private lastMouseX = 0;
@@ -92,6 +100,7 @@ export class Window {
     this.pixelRatio = config.pixelRatio ?? window.devicePixelRatio ?? 1;
     this.preventDefaultKeys = config.preventDefaultKeys ?? true;
     this.allowDefaultKeys = new Set(config.allowDefaultKeys ?? ["F5", "F12"]);
+    this.shouldAllowKeyboardDefault = config.shouldAllowKeyboardDefault ?? null;
 
     if (this.fullscreen) {
       this.width = window.innerWidth;
@@ -242,8 +251,12 @@ export class Window {
         return;
       }
 
+      // Check if we should allow default keyboard behavior (e.g., ImGui text input)
+      const allowDefault = this.shouldAllowKeyboardDefault?.() ?? false;
+
       // Prevent default for game keys (but allow F5 refresh, F12 devtools, etc.)
-      if (this.preventDefaultKeys && !this.allowDefaultKeys.has(e.code)) {
+      // Also skip preventDefault when ImGui wants keyboard input for text
+      if (this.preventDefaultKeys && !this.allowDefaultKeys.has(e.code) && !allowDefault) {
         e.preventDefault();
       }
 
@@ -259,7 +272,10 @@ export class Window {
         return;
       }
 
-      if (this.preventDefaultKeys && !this.allowDefaultKeys.has(e.code)) {
+      // Check if we should allow default keyboard behavior
+      const allowDefault = this.shouldAllowKeyboardDefault?.() ?? false;
+
+      if (this.preventDefaultKeys && !this.allowDefaultKeys.has(e.code) && !allowDefault) {
         e.preventDefault();
       }
 

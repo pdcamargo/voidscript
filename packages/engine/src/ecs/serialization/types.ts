@@ -234,6 +234,13 @@ export interface PropertySerializerConfig<T = any> {
    */
   customSerializer?: CustomPropertySerializer<T>;
 
+  /**
+   * Tooltip text shown when hovering over the property label in the inspector
+   * Provides additional context or explanation for the property
+   * @example "Controls the animation playback speed multiplier (1.0 = normal speed)"
+   */
+  tooltip?: string;
+
   customEditor?: (options: {
     label: string;
     value: T;

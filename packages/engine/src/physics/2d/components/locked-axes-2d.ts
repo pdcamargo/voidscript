@@ -11,6 +11,7 @@
  */
 
 import { component } from '../../../ecs/component.js';
+import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 
 export interface LockedAxes2DData {
   /** Lock rotation (prevent rotation around Z axis in 2D) */
@@ -30,5 +31,21 @@ export const LockedAxes2D = component<LockedAxes2DData>(
     defaultValue: () => ({ lockRotation: false }),
     displayName: 'Locked Axes 2D',
     description: 'Lock rotation for 2D physics bodies',
+    customEditor: ({ componentData }) => {
+      EditorLayout.beginLabelsWidth(['Lock Rotation']);
+
+      const [lockRotation, changed] = EditorLayout.checkboxField(
+        'Lock Rotation',
+        componentData.lockRotation,
+        {
+          tooltip: 'Prevent rotation around Z axis (keeps object upright)',
+        }
+      );
+      if (changed) {
+        componentData.lockRotation = lockRotation;
+      }
+
+      EditorLayout.endLabelsWidth();
+    },
   },
 );

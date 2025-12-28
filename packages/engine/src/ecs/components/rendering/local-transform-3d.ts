@@ -18,6 +18,7 @@
 
 import { component } from '../../component.js';
 import { Vector3 } from '../../../math/index.js';
+import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 
 export interface LocalTransform3DData {
   /** Position relative to parent */
@@ -71,6 +72,44 @@ export const LocalTransform3D = component<LocalTransform3DData>(
     }),
     displayName: 'Local Transform 3D',
     description: 'Transform relative to parent entity',
+    customEditor: ({ componentData }) => {
+      EditorLayout.beginLabelsWidth(['Position', 'Rotation', 'Scale']);
+
+      const [position, posChanged] = EditorLayout.vector3Field(
+        'Position',
+        componentData.position,
+        { speed: 0.1, tooltip: 'Position offset relative to parent' }
+      );
+      if (posChanged) {
+        componentData.position.x = position.x;
+        componentData.position.y = position.y;
+        componentData.position.z = position.z;
+      }
+
+      const [rotation, rotChanged] = EditorLayout.vector3Field(
+        'Rotation',
+        componentData.rotation,
+        { speed: 0.01, tooltip: 'Rotation offset in radians (Euler angles)' }
+      );
+      if (rotChanged) {
+        componentData.rotation.x = rotation.x;
+        componentData.rotation.y = rotation.y;
+        componentData.rotation.z = rotation.z;
+      }
+
+      const [scale, scaleChanged] = EditorLayout.vector3Field(
+        'Scale',
+        componentData.scale,
+        { speed: 0.01, tooltip: 'Scale multiplier relative to parent' }
+      );
+      if (scaleChanged) {
+        componentData.scale.x = scale.x;
+        componentData.scale.y = scale.y;
+        componentData.scale.z = scale.z;
+      }
+
+      EditorLayout.endLabelsWidth();
+    },
   },
 );
 

@@ -11,6 +11,7 @@
 
 import { component } from '../../component.js';
 import { Vector3 } from '../../../math/index.js';
+import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 
 export interface Transform3DData {
   /** Position in world space */
@@ -64,5 +65,43 @@ export const Transform3D = component<Transform3DData>(
     }),
     displayName: 'Transform 3D',
     description: 'Transform in 3D space',
+    customEditor: ({ componentData }) => {
+      EditorLayout.beginLabelsWidth(['Position', 'Rotation', 'Scale']);
+
+      // Position
+      const [position, posChanged] = EditorLayout.vector3Field('Position', componentData.position, {
+        speed: 0.1,
+        tooltip: 'World-space position (x, y, z)',
+      });
+      if (posChanged) {
+        componentData.position.x = position.x;
+        componentData.position.y = position.y;
+        componentData.position.z = position.z;
+      }
+
+      // Rotation
+      const [rotation, rotChanged] = EditorLayout.vector3Field('Rotation', componentData.rotation, {
+        speed: 0.01,
+        tooltip: 'Euler rotation in radians (x, y, z)',
+      });
+      if (rotChanged) {
+        componentData.rotation.x = rotation.x;
+        componentData.rotation.y = rotation.y;
+        componentData.rotation.z = rotation.z;
+      }
+
+      // Scale
+      const [scale, scaleChanged] = EditorLayout.vector3Field('Scale', componentData.scale, {
+        speed: 0.01,
+        tooltip: 'Scale factors (x, y, z)',
+      });
+      if (scaleChanged) {
+        componentData.scale.x = scale.x;
+        componentData.scale.y = scale.y;
+        componentData.scale.z = scale.z;
+      }
+
+      EditorLayout.endLabelsWidth();
+    },
   },
 );

@@ -30,7 +30,7 @@
  */
 
 import { component } from '../../component.js';
-import { ImGui } from '@mori2003/jsimgui';
+import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 import type { Entity } from '../../entity.js';
 import type { Command } from '../../command.js';
 
@@ -367,8 +367,8 @@ let lastAppliedLightningPresetData: Partial<LightningField2DData> | null = null;
 // ============================================================================
 
 function renderLightningPresetSelector(data: LightningField2DData): void {
-  ImGui.TextColored({ x: 1.0, y: 0.9, z: 0.3, w: 1.0 }, 'Lightning Preset');
-  ImGui.SameLine();
+  EditorLayout.header('Lightning Preset', { r: 1.0, g: 0.9, b: 0.3 });
+  EditorLayout.sameLine();
 
   const presetMap: Record<LightningPreset, string> = {
     custom: 'Custom',
@@ -379,28 +379,29 @@ function renderLightningPresetSelector(data: LightningField2DData): void {
   };
 
   const presetLabel = presetMap[currentLightningPreset];
+  const presetOptions = Object.values(presetMap);
 
-  if (ImGui.BeginCombo('##lightningPreset', presetLabel)) {
-    for (const [preset, label] of Object.entries(presetMap)) {
-      const isSelected = currentLightningPreset === preset;
-      if (ImGui.Selectable(label, isSelected)) {
-        if (preset !== 'custom') {
-          // Apply preset
-          const presetData =
-            LIGHTNING_PRESETS[preset as Exclude<LightningPreset, 'custom'>];
-          Object.assign(data, presetData);
-          lastAppliedLightningPresetData = { ...presetData };
-          currentLightningPreset = preset as LightningPreset;
-        } else {
-          currentLightningPreset = 'custom';
-          lastAppliedLightningPresetData = null;
-        }
-      }
-      if (isSelected) {
-        ImGui.SetItemDefaultFocus();
-      }
+  const [selected, changed] = EditorLayout.comboField('', presetLabel, presetOptions, {
+    id: 'lightningPreset',
+  });
+
+  if (changed) {
+    // Find the preset key from the selected label
+    const selectedPreset = (Object.entries(presetMap).find(
+      ([, label]) => label === selected
+    )?.[0] ?? 'custom') as LightningPreset;
+
+    if (selectedPreset !== 'custom') {
+      // Apply preset
+      const presetData =
+        LIGHTNING_PRESETS[selectedPreset as Exclude<LightningPreset, 'custom'>];
+      Object.assign(data, presetData);
+      lastAppliedLightningPresetData = { ...presetData };
+      currentLightningPreset = selectedPreset;
+    } else {
+      currentLightningPreset = 'custom';
+      lastAppliedLightningPresetData = null;
     }
-    ImGui.EndCombo();
   }
 
   // Auto-detect custom changes
@@ -439,16 +440,11 @@ function renderLightningPreviewSection(
   entity: Entity,
   commands: Command,
 ): void {
-  if (ImGui.CollapsingHeader('Preview##lightningPreview', ImGui.TreeNodeFlags.DefaultOpen)) {
-    ImGui.Indent();
+  if (EditorLayout.beginGroup('Preview', true)) {
+    EditorLayout.hint('Trigger a lightning strike for preview');
+    EditorLayout.spacing();
 
-    ImGui.TextColored(
-      { x: 0.7, y: 0.7, z: 0.7, w: 1.0 },
-      'Trigger a lightning strike for preview'
-    );
-    ImGui.Spacing();
-
-    if (ImGui.Button('⚡ Trigger Strike', { x: 150, y: 30 })) {
+    if (EditorLayout.button('Trigger Strike', { tooltip: 'Click to manually trigger a lightning bolt' })) {
       // Dynamically import to avoid circular dependency
       import('../../systems/lightning-field-2d-system.js').then(
         ({ LightningField2DRenderManager }) => {
@@ -459,307 +455,234 @@ function renderLightningPreviewSection(
         }
       );
     }
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Click to manually trigger a lightning bolt');
-    }
 
-    ImGui.Unindent();
+    EditorLayout.endGroup();
   }
 }
 
 function renderLightningSizeSection(data: LightningField2DData): void {
-  if (ImGui.CollapsingHeader('Size & Visibility##lightningSize')) {
-    ImGui.Indent();
+  if (EditorLayout.beginGroup('Size & Visibility', false)) {
+    EditorLayout.beginLabelsWidth(['Base Size', 'Visible', 'Sorting Layer', 'Sorting Order']);
 
-    // baseSize Vec2 inline
-    ImGui.Text('Base Size:');
-    const baseX: [number] = [data.baseSize.x];
-    const baseY: [number] = [data.baseSize.y];
-    ImGui.SetNextItemWidth(100);
-    ImGui.DragFloat('##baseSizeX', baseX, 0.01, 0.1, 100);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Base size of lightning field before transform scaling');
+    const [baseSize, baseSizeChanged] = EditorLayout.vector2Field('Base Size', data.baseSize, {
+      speed: 0.01,
+      min: 0.1,
+      max: 100,
+      tooltip: 'Base size of lightning field before transform scaling',
+    });
+    if (baseSizeChanged) {
+      data.baseSize.x = baseSize.x;
+      data.baseSize.y = baseSize.y;
     }
-    ImGui.SameLine();
-    ImGui.Text('x');
-    ImGui.SameLine();
-    ImGui.SetNextItemWidth(100);
-    ImGui.DragFloat('##baseSizeY', baseY, 0.01, 0.1, 100);
-    data.baseSize.x = baseX[0];
-    data.baseSize.y = baseY[0];
 
-    ImGui.Spacing();
+    EditorLayout.spacing();
 
-    // visible checkbox
-    const visible: [boolean] = [data.visible];
-    ImGui.Checkbox('Visible', visible);
-    data.visible = visible[0];
+    const [visible, visibleChanged] = EditorLayout.checkboxField('Visible', data.visible);
+    if (visibleChanged) data.visible = visible;
 
-    ImGui.Spacing();
+    EditorLayout.spacing();
 
-    // sortingLayer and sortingOrder
-    ImGui.Text('Sorting Layer:');
-    const sortingLayer: [number] = [data.sortingLayer];
-    ImGui.DragInt('##sortingLayer', sortingLayer, 1, -1000, 1000);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Z-ordering for layered rendering (higher = on top)');
-    }
-    data.sortingLayer = sortingLayer[0];
+    const [sortingLayer, layerChanged] = EditorLayout.integerField('Sorting Layer', data.sortingLayer, {
+      speed: 1,
+      min: -1000,
+      max: 1000,
+      tooltip: 'Z-ordering for layered rendering (higher = on top)',
+    });
+    if (layerChanged) data.sortingLayer = sortingLayer;
 
-    ImGui.Text('Sorting Order:');
-    const sortingOrder: [number] = [data.sortingOrder];
-    ImGui.DragInt('##sortingOrder', sortingOrder, 1, -1000, 1000);
-    data.sortingOrder = sortingOrder[0];
+    const [sortingOrder, orderChanged] = EditorLayout.integerField('Sorting Order', data.sortingOrder, {
+      speed: 1,
+      min: -1000,
+      max: 1000,
+    });
+    if (orderChanged) data.sortingOrder = sortingOrder;
 
-    ImGui.Unindent();
+    EditorLayout.endLabelsWidth();
+    EditorLayout.endGroup();
   }
 }
 
 function renderLightningTimingSection(data: LightningField2DData): void {
-  if (ImGui.CollapsingHeader('Strike Timing##lightningTiming')) {
-    ImGui.Indent();
+  if (EditorLayout.beginGroup('Strike Timing', false)) {
+    EditorLayout.beginLabelsWidth(['Min Interval', 'Max Interval', 'Strike Duration', 'Simultaneous Strikes']);
 
-    // minInterval
-    ImGui.Text('Min Interval:');
-    const minInterval: [number] = [data.minInterval];
-    ImGui.SliderFloat('##minInterval', minInterval, 0.1, 30);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Minimum seconds between lightning strikes');
-    }
-    data.minInterval = minInterval[0];
+    const [minInterval, minIntervalChanged] = EditorLayout.numberField('Min Interval', data.minInterval, {
+      min: 0.1, max: 30, useSlider: true,
+      tooltip: 'Minimum seconds between lightning strikes',
+    });
+    if (minIntervalChanged) data.minInterval = minInterval;
 
-    // maxInterval
-    ImGui.Text('Max Interval:');
-    const maxInterval: [number] = [data.maxInterval];
-    ImGui.SliderFloat('##maxInterval', maxInterval, 0.1, 60);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Maximum seconds between lightning strikes');
-    }
-    data.maxInterval = Math.max(data.minInterval, maxInterval[0]);
+    const [maxInterval, maxIntervalChanged] = EditorLayout.numberField('Max Interval', data.maxInterval, {
+      min: 0.1, max: 60, useSlider: true,
+      tooltip: 'Maximum seconds between lightning strikes',
+    });
+    if (maxIntervalChanged) data.maxInterval = Math.max(data.minInterval, maxInterval);
 
-    // strikeDuration
-    ImGui.Text('Strike Duration:');
-    const strikeDuration: [number] = [data.strikeDuration];
-    ImGui.SliderFloat('##strikeDuration', strikeDuration, 0.02, 0.5);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('How long each bolt is visible (seconds)');
-    }
-    data.strikeDuration = strikeDuration[0];
+    const [strikeDuration, durationChanged] = EditorLayout.numberField('Strike Duration', data.strikeDuration, {
+      min: 0.02, max: 0.5, useSlider: true,
+      tooltip: 'How long each bolt is visible (seconds)',
+    });
+    if (durationChanged) data.strikeDuration = strikeDuration;
 
-    // simultaneousStrikes
-    ImGui.Text('Simultaneous Strikes:');
-    const simultaneousStrikes: [number] = [data.simultaneousStrikes];
-    ImGui.SliderInt('##simultaneousStrikes', simultaneousStrikes, 1, 5);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Maximum number of bolts visible at once');
-    }
-    data.simultaneousStrikes = simultaneousStrikes[0];
+    const [simultaneousStrikes, strikesChanged] = EditorLayout.integerField('Simultaneous Strikes', data.simultaneousStrikes, {
+      min: 1, max: 5, useSlider: true,
+      tooltip: 'Maximum number of bolts visible at once',
+    });
+    if (strikesChanged) data.simultaneousStrikes = simultaneousStrikes;
 
-    ImGui.Unindent();
+    EditorLayout.endLabelsWidth();
+    EditorLayout.endGroup();
   }
 }
 
 function renderLightningAppearanceSection(data: LightningField2DData): void {
-  if (ImGui.CollapsingHeader('Bolt Appearance##lightningAppearance')) {
-    ImGui.Indent();
+  if (EditorLayout.beginGroup('Bolt Appearance', false)) {
+    EditorLayout.beginLabelsWidth(['Bolt Color', 'Glow Color', 'Bolt Width', 'Glow Radius', 'Glow Intensity', 'Pixel Size']);
 
-    // boltColor
-    ImGui.Text('Bolt Color:');
-    const boltColor: [number, number, number] = [
-      data.boltColor.r,
-      data.boltColor.g,
-      data.boltColor.b,
-    ];
-    if (ImGui.ColorEdit3('##boltColor', boltColor)) {
-      data.boltColor.r = boltColor[0];
-      data.boltColor.g = boltColor[1];
-      data.boltColor.b = boltColor[2];
-    }
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Core bolt color');
+    const [boltColor, boltColorChanged] = EditorLayout.colorField('Bolt Color', data.boltColor, {
+      tooltip: 'Core bolt color',
+    });
+    if (boltColorChanged) {
+      data.boltColor.r = boltColor.r;
+      data.boltColor.g = boltColor.g;
+      data.boltColor.b = boltColor.b;
     }
 
-    // glowColor
-    ImGui.Text('Glow Color:');
-    const glowColor: [number, number, number] = [
-      data.glowColor.r,
-      data.glowColor.g,
-      data.glowColor.b,
-    ];
-    if (ImGui.ColorEdit3('##glowColor', glowColor)) {
-      data.glowColor.r = glowColor[0];
-      data.glowColor.g = glowColor[1];
-      data.glowColor.b = glowColor[2];
-    }
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Outer glow color');
+    const [glowColor, glowColorChanged] = EditorLayout.colorField('Glow Color', data.glowColor, {
+      tooltip: 'Outer glow color',
+    });
+    if (glowColorChanged) {
+      data.glowColor.r = glowColor.r;
+      data.glowColor.g = glowColor.g;
+      data.glowColor.b = glowColor.b;
     }
 
-    ImGui.Spacing();
+    EditorLayout.spacing();
 
-    // boltWidth
-    ImGui.Text('Bolt Width:');
-    const boltWidth: [number] = [data.boltWidth];
-    ImGui.SliderFloat('##boltWidth', boltWidth, 0.5, 5);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Core bolt width in pixels');
-    }
-    data.boltWidth = boltWidth[0];
+    const [boltWidth, boltWidthChanged] = EditorLayout.numberField('Bolt Width', data.boltWidth, {
+      min: 0.5, max: 5, useSlider: true,
+      tooltip: 'Core bolt width in pixels',
+    });
+    if (boltWidthChanged) data.boltWidth = boltWidth;
 
-    // glowRadius
-    ImGui.Text('Glow Radius:');
-    const glowRadius: [number] = [data.glowRadius];
-    ImGui.SliderFloat('##glowRadius', glowRadius, 1, 30);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Glow spread in pixels');
-    }
-    data.glowRadius = glowRadius[0];
+    const [glowRadius, glowRadiusChanged] = EditorLayout.numberField('Glow Radius', data.glowRadius, {
+      min: 1, max: 30, useSlider: true,
+      tooltip: 'Glow spread in pixels',
+    });
+    if (glowRadiusChanged) data.glowRadius = glowRadius;
 
-    // glowIntensity
-    ImGui.Text('Glow Intensity:');
-    const glowIntensity: [number] = [data.glowIntensity];
-    ImGui.SliderFloat('##glowIntensity', glowIntensity, 0, 1);
-    data.glowIntensity = glowIntensity[0];
+    const [glowIntensity, glowIntensityChanged] = EditorLayout.numberField('Glow Intensity', data.glowIntensity, {
+      min: 0, max: 1, useSlider: true,
+    });
+    if (glowIntensityChanged) data.glowIntensity = glowIntensity;
 
-    ImGui.Spacing();
+    EditorLayout.spacing();
 
-    // pixelSize (use DragFloat for fine control, including values < 1)
-    ImGui.Text('Pixel Size:');
-    const pixelSize: [number] = [data.pixelSize];
-    ImGui.DragFloat('##pixelSize', pixelSize, 0.1, 0.1, 16.0, '%.1f');
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Pixelation grid size (smaller = finer detail, 0.1 = no pixelation)');
-    }
-    data.pixelSize = Math.max(0.1, pixelSize[0]);
+    const [pixelSize, pixelSizeChanged] = EditorLayout.numberField('Pixel Size', data.pixelSize, {
+      speed: 0.1, min: 0.1, max: 16,
+      tooltip: 'Pixelation grid size (smaller = finer detail, 0.1 = no pixelation)',
+    });
+    if (pixelSizeChanged) data.pixelSize = Math.max(0.1, pixelSize);
 
-    ImGui.Unindent();
+    EditorLayout.endLabelsWidth();
+    EditorLayout.endGroup();
   }
 }
 
 function renderLightningGenerationSection(data: LightningField2DData): void {
-  if (ImGui.CollapsingHeader('Procedural Generation##lightningGeneration')) {
-    ImGui.Indent();
+  if (EditorLayout.beginGroup('Procedural Generation', false)) {
+    EditorLayout.beginLabelsWidth(['Segments', 'Displacement', 'Noise Strength', 'Branch Probability', 'Branch Length', 'Sub-Branch Probability', 'Seed']);
 
-    // segments
-    ImGui.Text('Segments:');
-    const segments: [number] = [data.segments];
-    ImGui.SliderInt('##segments', segments, 4, 32);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Number of segments per bolt (higher = more detail)');
-    }
-    data.segments = segments[0];
+    const [segments, segmentsChanged] = EditorLayout.integerField('Segments', data.segments, {
+      min: 4, max: 32, useSlider: true,
+      tooltip: 'Number of segments per bolt (higher = more detail)',
+    });
+    if (segmentsChanged) data.segments = segments;
 
-    // displacement
-    ImGui.Text('Displacement:');
-    const displacement: [number] = [data.displacement];
-    ImGui.SliderFloat('##displacement', displacement, 0, 1);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Jaggedness of bolt (higher = more displaced)');
-    }
-    data.displacement = displacement[0];
+    const [displacement, displacementChanged] = EditorLayout.numberField('Displacement', data.displacement, {
+      min: 0, max: 1, useSlider: true,
+      tooltip: 'Jaggedness of bolt (higher = more displaced)',
+    });
+    if (displacementChanged) data.displacement = displacement;
 
-    // noiseStrength
-    ImGui.Text('Noise Strength:');
-    const noiseStrength: [number] = [data.noiseStrength];
-    ImGui.SliderFloat('##noiseStrength', noiseStrength, 0, 1);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Organic variation added to bolt paths');
-    }
-    data.noiseStrength = noiseStrength[0];
+    const [noiseStrength, noiseChanged] = EditorLayout.numberField('Noise Strength', data.noiseStrength, {
+      min: 0, max: 1, useSlider: true,
+      tooltip: 'Organic variation added to bolt paths',
+    });
+    if (noiseChanged) data.noiseStrength = noiseStrength;
 
-    ImGui.Spacing();
+    EditorLayout.spacing();
 
-    // branchProbability
-    ImGui.Text('Branch Probability:');
-    const branchProbability: [number] = [data.branchProbability];
-    ImGui.SliderFloat('##branchProbability', branchProbability, 0, 1);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Chance of spawning branches from main bolt');
-    }
-    data.branchProbability = branchProbability[0];
+    const [branchProbability, branchProbChanged] = EditorLayout.numberField('Branch Probability', data.branchProbability, {
+      min: 0, max: 1, useSlider: true,
+      tooltip: 'Chance of spawning branches from main bolt',
+    });
+    if (branchProbChanged) data.branchProbability = branchProbability;
 
-    // branchLengthFactor
-    ImGui.Text('Branch Length:');
-    const branchLengthFactor: [number] = [data.branchLengthFactor];
-    ImGui.SliderFloat('##branchLengthFactor', branchLengthFactor, 0.1, 0.8);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Branch length relative to main bolt');
-    }
-    data.branchLengthFactor = branchLengthFactor[0];
+    const [branchLengthFactor, branchLenChanged] = EditorLayout.numberField('Branch Length', data.branchLengthFactor, {
+      min: 0.1, max: 0.8, useSlider: true,
+      tooltip: 'Branch length relative to main bolt',
+    });
+    if (branchLenChanged) data.branchLengthFactor = branchLengthFactor;
 
-    // subBranchProbability (default to 0.3 if undefined for backwards compatibility)
-    ImGui.Text('Sub-Branch Probability:');
-    const subBranchProbability: [number] = [data.subBranchProbability ?? 0.3];
-    ImGui.SliderFloat('##subBranchProbability', subBranchProbability, 0, 1);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Chance of spawning sub-branches from branches (for more complex lightning)');
-    }
-    data.subBranchProbability = subBranchProbability[0];
+    const [subBranchProbability, subBranchChanged] = EditorLayout.numberField('Sub-Branch Probability', data.subBranchProbability ?? 0.3, {
+      min: 0, max: 1, useSlider: true,
+      tooltip: 'Chance of spawning sub-branches from branches (for more complex lightning)',
+    });
+    if (subBranchChanged) data.subBranchProbability = subBranchProbability;
 
-    ImGui.Spacing();
+    EditorLayout.spacing();
 
-    // seed
-    ImGui.Text('Seed:');
-    const seed: [number] = [data.seed];
-    ImGui.DragInt('##seed', seed, 1, 0, 999999);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Base random seed for bolt generation');
-    }
-    data.seed = seed[0];
+    const [seed, seedChanged] = EditorLayout.integerField('Seed', data.seed, {
+      speed: 1, min: 0, max: 999999,
+      tooltip: 'Base random seed for bolt generation',
+    });
+    if (seedChanged) data.seed = seed;
 
-    ImGui.Unindent();
+    EditorLayout.endLabelsWidth();
+    EditorLayout.endGroup();
   }
 }
 
 function renderLightningAnimationSection(data: LightningField2DData): void {
-  if (ImGui.CollapsingHeader('Animation##lightningAnimation')) {
-    ImGui.Indent();
+  if (EditorLayout.beginGroup('Animation', false)) {
+    EditorLayout.beginLabelsWidth(['Fade Mode', 'Flicker Speed']);
 
-    // fadeMode
-    ImGui.Text('Fade Mode:');
     const fadeModeMap: Record<LightningField2DData['fadeMode'], string> = {
       instant: 'Instant',
       fade: 'Fade Out',
       flicker: 'Flicker',
     };
 
-    if (ImGui.BeginCombo('##fadeMode', fadeModeMap[data.fadeMode])) {
-      for (const [mode, label] of Object.entries(fadeModeMap)) {
-        const isSelected = data.fadeMode === mode;
-        if (ImGui.Selectable(label, isSelected)) {
-          data.fadeMode = mode as LightningField2DData['fadeMode'];
-        }
-        if (isSelected) {
-          ImGui.SetItemDefaultFocus();
-        }
-      }
-      ImGui.EndCombo();
-    }
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('How bolts disappear after their duration');
+    const fadeModeOptions = Object.values(fadeModeMap);
+    const [selectedFade, fadeChanged] = EditorLayout.comboField('Fade Mode', fadeModeMap[data.fadeMode], fadeModeOptions, {
+      tooltip: 'How bolts disappear after their duration',
+    });
+    if (fadeChanged) {
+      const selectedMode = (Object.entries(fadeModeMap).find(
+        ([, label]) => label === selectedFade
+      )?.[0] ?? 'fade') as LightningField2DData['fadeMode'];
+      data.fadeMode = selectedMode;
     }
 
     // flickerSpeed (only if flicker mode)
     if (data.fadeMode === 'flicker') {
-      ImGui.Text('Flicker Speed:');
-      const flickerSpeed: [number] = [data.flickerSpeed];
-      ImGui.SliderFloat('##flickerSpeed', flickerSpeed, 5, 30);
-      if (ImGui.IsItemHovered()) {
-        ImGui.SetTooltip('Flicker cycles per second');
-      }
-      data.flickerSpeed = flickerSpeed[0];
+      const [flickerSpeed, flickerChanged] = EditorLayout.numberField('Flicker Speed', data.flickerSpeed, {
+        min: 5, max: 30, useSlider: true,
+        tooltip: 'Flicker cycles per second',
+      });
+      if (flickerChanged) data.flickerSpeed = flickerSpeed;
     }
 
-    ImGui.Unindent();
+    EditorLayout.endLabelsWidth();
+    EditorLayout.endGroup();
   }
 }
 
 function renderLightningDirectionSection(data: LightningField2DData): void {
-  if (ImGui.CollapsingHeader('Direction##lightningDirection')) {
-    ImGui.Indent();
+  if (EditorLayout.beginGroup('Direction', false)) {
+    EditorLayout.beginLabelsWidth(['Strike Direction', 'Angle Variation']);
 
-    // strikeDirection
-    ImGui.Text('Strike Direction:');
     const directionMap: Record<
       LightningField2DData['strikeDirection'],
       string
@@ -771,76 +694,73 @@ function renderLightningDirectionSection(data: LightningField2DData): void {
       random: 'Random',
     };
 
-    if (ImGui.BeginCombo('##strikeDirection', directionMap[data.strikeDirection])) {
-      for (const [direction, label] of Object.entries(directionMap)) {
-        const isSelected = data.strikeDirection === direction;
-        if (ImGui.Selectable(label, isSelected)) {
-          data.strikeDirection = direction as LightningField2DData['strikeDirection'];
-        }
-        if (isSelected) {
-          ImGui.SetItemDefaultFocus();
-        }
-      }
-      ImGui.EndCombo();
-    }
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Direction bolts travel across the field');
+    const directionOptions = Object.values(directionMap);
+    const [selectedDir, dirChanged] = EditorLayout.comboField('Strike Direction', directionMap[data.strikeDirection], directionOptions, {
+      tooltip: 'Direction bolts travel across the field',
+    });
+    if (dirChanged) {
+      const selectedDirection = (Object.entries(directionMap).find(
+        ([, label]) => label === selectedDir
+      )?.[0] ?? 'top-down') as LightningField2DData['strikeDirection'];
+      data.strikeDirection = selectedDirection;
     }
 
-    // angleVariation
-    ImGui.Text('Angle Variation:');
-    const angleVariation: [number] = [data.angleVariation];
-    ImGui.SliderFloat('##angleVariation', angleVariation, 0, 0.5);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Random angle variation in radians');
-    }
-    data.angleVariation = angleVariation[0];
+    const [angleVariation, angleChanged] = EditorLayout.numberField('Angle Variation', data.angleVariation, {
+      min: 0, max: 0.5, useSlider: true,
+      tooltip: 'Random angle variation in radians',
+    });
+    if (angleChanged) data.angleVariation = angleVariation;
 
-    ImGui.Unindent();
+    EditorLayout.endLabelsWidth();
+    EditorLayout.endGroup();
   }
 }
 
 function renderLightningEffectsSection(data: LightningField2DData): void {
-  if (ImGui.CollapsingHeader('Effects##lightningEffects')) {
-    ImGui.Indent();
+  if (EditorLayout.beginGroup('Effects', false)) {
+    EditorLayout.beginLabelsWidth(['Enable Screen Flash', 'Enable Ground Glow']);
 
-    // enableScreenFlash
-    const enableScreenFlash: [boolean] = [data.enableScreenFlash];
-    ImGui.Checkbox('Enable Screen Flash', enableScreenFlash);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Flash the screen white when lightning strikes');
-    }
-    data.enableScreenFlash = enableScreenFlash[0];
+    const [enableScreenFlash, flashEnableChanged] = EditorLayout.checkboxField('Enable Screen Flash', data.enableScreenFlash, {
+      tooltip: 'Flash the screen white when lightning strikes',
+    });
+    if (flashEnableChanged) data.enableScreenFlash = enableScreenFlash;
+
+    EditorLayout.endLabelsWidth();
 
     if (data.enableScreenFlash) {
-      ImGui.Indent();
-      ImGui.Text('Flash Intensity:');
-      const flashIntensity: [number] = [data.flashIntensity];
-      ImGui.SliderFloat('##flashIntensity', flashIntensity, 0, 1);
-      data.flashIntensity = flashIntensity[0];
-      ImGui.Unindent();
+      EditorLayout.beginIndent();
+      EditorLayout.beginLabelsWidth(['Flash Intensity']);
+      const [flashIntensity, flashIntensityChanged] = EditorLayout.numberField('Flash Intensity', data.flashIntensity, {
+        min: 0, max: 1, useSlider: true,
+      });
+      if (flashIntensityChanged) data.flashIntensity = flashIntensity;
+      EditorLayout.endLabelsWidth();
+      EditorLayout.endIndent();
     }
 
-    ImGui.Spacing();
+    EditorLayout.spacing();
 
-    // enableGroundGlow
-    const enableGroundGlow: [boolean] = [data.enableGroundGlow];
-    ImGui.Checkbox('Enable Ground Glow', enableGroundGlow);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Add a glow effect at bolt impact point');
-    }
-    data.enableGroundGlow = enableGroundGlow[0];
+    EditorLayout.beginLabelsWidth(['Enable Ground Glow']);
+
+    const [enableGroundGlow, glowEnableChanged] = EditorLayout.checkboxField('Enable Ground Glow', data.enableGroundGlow, {
+      tooltip: 'Add a glow effect at bolt impact point',
+    });
+    if (glowEnableChanged) data.enableGroundGlow = enableGroundGlow;
+
+    EditorLayout.endLabelsWidth();
 
     if (data.enableGroundGlow) {
-      ImGui.Indent();
-      ImGui.Text('Ground Glow Radius:');
-      const groundGlowRadius: [number] = [data.groundGlowRadius];
-      ImGui.SliderFloat('##groundGlowRadius', groundGlowRadius, 5, 50);
-      data.groundGlowRadius = groundGlowRadius[0];
-      ImGui.Unindent();
+      EditorLayout.beginIndent();
+      EditorLayout.beginLabelsWidth(['Ground Glow Radius']);
+      const [groundGlowRadius, radiusChanged] = EditorLayout.numberField('Ground Glow Radius', data.groundGlowRadius, {
+        min: 5, max: 50, useSlider: true,
+      });
+      if (radiusChanged) data.groundGlowRadius = groundGlowRadius;
+      EditorLayout.endLabelsWidth();
+      EditorLayout.endIndent();
     }
 
-    ImGui.Unindent();
+    EditorLayout.endGroup();
   }
 }
 
@@ -930,12 +850,12 @@ export const LightningField2D = component<LightningField2DData>(
     customEditor: ({ entity, componentData, commands }) => {
       // Preview button at top (easy access)
       renderLightningPreviewSection(entity, commands);
-      ImGui.Spacing();
+      EditorLayout.spacing();
 
       // Preset selector
       renderLightningPresetSelector(componentData);
-      ImGui.Separator();
-      ImGui.Spacing();
+      EditorLayout.separator();
+      EditorLayout.spacing();
 
       // Collapsible sections
       renderLightningSizeSection(componentData);

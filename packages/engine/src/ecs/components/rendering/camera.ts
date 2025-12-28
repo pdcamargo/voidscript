@@ -1,5 +1,5 @@
 import { component } from "../../component.js";
-import { ImGui } from '@mori2003/jsimgui';
+import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 
 export interface CameraData {
   /**
@@ -103,74 +103,81 @@ export const Camera = component<CameraData>(
     path: "rendering/camera",
     showHelper: false,
     customEditor: ({ componentData }) => {
-      // Type selector dropdown
-      const typeOptions: Array<'perspective' | 'orthographic'> = ['perspective', 'orthographic'];
+      EditorLayout.beginLabelsWidth(['Projection Type']);
+
+      const ProjectionType = { perspective: 'perspective', orthographic: 'orthographic' } as const;
       const currentType = componentData.type || 'perspective';
 
-      ImGui.Text('Projection Type:');
-      ImGui.SameLine();
-      if (ImGui.BeginCombo('##type', currentType)) {
-        for (const option of typeOptions) {
-          const isSelected = currentType === option;
-          if (ImGui.Selectable(option, isSelected)) {
-            componentData.type = option;
-          }
-          if (isSelected) {
-            ImGui.SetItemDefaultFocus();
-          }
-        }
-        ImGui.EndCombo();
-      }
+      const [newType, typeChanged] = EditorLayout.enumField('Projection Type', currentType, ProjectionType, {
+        tooltip: 'Camera projection mode',
+      });
+      if (typeChanged) componentData.type = newType;
 
-      ImGui.Separator();
+      EditorLayout.endLabelsWidth();
+
+      EditorLayout.separator();
 
       // Conditional perspective properties
       if (currentType === 'perspective') {
-        ImGui.Text('Perspective Properties');
-        ImGui.Indent();
-        const fov: [number] = [componentData.fov];
-        if (ImGui.SliderFloat('Field of View##fov', fov, 10, 150)) {
-          componentData.fov = fov[0];
+        if (EditorLayout.beginGroup('Perspective Properties', true)) {
+          EditorLayout.beginLabelsWidth(['Field of View']);
+
+          const [fov, fovChanged] = EditorLayout.numberField('Field of View', componentData.fov, {
+            min: 10, max: 150, useSlider: true, tooltip: 'Vertical field of view in degrees',
+          });
+          if (fovChanged) componentData.fov = fov;
+
+          EditorLayout.endLabelsWidth();
+          EditorLayout.endGroup();
         }
-        ImGui.Unindent();
       }
 
       // Conditional orthographic properties
       if (currentType === 'orthographic') {
-        ImGui.Text('Orthographic Properties');
-        ImGui.Indent();
-        const size: [number] = [componentData.size];
-        if (ImGui.DragFloat('Size##size', size, 0.1, 0.1, 100)) {
-          componentData.size = size[0];
+        if (EditorLayout.beginGroup('Orthographic Properties', true)) {
+          EditorLayout.beginLabelsWidth(['Size', 'Zoom']);
+
+          const [size, sizeChanged] = EditorLayout.numberField('Size', componentData.size, {
+            min: 0.1, max: 100, speed: 0.1, tooltip: 'Half-height of the camera view in world units',
+          });
+          if (sizeChanged) componentData.size = size;
+
+          const [zoom, zoomChanged] = EditorLayout.numberField('Zoom', componentData.zoom, {
+            min: 0.01, max: 10, speed: 0.01, tooltip: 'Zoom multiplier (2 = shows half the view)',
+          });
+          if (zoomChanged) componentData.zoom = zoom;
+
+          EditorLayout.endLabelsWidth();
+          EditorLayout.endGroup();
         }
-        const zoom: [number] = [componentData.zoom];
-        if (ImGui.DragFloat('Zoom##zoom', zoom, 0.01, 0.01, 10)) {
-          componentData.zoom = zoom[0];
-        }
-        ImGui.Unindent();
       }
 
-      ImGui.Separator();
+      EditorLayout.separator();
 
       // Shared clipping planes
-      ImGui.Text('Clipping Planes');
-      ImGui.Indent();
-      const near: [number] = [componentData.near];
-      const far: [number] = [componentData.far];
+      if (EditorLayout.beginGroup('Clipping Planes', true)) {
+        EditorLayout.beginLabelsWidth(['Near', 'Far']);
 
-      ImGui.DragFloat('Near##near', near, 0.01, 0.001, 10);
-      ImGui.DragFloat('Far##far', far, 0.1, 1, 10000);
+        const [near, nearChanged] = EditorLayout.numberField('Near', componentData.near, {
+          min: 0.001, max: 10, speed: 0.01, tooltip: 'Near clipping plane distance',
+        });
+        const [far, farChanged] = EditorLayout.numberField('Far', componentData.far, {
+          min: 1, max: 10000, speed: 0.1, tooltip: 'Far clipping plane distance',
+        });
 
-      // Validation
-      if (near[0] >= far[0]) {
-        ImGui.TextColored({ x: 1, y: 0.5, z: 0, w: 1 },
-          'Warning: Near must be less than Far');
-        near[0] = Math.min(near[0], far[0] - 0.1);
+        // Validation
+        if (near >= far) {
+          EditorLayout.warning('Near must be less than Far');
+          componentData.near = Math.min(near, far - 0.1);
+        } else if (nearChanged) {
+          componentData.near = near;
+        }
+
+        if (farChanged) componentData.far = far;
+
+        EditorLayout.endLabelsWidth();
+        EditorLayout.endGroup();
       }
-
-      componentData.near = near[0];
-      componentData.far = far[0];
-      ImGui.Unindent();
     },
   }
 );

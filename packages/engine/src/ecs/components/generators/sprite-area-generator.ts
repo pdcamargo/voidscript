@@ -17,9 +17,8 @@ import {
   Parent,
   Children,
   globalComponentRegistry,
-  renderComponentNamePicker,
+  EditorLayout,
 } from '@voidscript/engine';
-import { ImGui, ImVec2, ImVec4 } from '@mori2003/jsimgui';
 
 /**
  * Marker component to indicate sprites have been generated.
@@ -248,52 +247,33 @@ function clearSprites(parentEntity: Entity, commands: Command): void {
 // ============================================================================
 
 function renderBoundsSection(data: SpriteAreaGeneratorData): void {
-  if (ImGui.CollapsingHeader('📦 Bounds', ImGui.TreeNodeFlags.DefaultOpen)) {
-    ImGui.Indent();
+  if (EditorLayout.beginGroup('Bounds', true)) {
+    EditorLayout.beginLabelsWidth(['Min', 'Max']);
 
-    // Min Bounds - inline X Y Z
-    ImGui.Text('Min:');
-    ImGui.SameLine();
-    const minX: [number] = [data.boundsMin.x];
-    const minY: [number] = [data.boundsMin.y];
-    const minZ: [number] = [data.boundsMin.z];
-    ImGui.SetNextItemWidth(60);
-    if (ImGui.DragFloat('##minX', minX, 0.5)) {
-      data.boundsMin.x = minX[0];
-    }
-    ImGui.SameLine();
-    ImGui.SetNextItemWidth(60);
-    if (ImGui.DragFloat('##minY', minY, 0.5)) {
-      data.boundsMin.y = minY[0];
-    }
-    ImGui.SameLine();
-    ImGui.SetNextItemWidth(60);
-    if (ImGui.DragFloat('##minZ', minZ, 0.5)) {
-      data.boundsMin.z = minZ[0];
+    // Min Bounds
+    const [boundsMin, minChanged] = EditorLayout.vector3Field('Min', new Vector3(data.boundsMin.x, data.boundsMin.y, data.boundsMin.z), {
+      speed: 0.5,
+      tooltip: 'Minimum bounds for sprite generation area',
+    });
+    if (minChanged) {
+      data.boundsMin.x = boundsMin.x;
+      data.boundsMin.y = boundsMin.y;
+      data.boundsMin.z = boundsMin.z;
     }
 
-    // Max Bounds - inline X Y Z
-    ImGui.Text('Max:');
-    ImGui.SameLine();
-    const maxX: [number] = [data.boundsMax.x];
-    const maxY: [number] = [data.boundsMax.y];
-    const maxZ: [number] = [data.boundsMax.z];
-    ImGui.SetNextItemWidth(60);
-    if (ImGui.DragFloat('##maxX', maxX, 0.5)) {
-      data.boundsMax.x = maxX[0];
-    }
-    ImGui.SameLine();
-    ImGui.SetNextItemWidth(60);
-    if (ImGui.DragFloat('##maxY', maxY, 0.5)) {
-      data.boundsMax.y = maxY[0];
-    }
-    ImGui.SameLine();
-    ImGui.SetNextItemWidth(60);
-    if (ImGui.DragFloat('##maxZ', maxZ, 0.5)) {
-      data.boundsMax.z = maxZ[0];
+    // Max Bounds
+    const [boundsMax, maxChanged] = EditorLayout.vector3Field('Max', new Vector3(data.boundsMax.x, data.boundsMax.y, data.boundsMax.z), {
+      speed: 0.5,
+      tooltip: 'Maximum bounds for sprite generation area',
+    });
+    if (maxChanged) {
+      data.boundsMax.x = boundsMax.x;
+      data.boundsMax.y = boundsMax.y;
+      data.boundsMax.z = boundsMax.z;
     }
 
-    ImGui.Spacing();
+    EditorLayout.endLabelsWidth();
+    EditorLayout.spacing();
 
     // Validate bounds
     if (
@@ -301,306 +281,211 @@ function renderBoundsSection(data: SpriteAreaGeneratorData): void {
       data.boundsMin.y > data.boundsMax.y ||
       data.boundsMin.z > data.boundsMax.z
     ) {
-      ImGui.TextColored(
-        new ImVec4(1.0, 0.5, 0.0, 1.0),
-        'Warning: Min should be less than Max',
-      );
+      EditorLayout.warning('Min should be less than Max');
     }
 
-    if (ImGui.Button('Reset Bounds')) {
+    if (EditorLayout.button('Reset Bounds##bounds')) {
       data.boundsMin = { x: -50, y: 0, z: -5 };
       data.boundsMax = { x: 50, y: 30, z: 5 };
     }
 
-    ImGui.Unindent();
+    EditorLayout.endGroup();
   }
 }
 
 function renderGenerationSection(data: SpriteAreaGeneratorData): void {
-  if (ImGui.CollapsingHeader('🎲 Generation', ImGui.TreeNodeFlags.DefaultOpen)) {
-    ImGui.Indent();
+  if (EditorLayout.beginGroup('Generation', true)) {
+    EditorLayout.beginLabelsWidth(['Texture', 'Seed', 'Sprite Count', 'Min Distance']);
 
-    // Texture picker
-    ImGui.Text('Texture:');
-    ImGui.SameLine();
+    // Texture picker using runtimeAssetField
+    const [texture, textureChanged] = EditorLayout.runtimeAssetField('Texture', data.spriteTexture, {
+      assetTypes: [AssetType.Texture],
+      allowClear: true,
+      tooltip: 'Texture containing sprite definitions',
+    });
+    if (textureChanged) {
+      data.spriteTexture = texture;
+    }
+
+    // Show sprite count if texture is selected
     if (data.spriteTexture && data.spriteTexture.guid) {
       const metadata = AssetDatabase.getMetadata(data.spriteTexture.guid);
-      const textureName = metadata?.path.split('/').pop() || 'Unknown';
-      ImGui.TextColored(new ImVec4(0.7, 0.9, 0.7, 1.0), textureName);
-
-      // Show sprite count
       if (metadata && isTextureMetadata(metadata)) {
         const sprites = metadata.sprites || [];
-        ImGui.SameLine();
-        ImGui.TextDisabled(`(${sprites.length} sprites)`);
+        EditorLayout.textDisabled(`(${sprites.length} sprites available)`);
       }
-    } else {
-      ImGui.TextDisabled('(None)');
     }
 
-    if (ImGui.Button('Select Texture##spriteTexture')) {
-      ImGui.OpenPopup('TexturePicker##spriteTexture');
-    }
-
-    // Texture picker popup
-    const popupOpen: [boolean] = [true];
-    if (ImGui.BeginPopupModal('TexturePicker##spriteTexture', popupOpen, ImGui.WindowFlags.AlwaysAutoResize)) {
-      ImGui.Text('Select Sprite Texture');
-      ImGui.Separator();
-
-      const textureGuids = AssetDatabase.getAllGuids().filter((guid) => {
-        const meta = AssetDatabase.getMetadata(guid);
-        return meta && meta.type === AssetType.Texture;
-      });
-
-      ImGui.BeginChild('TextureList', new ImVec2(400, 300), 1);
-      let selectedGuid: string | null = null;
-      for (const guid of textureGuids) {
-        const meta = AssetDatabase.getMetadata(guid);
-        if (meta) {
-          const name = meta.path.split('/').pop() || guid;
-          if (ImGui.Selectable(name, data.spriteTexture?.guid === guid)) {
-            selectedGuid = guid;
-          }
-        }
-      }
-      ImGui.EndChild();
-
-      if (selectedGuid) {
-        const metadata = AssetDatabase.getMetadata(selectedGuid);
-        if (metadata) {
-          data.spriteTexture = RuntimeAssetManager.get().getOrCreate(
-            selectedGuid,
-            metadata,
-          );
-        }
-        ImGui.CloseCurrentPopup();
-      }
-
-      if (ImGui.Button('Cancel')) {
-        ImGui.CloseCurrentPopup();
-      }
-
-      ImGui.EndPopup();
-    }
-
-    ImGui.Spacing();
+    EditorLayout.spacing();
 
     // Seed
-    ImGui.Text('Seed:');
-    ImGui.SameLine();
-    const seed: [number] = [data.seed];
-    ImGui.SetNextItemWidth(120);
-    if (ImGui.InputInt('##seed', seed)) {
-      data.seed = seed[0];
-    }
-    ImGui.SameLine();
-    if (ImGui.Button('Randomize')) {
+    const [seed, seedChanged] = EditorLayout.integerField('Seed', data.seed, {
+      tooltip: 'Random seed for deterministic generation',
+    });
+    if (seedChanged) data.seed = seed;
+
+    EditorLayout.sameLine();
+    if (EditorLayout.button('Randomize##seed')) {
       data.seed = Math.floor(Math.random() * 1000000);
     }
 
-    ImGui.Spacing();
+    EditorLayout.spacing();
 
-    // Sprite count - drag + input for precise control
-    ImGui.Text('Sprite Count:');
-    const spriteCount: [number] = [data.spriteCount];
-    ImGui.SetNextItemWidth(120);
-    ImGui.DragInt('##spriteCountDrag', spriteCount, 1, 0, 10000);
-    ImGui.SameLine();
-    ImGui.SetNextItemWidth(80);
-    if (ImGui.InputInt('##spriteCountInput', spriteCount, 0, 0)) {
-      // InputInt returns true on change
-    }
-    data.spriteCount = Math.max(0, spriteCount[0]);
+    // Sprite count
+    const [spriteCount, countChanged] = EditorLayout.integerField('Sprite Count', data.spriteCount, {
+      speed: 1,
+      min: 0,
+      max: 10000,
+      tooltip: 'Number of sprites to generate',
+    });
+    if (countChanged) data.spriteCount = Math.max(0, spriteCount);
 
-    ImGui.Spacing();
+    EditorLayout.endLabelsWidth();
+    EditorLayout.spacing();
 
-    // Scale range - drag + input for precise control
-    ImGui.Text('Scale Range:');
-    ImGui.Indent();
+    // Scale range
+    EditorLayout.text('Scale Range:');
+    EditorLayout.beginIndent();
+    EditorLayout.beginLabelsWidth(['Min Scale', 'Max Scale']);
 
-    ImGui.Text('Min:');
-    ImGui.SameLine();
-    const minScale: [number] = [data.minScale];
-    ImGui.SetNextItemWidth(80);
-    ImGui.DragFloat('##minScaleDrag', minScale, 0.01, 0.01, 20);
-    ImGui.SameLine();
-    ImGui.SetNextItemWidth(60);
-    ImGui.InputFloat('##minScaleInput', minScale);
-    data.minScale = Math.max(0.01, minScale[0]);
+    const [minScale, minScaleChanged] = EditorLayout.numberField('Min Scale', data.minScale, {
+      speed: 0.01,
+      min: 0.01,
+      max: 20,
+      tooltip: 'Minimum sprite scale',
+    });
+    if (minScaleChanged) data.minScale = Math.max(0.01, minScale);
 
-    ImGui.Text('Max:');
-    ImGui.SameLine();
-    const maxScale: [number] = [data.maxScale];
-    ImGui.SetNextItemWidth(80);
-    ImGui.DragFloat('##maxScaleDrag', maxScale, 0.01, 0.01, 20);
-    ImGui.SameLine();
-    ImGui.SetNextItemWidth(60);
-    ImGui.InputFloat('##maxScaleInput', maxScale);
-    data.maxScale = Math.max(0.01, maxScale[0]);
+    const [maxScale, maxScaleChanged] = EditorLayout.numberField('Max Scale', data.maxScale, {
+      speed: 0.01,
+      min: 0.01,
+      max: 20,
+      tooltip: 'Maximum sprite scale',
+    });
+    if (maxScaleChanged) data.maxScale = Math.max(0.01, maxScale);
 
-    ImGui.Unindent();
+    EditorLayout.endLabelsWidth();
+    EditorLayout.endIndent();
 
-    ImGui.Spacing();
+    EditorLayout.spacing();
+
+    EditorLayout.beginLabelsWidth(['Min Distance']);
 
     // Min Distance
-    ImGui.Text('Min Distance:');
-    const minDist: [number] = [data.minDistance ?? 0];
-    ImGui.SetNextItemWidth(100);
-    ImGui.DragFloat('##minDistDrag', minDist, 0.1, 0, 100);
-    ImGui.SameLine();
-    ImGui.SetNextItemWidth(60);
-    ImGui.InputFloat('##minDistInput', minDist);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Minimum 3D distance between sprites (0 = disabled)');
-    }
-    data.minDistance = Math.max(0, minDist[0]);
+    const [minDistance, minDistChanged] = EditorLayout.numberField('Min Distance', data.minDistance ?? 0, {
+      speed: 0.1,
+      min: 0,
+      max: 100,
+      tooltip: 'Minimum 3D distance between sprites (0 = disabled)',
+    });
+    if (minDistChanged) data.minDistance = Math.max(0, minDistance);
 
-    ImGui.Unindent();
+    EditorLayout.endLabelsWidth();
+    EditorLayout.endGroup();
   }
 }
 
 function renderVisualPropertiesSection(data: SpriteAreaGeneratorData): void {
-  if (ImGui.CollapsingHeader('🎨 Visual Properties')) {
-    ImGui.Indent();
+  if (EditorLayout.beginGroup('Visual Properties', false)) {
+    EditorLayout.beginLabelsWidth(['Sorting Layer', 'Sorting Order', 'Anchor', 'Is Lit', 'Tint Color']);
 
     // Sorting Layer
-    ImGui.Text('Sorting Layer:');
-    const sortingLayer: [number] = [data.sortingLayer];
-    ImGui.SetNextItemWidth(100);
-    if (ImGui.DragInt('##sortingLayer', sortingLayer, 1, -1000, 1000)) {
-      data.sortingLayer = sortingLayer[0];
-    }
+    const [sortingLayer, layerChanged] = EditorLayout.integerField('Sorting Layer', data.sortingLayer, {
+      speed: 1,
+      min: -1000,
+      max: 1000,
+      tooltip: 'Sorting layer for render order',
+    });
+    if (layerChanged) data.sortingLayer = sortingLayer;
 
     // Sorting Order
-    ImGui.Text('Sorting Order:');
-    const sortingOrder: [number] = [data.sortingOrder];
-    ImGui.SetNextItemWidth(100);
-    if (ImGui.DragInt('##sortingOrder', sortingOrder, 1, -1000, 1000)) {
-      data.sortingOrder = sortingOrder[0];
-    }
+    const [sortingOrder, orderChanged] = EditorLayout.integerField('Sorting Order', data.sortingOrder, {
+      speed: 1,
+      min: -1000,
+      max: 1000,
+      tooltip: 'Sorting order within the layer',
+    });
+    if (orderChanged) data.sortingOrder = sortingOrder;
 
-    ImGui.Spacing();
+    EditorLayout.spacing();
 
     // Anchor
-    ImGui.Text('Anchor:');
     if (!data.anchor) {
       data.anchor = { x: 0.5, y: 0.5 };
     }
-    const anchorX: [number] = [data.anchor.x];
-    const anchorY: [number] = [data.anchor.y];
-    ImGui.SetNextItemWidth(80);
-    ImGui.DragFloat('##anchorX', anchorX, 0.01, 0, 1);
-    ImGui.SameLine();
-    ImGui.Text('×');
-    ImGui.SameLine();
-    ImGui.SetNextItemWidth(80);
-    ImGui.DragFloat('##anchorY', anchorY, 0.01, 0, 1);
-    data.anchor.x = anchorX[0];
-    data.anchor.y = anchorY[0];
-
-    ImGui.Spacing();
-
-    // Is Lit (simple checkbox, no tooltip as per user request)
-    const isLit: [boolean] = [data.isLit];
-    if (ImGui.Checkbox('Is Lit', isLit)) {
-      data.isLit = isLit[0];
+    const [anchor, anchorChanged] = EditorLayout.vector2Field('Anchor', data.anchor, {
+      speed: 0.01,
+      min: 0,
+      max: 1,
+      tooltip: 'Sprite anchor point (0-1 range)',
+    });
+    if (anchorChanged) {
+      data.anchor.x = anchor.x;
+      data.anchor.y = anchor.y;
     }
 
-    ImGui.Spacing();
+    EditorLayout.spacing();
+
+    // Is Lit
+    const [isLit, isLitChanged] = EditorLayout.checkboxField('Is Lit', data.isLit, {
+      tooltip: 'Whether sprites receive lighting',
+    });
+    if (isLitChanged) data.isLit = isLit;
+
+    EditorLayout.spacing();
 
     // Tint Color
     if (!data.tintColor) {
       data.tintColor = { r: 1, g: 1, b: 1, a: 1 };
     }
-    ImGui.Text('Tint Color:');
-    const tintColor: [number, number, number, number] = [
-      data.tintColor.r,
-      data.tintColor.g,
-      data.tintColor.b,
-      data.tintColor.a,
-    ];
-    if (ImGui.ColorEdit4('##tintColor', tintColor)) {
-      data.tintColor.r = tintColor[0];
-      data.tintColor.g = tintColor[1];
-      data.tintColor.b = tintColor[2];
-      data.tintColor.a = tintColor[3];
+    const [tintColor, tintChanged] = EditorLayout.colorField('Tint Color', data.tintColor, {
+      hasAlpha: true,
+      tooltip: 'Tint color applied to all sprites',
+    });
+    if (tintChanged) {
+      data.tintColor.r = tintColor.r;
+      data.tintColor.g = tintColor.g;
+      data.tintColor.b = tintColor.b;
+      data.tintColor.a = tintColor.a ?? 1;
     }
 
-    ImGui.Unindent();
+    EditorLayout.endLabelsWidth();
+    EditorLayout.endGroup();
   }
 }
 
 function renderAdditionalComponentsSection(data: SpriteAreaGeneratorData): void {
-  if (ImGui.CollapsingHeader('🧩 Additional Components')) {
-    ImGui.Indent();
-
+  if (EditorLayout.beginGroup('Additional Components', false)) {
     // Initialize if missing
     if (!data.additionalComponents) {
       data.additionalComponents = [];
     }
 
-    ImGui.TextDisabled('Components spawned on each sprite:');
-    ImGui.Spacing();
+    EditorLayout.textDisabled('Components spawned on each sprite:');
+    EditorLayout.spacing();
 
-    // List existing components
-    if (data.additionalComponents.length === 0) {
-      ImGui.TextDisabled('(None)');
-    } else {
-      let componentToRemove: string | null = null;
+    EditorLayout.beginLabelsWidth(['Components']);
 
-      for (let i = 0; i < data.additionalComponents.length; i++) {
-        const componentName = data.additionalComponents[i];
-        if (!componentName) continue;
-
-        const componentType = globalComponentRegistry.getByName(componentName);
-        const displayName = componentType?.metadata?.displayName || componentName;
-
-        ImGui.BulletText(displayName);
-        ImGui.SameLine();
-        if (ImGui.SmallButton(`Remove##${i}`)) {
-          componentToRemove = componentName;
-        }
-
-        // Tooltip with description
-        if (ImGui.IsItemHovered() && componentType?.metadata?.description) {
-          ImGui.SetTooltip(componentType.metadata.description);
-        }
+    // Use componentNamesField for managing additional components
+    const [components, componentsChanged] = EditorLayout.componentNamesField(
+      'Components',
+      data.additionalComponents,
+      {
+        tooltip: 'Additional components to add to generated sprites',
+        id: 'additionalComponents',
+        filter: (comp) => {
+          // Filter out base components that are always added
+          const excludedNames = ['LocalTransform3D', 'Transform3D', 'Parent', 'Sprite2D', 'Children'];
+          return !excludedNames.includes(comp.name);
+        },
       }
-
-      // Remove component outside the loop
-      if (componentToRemove) {
-        data.additionalComponents = data.additionalComponents.filter(
-          name => name !== componentToRemove
-        );
-      }
+    );
+    if (componentsChanged) {
+      data.additionalComponents = components;
     }
 
-    ImGui.Spacing();
-
-    // Add component button
-    ImGui.PushID('additionalComponentsSection');
-    if (ImGui.Button('Add Component', new ImVec2(200, 0))) {
-      ImGui.OpenPopup('ComponentPicker##spriteAreaGen');
-    }
-
-    // Component picker popup
-    renderComponentNamePicker({
-      popupId: 'ComponentPicker##spriteAreaGen',
-      selectedNames: data.additionalComponents,
-      multiSelect: true,
-      onSelect: (names) => {
-        data.additionalComponents = names;
-      },
-      filter: (comp) => {
-        // Filter out base components that are always added
-        const excludedNames = ['LocalTransform3D', 'Transform3D', 'Parent', 'Sprite2D', 'Children'];
-        return !excludedNames.includes(comp.name);
-      },
-    });
-    ImGui.PopID();
-
-    ImGui.Unindent();
+    EditorLayout.endLabelsWidth();
+    EditorLayout.endGroup();
   }
 }
 
@@ -609,20 +494,20 @@ function renderActionsSection(
   data: SpriteAreaGeneratorData,
   commands: Command
 ): void {
-  ImGui.Separator();
-  ImGui.Spacing();
+  EditorLayout.separator();
+  EditorLayout.spacing();
 
-  if (ImGui.Button('Generate Sprites', new ImVec2(150, 28))) {
+  if (EditorLayout.button('Generate Sprites##action')) {
     generateSprites(entity, data, commands);
   }
 
-  ImGui.SameLine();
+  EditorLayout.sameLine();
 
-  if (ImGui.Button('Clear Sprites', new ImVec2(150, 28))) {
+  if (EditorLayout.button('Clear Sprites##action')) {
     clearSprites(entity, commands);
   }
 
-  ImGui.Spacing();
+  EditorLayout.spacing();
 
   // Info - get child count from Children component
   const children = commands.tryGetComponent(entity, Children);
@@ -639,9 +524,9 @@ function renderActionsSection(
   }
 
   if (aliveCount !== count) {
-    ImGui.TextColored({ x: 1, y: 0.5, z: 0, w: 1 }, `Children: ${aliveCount} (${count - aliveCount} dead refs!)`);
+    EditorLayout.warning(`Children: ${aliveCount} (${count - aliveCount} dead refs!)`);
   } else {
-    ImGui.TextDisabled(`Children: ${count}`);
+    EditorLayout.textDisabled(`Children: ${count}`);
   }
 }
 

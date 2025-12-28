@@ -3,8 +3,7 @@ import {
   type Entity,
   type ComponentType,
   SkyGradient2D,
-  entityPicker,
-  ImGui,
+  EditorLayout,
 } from '@voidscript/engine';
 
 export interface FogSkySyncData {
@@ -28,17 +27,14 @@ export const FogSkySync = component<FogSkySyncData>(
     defaultValue: () => ({
       skyEntity: null,
     }),
-    customEditor: ({ componentData, commands }) => {
-      ImGui.Text('Sky Entity:');
-      const result = entityPicker({
-        label: 'skyEntity',
-        currentEntity: componentData.skyEntity,
-        commands,
+    customEditor: ({ componentData }) => {
+      const [entity, changed] = EditorLayout.entityField('Sky Entity', componentData.skyEntity, {
         allowNone: true,
         requiredComponents: [SkyGradient2D] as ComponentType<unknown>[],
+        tooltip: 'Entity with SkyGradient2D component to sync fog color from',
       });
-      if (result.changed) {
-        componentData.skyEntity = result.entity;
+      if (changed) {
+        componentData.skyEntity = entity;
       }
     },
   },

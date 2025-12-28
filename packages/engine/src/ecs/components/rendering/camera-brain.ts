@@ -22,6 +22,7 @@
 
 import { component } from "../../component.js";
 import type { Entity } from "../../entity.js";
+import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 import { ImGui } from "@mori2003/jsimgui";
 
 export type BlendCurve = "linear" | "easeIn" | "easeOut" | "easeInOut";
@@ -102,73 +103,41 @@ export const CameraBrain = component<CameraBrainData>(
       "Controls the main camera based on active virtual cameras with smooth blending",
     path: "rendering/camera",
     customEditor: ({ componentData }) => {
-      // Blend Time slider
-      ImGui.Text("Blend Time:");
-      const blendTime: [number] = [componentData.blendTime];
-      if (ImGui.SliderFloat("##blendTime", blendTime, 0, 3)) {
-        componentData.blendTime = blendTime[0];
-      }
+      EditorLayout.beginLabelsWidth(['Blend Time', 'Blend Curve', 'Update Mode', 'World Up']);
 
-      // Blend Curve dropdown
-      ImGui.Text("Blend Curve:");
-      const curves: BlendCurve[] = ["linear", "easeIn", "easeOut", "easeInOut"];
-      if (ImGui.BeginCombo("##blendCurve", componentData.blendCurve)) {
-        for (const curve of curves) {
-          const isSelected = componentData.blendCurve === curve;
-          if (ImGui.Selectable(curve, isSelected)) {
-            componentData.blendCurve = curve;
-          }
-          if (isSelected) {
-            ImGui.SetItemDefaultFocus();
-          }
-        }
-        ImGui.EndCombo();
-      }
+      const BlendCurveEnum = { linear: 'linear', easeIn: 'easeIn', easeOut: 'easeOut', easeInOut: 'easeInOut' } as const;
+      const UpdateModeEnum = { update: 'update', fixedUpdate: 'fixedUpdate', lateUpdate: 'lateUpdate' } as const;
 
-      // Update Mode dropdown
-      ImGui.Text("Update Mode:");
-      const modes: CameraBrainUpdateMode[] = [
-        "update",
-        "fixedUpdate",
-        "lateUpdate",
-      ];
-      if (ImGui.BeginCombo("##updateMode", componentData.updateMode)) {
-        for (const mode of modes) {
-          const isSelected = componentData.updateMode === mode;
-          if (ImGui.Selectable(mode, isSelected)) {
-            componentData.updateMode = mode;
-          }
-          if (isSelected) {
-            ImGui.SetItemDefaultFocus();
-          }
-        }
-        ImGui.EndCombo();
-      }
+      const [blendTime, blendTimeChanged] = EditorLayout.numberField('Blend Time', componentData.blendTime, {
+        min: 0, max: 3, useSlider: true, tooltip: 'Blend time in seconds when transitioning between virtual cameras',
+      });
+      if (blendTimeChanged) componentData.blendTime = blendTime;
 
-      ImGui.Separator();
+      const [blendCurve, blendCurveChanged] = EditorLayout.enumField('Blend Curve', componentData.blendCurve, BlendCurveEnum, {
+        tooltip: 'Easing curve for camera transitions',
+      });
+      if (blendCurveChanged) componentData.blendCurve = blendCurve;
 
-      // World Up
-      ImGui.Text("World Up:");
-      const worldUp = [
-        componentData.worldUp.x,
-        componentData.worldUp.y,
-        componentData.worldUp.z,
-      ] as [number, number, number];
-      if (ImGui.DragFloat3("##worldUp", worldUp, 0.1, -1, 1)) {
-        componentData.worldUp = { x: worldUp[0], y: worldUp[1], z: worldUp[2] };
-      }
+      const [updateMode, updateModeChanged] = EditorLayout.enumField('Update Mode', componentData.updateMode, UpdateModeEnum, {
+        tooltip: 'When to update the camera (update, fixedUpdate, or lateUpdate)',
+      });
+      if (updateModeChanged) componentData.updateMode = updateMode;
 
-      ImGui.Separator();
+      EditorLayout.separator();
+
+      const [worldUp, worldUpChanged] = EditorLayout.vector3Field('World Up', componentData.worldUp, {
+        min: -1, max: 1, speed: 0.1, tooltip: 'World up axis for camera orientation',
+      });
+      if (worldUpChanged) componentData.worldUp = worldUp;
+
+      EditorLayout.endLabelsWidth();
+
+      EditorLayout.separator();
 
       // Runtime status (read-only)
-      ImGui.TextColored(
-        { x: 0.6, y: 0.6, z: 0.6, w: 1 },
-        "Runtime Status:"
-      );
-      ImGui.Text(
-        `Active VCam: ${componentData._activeVCam !== null ? `Entity ${componentData._activeVCam}` : "None"}`
-      );
-      ImGui.Text(`Blending: ${componentData._isBlending ? "Yes" : "No"}`);
+      EditorLayout.textDisabled('Runtime Status:');
+      EditorLayout.text(`Active VCam: ${componentData._activeVCam !== null ? `Entity ${componentData._activeVCam}` : 'None'}`);
+      EditorLayout.text(`Blending: ${componentData._isBlending ? 'Yes' : 'No'}`);
       if (componentData._isBlending) {
         ImGui.ProgressBar(componentData._blendProgress, { x: -1, y: 0 });
       }

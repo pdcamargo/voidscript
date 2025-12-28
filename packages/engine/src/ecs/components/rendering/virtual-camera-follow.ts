@@ -34,8 +34,7 @@
 
 import { component } from "../../component.js";
 import type { Entity } from "../../entity.js";
-import { ImGui } from "@mori2003/jsimgui";
-import { entityPicker } from "../../../app/imgui/entity-picker.js";
+import { EditorLayout } from "../../../app/imgui/editor-layout.js";
 
 export type FollowMode =
   | "none" // No following
@@ -256,122 +255,103 @@ export const VirtualCameraFollow = component<VirtualCameraFollowData>(
     description: "Controls how a virtual camera follows a target entity",
     path: "rendering/camera",
     showHelper: true,
-    customEditor: ({ componentData, commands }) => {
-      // Target entity picker
-      ImGui.Text("Target Entity:");
-      const result = entityPicker({
-        label: "target",
-        currentEntity: componentData.target,
-        commands,
-        allowNone: true,
-      });
-      if (result.changed) {
-        componentData.target = result.entity;
-      }
+    customEditor: ({ componentData }) => {
+      EditorLayout.beginLabelsWidth(['Target Entity', 'Follow Mode', 'Position Offset']);
 
-      ImGui.Separator();
+      // Target entity picker
+      const [target, targetChanged] = EditorLayout.entityField("Target Entity", componentData.target, {
+        allowNone: true,
+        tooltip: "Entity to follow"
+      });
+      if (targetChanged) componentData.target = target;
+
+      EditorLayout.separator();
 
       // Follow Mode
-      ImGui.Text("Follow Mode:");
-      const modes: FollowMode[] = [
-        "none",
-        "hardLock",
-        "transposer",
-        "orbitalTransposer",
-        "2dFollow",
-      ];
-      if (ImGui.BeginCombo("##mode", componentData.mode)) {
-        for (const mode of modes) {
-          const isSelected = componentData.mode === mode;
-          if (ImGui.Selectable(mode, isSelected)) {
-            componentData.mode = mode;
-          }
-          if (isSelected) {
-            ImGui.SetItemDefaultFocus();
-          }
-        }
-        ImGui.EndCombo();
-      }
+      const FollowModeEnum = {
+        none: "none",
+        hardLock: "hardLock",
+        transposer: "transposer",
+        orbitalTransposer: "orbitalTransposer",
+        "2dFollow": "2dFollow",
+      } as const;
+      const [mode, modeChanged] = EditorLayout.enumField("Follow Mode", componentData.mode, FollowModeEnum, {
+        tooltip: "How the camera follows the target"
+      });
+      if (modeChanged) componentData.mode = mode;
 
-      ImGui.Separator();
+      EditorLayout.endLabelsWidth();
+
+      EditorLayout.separator();
 
       // Common settings (shown for most modes)
       if (componentData.mode !== "none") {
-        ImGui.Text("Position Offset:");
-        const offset = [
-          componentData.offset.x,
-          componentData.offset.y,
-          componentData.offset.z,
-        ] as [number, number, number];
-        if (ImGui.DragFloat3("##offset", offset, 0.1)) {
-          componentData.offset = { x: offset[0], y: offset[1], z: offset[2] };
-        }
+        EditorLayout.beginLabelsWidth(['Position Offset', 'Damping', 'Per-Axis Damping', 'Damping Per Axis', 'Ignore Z (2D Mode)']);
+
+        const [offset, offsetChanged] = EditorLayout.vector3Field("Position Offset", componentData.offset, {
+          speed: 0.1, tooltip: "Offset from target position (world space)"
+        });
+        if (offsetChanged) componentData.offset = { x: offset.x, y: offset.y, z: offset.z };
 
         // Damping (not for hardLock)
         if (componentData.mode !== "hardLock") {
-          ImGui.Separator();
-          ImGui.Text("Damping:");
-          const damping: [number] = [componentData.damping];
-          if (ImGui.DragFloat("##damping", damping, 0.1, 0, 20)) {
-            componentData.damping = damping[0];
-          }
+          EditorLayout.separator();
+
+          const [damping, dampingChanged] = EditorLayout.numberField("Damping", componentData.damping, {
+            min: 0, max: 20, speed: 0.1, tooltip: "Higher = smoother/slower following"
+          });
+          if (dampingChanged) componentData.damping = damping;
 
           // Per-axis damping toggle
           const hasPerAxis = componentData.dampingPerAxis !== null;
-          const usePerAxis: [boolean] = [hasPerAxis];
-          if (ImGui.Checkbox("Per-Axis Damping##usePerAxis", usePerAxis)) {
-            if (usePerAxis[0] && !hasPerAxis) {
+          const [usePerAxis, usePerAxisChanged] = EditorLayout.checkboxField("Per-Axis Damping", hasPerAxis, {
+            tooltip: "Use different damping values for each axis"
+          });
+          if (usePerAxisChanged) {
+            if (usePerAxis && !hasPerAxis) {
               componentData.dampingPerAxis = {
                 x: componentData.damping,
                 y: componentData.damping,
                 z: componentData.damping,
               };
-            } else if (!usePerAxis[0] && hasPerAxis) {
+            } else if (!usePerAxis && hasPerAxis) {
               componentData.dampingPerAxis = null;
             }
           }
 
           if (componentData.dampingPerAxis) {
-            const perAxis = [
-              componentData.dampingPerAxis.x,
-              componentData.dampingPerAxis.y,
-              componentData.dampingPerAxis.z,
-            ] as [number, number, number];
-            if (ImGui.DragFloat3("##dampingPerAxis", perAxis, 0.1, 0, 20)) {
-              componentData.dampingPerAxis = {
-                x: perAxis[0],
-                y: perAxis[1],
-                z: perAxis[2],
-              };
+            const [perAxis, perAxisChanged] = EditorLayout.vector3Field("Damping Per Axis", componentData.dampingPerAxis, {
+              speed: 0.1, min: 0, max: 20, tooltip: "Damping values for X, Y, Z axes"
+            });
+            if (perAxisChanged) {
+              componentData.dampingPerAxis = { x: perAxis.x, y: perAxis.y, z: perAxis.z };
             }
           }
 
-          ImGui.Separator();
+          EditorLayout.endLabelsWidth();
+
+          EditorLayout.separator();
+
           // Look-ahead settings
-          ImGui.Text("Look-Ahead:");
-          const lookaheadTime: [number] = [componentData.lookaheadTime];
-          if (
-            ImGui.DragFloat("Time##lookahead", lookaheadTime, 0.01, 0, 2)
-          ) {
-            componentData.lookaheadTime = lookaheadTime[0];
-          }
+          EditorLayout.header("Look-Ahead", { r: 0.6, g: 0.8, b: 1 });
+
+          EditorLayout.beginLabelsWidth(['Time', 'Smoothing']);
+
+          const [lookaheadTime, lookaheadTimeChanged] = EditorLayout.numberField("Time", componentData.lookaheadTime, {
+            min: 0, max: 2, speed: 0.01, tooltip: "Look-ahead time based on target velocity (seconds)"
+          });
+          if (lookaheadTimeChanged) componentData.lookaheadTime = lookaheadTime;
 
           if (componentData.lookaheadTime > 0) {
-            const lookaheadSmoothing: [number] = [
-              componentData.lookaheadSmoothing,
-            ];
-            if (
-              ImGui.DragFloat(
-                "Smoothing##lookaheadSmooth",
-                lookaheadSmoothing,
-                0.5,
-                1,
-                50
-              )
-            ) {
-              componentData.lookaheadSmoothing = lookaheadSmoothing[0];
-            }
+            const [lookaheadSmoothing, lookaheadSmoothingChanged] = EditorLayout.numberField("Smoothing", componentData.lookaheadSmoothing, {
+              min: 1, max: 50, speed: 0.5, tooltip: "Smoothing for look-ahead response"
+            });
+            if (lookaheadSmoothingChanged) componentData.lookaheadSmoothing = lookaheadSmoothing;
           }
+
+          EditorLayout.endLabelsWidth();
+        } else {
+          EditorLayout.endLabelsWidth();
         }
 
         // 2D specific
@@ -379,20 +359,22 @@ export const VirtualCameraFollow = component<VirtualCameraFollowData>(
           componentData.mode === "2dFollow" ||
           componentData.mode === "transposer"
         ) {
-          ImGui.Separator();
-          const ignoreZ: [boolean] = [componentData.ignoreZ];
-          if (ImGui.Checkbox("Ignore Z (2D Mode)##ignoreZ", ignoreZ)) {
-            componentData.ignoreZ = ignoreZ[0];
-          }
+          EditorLayout.separator();
+
+          EditorLayout.beginLabelsWidth(['Ignore Z (2D Mode)']);
+
+          const [ignoreZ, ignoreZChanged] = EditorLayout.checkboxField("Ignore Z (2D Mode)", componentData.ignoreZ, {
+            tooltip: "Ignore target's Z position for 2D games"
+          });
+          if (ignoreZChanged) componentData.ignoreZ = ignoreZ;
+
+          EditorLayout.endLabelsWidth();
         }
 
         // Transposer dead zone
         if (componentData.mode === "transposer") {
-          ImGui.Separator();
-          ImGui.TextColored(
-            { x: 0.6, y: 0.8, z: 1, w: 1 },
-            "Dead Zone:"
-          );
+          EditorLayout.separator();
+          EditorLayout.header("Dead Zone", { r: 0.6, g: 0.8, b: 1 });
 
           // Initialize missing properties for backward compatibility
           if (componentData.enableDeadZone === undefined) {
@@ -405,70 +387,66 @@ export const VirtualCameraFollow = component<VirtualCameraFollowData>(
             componentData.softZone = { width: 0.3, height: 0.3 };
           }
 
-          const enableDeadZone: [boolean] = [componentData.enableDeadZone];
-          if (ImGui.Checkbox("Enable Dead Zone##enableDeadZone", enableDeadZone)) {
-            componentData.enableDeadZone = enableDeadZone[0];
-          }
+          EditorLayout.beginLabelsWidth(['Enable Dead Zone', 'Dead Zone (viewport %)', 'Soft Zone (viewport %)']);
+
+          const [enableDeadZone, enableDeadZoneChanged] = EditorLayout.checkboxField("Enable Dead Zone", componentData.enableDeadZone, {
+            tooltip: "Target can move within dead zone without camera response"
+          });
+          if (enableDeadZoneChanged) componentData.enableDeadZone = enableDeadZone;
 
           // Only show dead zone settings if enabled
           if (componentData.enableDeadZone) {
-            ImGui.Text("Dead Zone (viewport %):");
-            const deadZone = [
-              componentData.deadZone.width,
-              componentData.deadZone.height,
-            ] as [number, number];
-            if (ImGui.SliderFloat2("##deadZone", deadZone, 0, 1)) {
-              componentData.deadZone = {
-                width: deadZone[0],
-                height: deadZone[1],
-              };
+            // Convert width/height to x/y for vector2Field
+            const deadZoneXY = { x: componentData.deadZone.width, y: componentData.deadZone.height };
+            const [deadZone, deadZoneChanged] = EditorLayout.vector2Field("Dead Zone (viewport %)", deadZoneXY, {
+              speed: 0.01, min: 0, max: 1, tooltip: "Dead zone size in viewport percentage"
+            });
+            if (deadZoneChanged) {
+              componentData.deadZone = { width: deadZone.x, height: deadZone.y };
             }
 
-            ImGui.Text("Soft Zone (viewport %):");
-            const softZone = [
-              componentData.softZone.width,
-              componentData.softZone.height,
-            ] as [number, number];
-            if (ImGui.SliderFloat2("##softZone", softZone, 0, 1)) {
-              componentData.softZone = {
-                width: softZone[0],
-                height: softZone[1],
-              };
+            const softZoneXY = { x: componentData.softZone.width, y: componentData.softZone.height };
+            const [softZone, softZoneChanged] = EditorLayout.vector2Field("Soft Zone (viewport %)", softZoneXY, {
+              speed: 0.01, min: 0, max: 1, tooltip: "Soft zone size in viewport percentage"
+            });
+            if (softZoneChanged) {
+              componentData.softZone = { width: softZone.x, height: softZone.y };
             }
           } else {
-            // Show disabled state
-            ImGui.TextDisabled("(Dead zone disabled - smooth follow without dead zone)");
+            EditorLayout.textDisabled("(Dead zone disabled - smooth follow without dead zone)");
           }
+
+          EditorLayout.endLabelsWidth();
         }
 
         // Orbital settings
         if (componentData.mode === "orbitalTransposer") {
-          ImGui.Separator();
-          ImGui.TextColored({ x: 0.6, y: 0.8, z: 1, w: 1 }, "Orbital Settings:");
+          EditorLayout.separator();
+          EditorLayout.header("Orbital Settings", { r: 0.6, g: 0.8, b: 1 });
 
-          const radius: [number] = [componentData.orbitalRadius];
-          if (
-            ImGui.DragFloat("Orbital Radius##radius", radius, 0.1, 0.1, 100)
-          ) {
-            componentData.orbitalRadius = radius[0];
-          }
+          EditorLayout.beginLabelsWidth(['Orbital Radius', 'Horizontal Angle', 'Vertical Angle', 'User Control']);
 
-          const angleX: [number] = [componentData.orbitalAngleX];
-          if (
-            ImGui.SliderFloat("Horizontal Angle##angleX", angleX, -180, 180)
-          ) {
-            componentData.orbitalAngleX = angleX[0];
-          }
+          const [radius, radiusChanged] = EditorLayout.numberField("Orbital Radius", componentData.orbitalRadius, {
+            min: 0.1, max: 100, speed: 0.1, tooltip: "Distance from target"
+          });
+          if (radiusChanged) componentData.orbitalRadius = radius;
 
-          const angleY: [number] = [componentData.orbitalAngleY];
-          if (ImGui.SliderFloat("Vertical Angle##angleY", angleY, -89, 89)) {
-            componentData.orbitalAngleY = angleY[0];
-          }
+          const [angleX, angleXChanged] = EditorLayout.numberField("Horizontal Angle", componentData.orbitalAngleX, {
+            min: -180, max: 180, useSlider: true, tooltip: "Horizontal orbital angle (degrees)"
+          });
+          if (angleXChanged) componentData.orbitalAngleX = angleX;
 
-          const userControl: [boolean] = [componentData.orbitalUserControl];
-          if (ImGui.Checkbox("User Control##userControl", userControl)) {
-            componentData.orbitalUserControl = userControl[0];
-          }
+          const [angleY, angleYChanged] = EditorLayout.numberField("Vertical Angle", componentData.orbitalAngleY, {
+            min: -89, max: 89, useSlider: true, tooltip: "Vertical orbital angle (degrees)"
+          });
+          if (angleYChanged) componentData.orbitalAngleY = angleY;
+
+          const [userControl, userControlChanged] = EditorLayout.checkboxField("User Control", componentData.orbitalUserControl, {
+            tooltip: "Allow user input to control orbital angles"
+          });
+          if (userControlChanged) componentData.orbitalUserControl = userControl;
+
+          EditorLayout.endLabelsWidth();
         }
       }
     },

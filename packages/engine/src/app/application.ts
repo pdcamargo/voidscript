@@ -426,8 +426,15 @@ export class Application {
     this.commands = new Command(this.world, this);
     this.layerStack = new LayerStack();
 
-    // Initialize window
-    this.window = new Window(config.window);
+    // Initialize window with callback to check if ImGui wants keyboard input
+    this.window = new Window({
+      ...config.window,
+      shouldAllowKeyboardDefault: () => {
+        // Allow default keyboard behavior when ImGui wants text input
+        // This is necessary for typing special characters (like colon) in ImGui inputs
+        return this.imguiLayer?.wantsTextInput() ?? false;
+      },
+    });
     this.window.setEventCallback((event) => this.onEvent(event));
 
     // Initialize renderer

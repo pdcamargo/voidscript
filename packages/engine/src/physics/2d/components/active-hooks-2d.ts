@@ -42,6 +42,7 @@
  */
 
 import { component } from '../../../ecs/component.js';
+import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 import { ActiveHooksFlags } from '../../collision/physics-hooks.js';
 
 export interface ActiveHooks2DData {
@@ -72,6 +73,37 @@ export const ActiveHooks2D = component<ActiveHooks2DData>(
     }),
     displayName: 'Active Hooks 2D',
     description: 'Enable physics hooks for custom collision filtering',
+    customEditor: ({ componentData }) => {
+      EditorLayout.beginLabelsWidth(['Filter Contact Pairs', 'Filter Intersection Pairs']);
+
+      const hasContactPairs = (componentData.hooks & ActiveHooksFlags.FILTER_CONTACT_PAIRS) !== 0;
+      const hasIntersectionPairs = (componentData.hooks & ActiveHooksFlags.FILTER_INTERSECTION_PAIRS) !== 0;
+
+      const [contactPairs, contactChanged] = EditorLayout.checkboxField(
+        'Filter Contact Pairs',
+        hasContactPairs,
+        { tooltip: 'Enable filterContactPair callback for custom collision filtering' }
+      );
+
+      const [intersectionPairs, intersectionChanged] = EditorLayout.checkboxField(
+        'Filter Intersection Pairs',
+        hasIntersectionPairs,
+        { tooltip: 'Enable filterIntersectionPair callback for sensor filtering' }
+      );
+
+      if (contactChanged || intersectionChanged) {
+        let newFlags = ActiveHooksFlags.NONE;
+        if (contactChanged ? contactPairs : hasContactPairs) {
+          newFlags |= ActiveHooksFlags.FILTER_CONTACT_PAIRS;
+        }
+        if (intersectionChanged ? intersectionPairs : hasIntersectionPairs) {
+          newFlags |= ActiveHooksFlags.FILTER_INTERSECTION_PAIRS;
+        }
+        componentData.hooks = newFlags;
+      }
+
+      EditorLayout.endLabelsWidth();
+    },
   },
 );
 

@@ -14,7 +14,7 @@
  */
 
 import { component } from '../../component.js';
-import { ImGui } from '@mori2003/jsimgui';
+import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 
 /**
  * Water2D component data
@@ -382,39 +382,33 @@ let lastAppliedPresetData: Partial<Water2DData> | null = null;
 // ============================================================================
 
 function renderPresetSelector(data: Water2DData): void {
-  ImGui.TextColored({ x: 0.4, y: 0.8, z: 1.0, w: 1.0 }, 'Water Preset');
-  ImGui.SameLine();
+  EditorLayout.header('Water Preset', { r: 0.4, g: 0.8, b: 1.0 });
+  EditorLayout.sameLine();
 
-  const presetMap: Record<WaterPreset, string> = {
-    'custom': 'Custom',
-    'calm-lake': 'Calm Lake',
-    'ocean-waves': 'Ocean Waves',
-    'river-stream': 'River/Stream',
-    'swamp-lava': 'Swamp/Lava',
-  };
+  const presetOptions = ['Custom', 'Calm Lake', 'Ocean Waves', 'River/Stream', 'Swamp/Lava'];
+  const presetKeys: WaterPreset[] = ['custom', 'calm-lake', 'ocean-waves', 'river-stream', 'swamp-lava'];
+  const currentIndex = presetKeys.indexOf(currentPreset);
+  const currentLabel = presetOptions[currentIndex] || 'Custom';
 
-  const presetLabel = presetMap[currentPreset];
+  const [newLabel, changed] = EditorLayout.comboField('', currentLabel, presetOptions, {
+    id: 'waterPreset',
+    tooltip: 'Select a water preset or customize settings',
+  });
 
-  if (ImGui.BeginCombo('##waterPreset', presetLabel)) {
-    for (const [preset, label] of Object.entries(presetMap)) {
-      const isSelected = currentPreset === preset;
-      if (ImGui.Selectable(label, isSelected)) {
-        if (preset !== 'custom') {
-          // Apply preset
-          const presetData = WATER_PRESETS[preset as Exclude<WaterPreset, 'custom'>];
-          Object.assign(data, presetData);
-          lastAppliedPresetData = { ...presetData };
-          currentPreset = preset as WaterPreset;
-        } else {
-          currentPreset = 'custom';
-          lastAppliedPresetData = null;
-        }
-      }
-      if (isSelected) {
-        ImGui.SetItemDefaultFocus();
-      }
+  if (changed) {
+    const newIndex = presetOptions.indexOf(newLabel);
+    const newPreset = presetKeys[newIndex] || 'custom';
+
+    if (newPreset !== 'custom') {
+      // Apply preset
+      const presetData = WATER_PRESETS[newPreset as Exclude<WaterPreset, 'custom'>];
+      Object.assign(data, presetData);
+      lastAppliedPresetData = { ...presetData };
+      currentPreset = newPreset;
+    } else {
+      currentPreset = 'custom';
+      lastAppliedPresetData = null;
     }
-    ImGui.EndCombo();
   }
 
   // Auto-detect custom changes
@@ -445,460 +439,425 @@ function renderPresetSelector(data: Water2DData): void {
 }
 
 function renderSurfaceSection(data: Water2DData): void {
-  if (ImGui.CollapsingHeader('🌊 Surface & Visibility##surface')) {
-    ImGui.Indent();
+  if (EditorLayout.beginGroup('Surface & Visibility', false)) {
+    EditorLayout.beginLabelsWidth(['Base Size', 'Surface Position', 'Visible', 'Sorting Layer', 'Sorting Order', 'Lit by Scene Lighting']);
 
-    // baseSize Vec2 inline
-    ImGui.Text('Base Size:');
-    const baseX: [number] = [data.baseSize.x];
-    const baseY: [number] = [data.baseSize.y];
-    ImGui.SetNextItemWidth(100);
-    ImGui.DragFloat('##baseSizeX', baseX, 0.01, 0.1, 100);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Base size of water surface before transform scaling');
+    // baseSize Vec2
+    const [baseSize, baseSizeChanged] = EditorLayout.vector2Field('Base Size', data.baseSize, {
+      speed: 0.01,
+      min: 0.1,
+      max: 100,
+      tooltip: 'Base size of water surface before transform scaling',
+    });
+    if (baseSizeChanged) {
+      data.baseSize.x = baseSize.x;
+      data.baseSize.y = baseSize.y;
     }
-    ImGui.SameLine();
-    ImGui.Text('×');
-    ImGui.SameLine();
-    ImGui.SetNextItemWidth(100);
-    ImGui.DragFloat('##baseSizeY', baseY, 0.01, 0.1, 100);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Base size of water surface before transform scaling');
-    }
-    data.baseSize.x = baseX[0];
-    data.baseSize.y = baseY[0];
 
-    ImGui.Spacing();
+    EditorLayout.spacing();
 
     // surfacePosition slider
-    ImGui.Text('Surface Position:');
-    const surfacePos: [number] = [data.surfacePosition];
-    ImGui.SliderFloat('##surfacePosition', surfacePos, 0.0, 1.0);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Vertical position of water surface (0=bottom, 1=top)');
-    }
-    data.surfacePosition = surfacePos[0];
+    const [surfacePos, surfacePosChanged] = EditorLayout.numberField('Surface Position', data.surfacePosition, {
+      min: 0,
+      max: 1,
+      useSlider: true,
+      tooltip: 'Vertical position of water surface (0=bottom, 1=top)',
+    });
+    if (surfacePosChanged) data.surfacePosition = surfacePos;
 
-    ImGui.Spacing();
+    EditorLayout.spacing();
 
     // visible checkbox
-    const visible: [boolean] = [data.visible];
-    ImGui.Checkbox('Visible', visible);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Toggle water visibility');
-    }
-    data.visible = visible[0];
+    const [visible, visibleChanged] = EditorLayout.checkboxField('Visible', data.visible, {
+      tooltip: 'Toggle water visibility',
+    });
+    if (visibleChanged) data.visible = visible;
 
-    ImGui.Spacing();
+    EditorLayout.spacing();
 
-    // sortingLayer and sortingOrder
-    ImGui.Text('Sorting Layer:');
-    const sortingLayer: [number] = [data.sortingLayer];
-    ImGui.DragInt('##sortingLayer', sortingLayer, 1, 0, 1000);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Z-ordering for layered rendering (higher = rendered later)');
-    }
-    data.sortingLayer = sortingLayer[0];
+    // sortingLayer
+    const [sortingLayer, sortingLayerChanged] = EditorLayout.integerField('Sorting Layer', data.sortingLayer, {
+      min: 0,
+      max: 1000,
+      tooltip: 'Z-ordering for layered rendering (higher = rendered later)',
+    });
+    if (sortingLayerChanged) data.sortingLayer = sortingLayer;
 
-    ImGui.Text('Sorting Order:');
-    const sortingOrder: [number] = [data.sortingOrder];
-    ImGui.DragInt('##sortingOrder', sortingOrder, 1, -1000, 1000);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Secondary Z-ordering within the same layer');
-    }
-    data.sortingOrder = sortingOrder[0];
+    // sortingOrder
+    const [sortingOrder, sortingOrderChanged] = EditorLayout.integerField('Sorting Order', data.sortingOrder, {
+      min: -1000,
+      max: 1000,
+      tooltip: 'Secondary Z-ordering within the same layer',
+    });
+    if (sortingOrderChanged) data.sortingOrder = sortingOrder;
 
-    ImGui.Spacing();
+    EditorLayout.spacing();
 
     // isLit checkbox
-    const isLit: [boolean] = [data.isLit];
-    ImGui.Checkbox('Lit by Scene Lighting', isLit);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Enable scene lighting to affect water surface');
-    }
-    data.isLit = isLit[0];
+    const [isLit, isLitChanged] = EditorLayout.checkboxField('Lit by Scene Lighting', data.isLit, {
+      tooltip: 'Enable scene lighting to affect water surface',
+    });
+    if (isLitChanged) data.isLit = isLit;
 
-    ImGui.Unindent();
+    EditorLayout.endLabelsWidth();
+    EditorLayout.endGroup();
   }
 }
 
 function renderWaterAppearanceSection(data: Water2DData): void {
-  if (ImGui.CollapsingHeader('💧 Water Appearance##waterAppearance')) {
-    ImGui.Indent();
+  if (EditorLayout.beginGroup('Water Appearance', false)) {
+    EditorLayout.beginLabelsWidth(['Water Color', 'Water Opacity']);
 
     // waterColor (RGBA color picker)
-    ImGui.Text('Water Color:');
-    const waterColor: [number, number, number, number] = [
-      data.waterColor.r,
-      data.waterColor.g,
-      data.waterColor.b,
-      data.waterColor.a,
-    ];
-    if (ImGui.ColorEdit4('##waterColor', waterColor)) {
-      data.waterColor.r = waterColor[0];
-      data.waterColor.g = waterColor[1];
-      data.waterColor.b = waterColor[2];
-      data.waterColor.a = waterColor[3];
-    }
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Tint color applied to water reflections');
+    const [waterColor, waterColorChanged] = EditorLayout.colorField('Water Color', data.waterColor, {
+      hasAlpha: true,
+      tooltip: 'Tint color applied to water reflections',
+    });
+    if (waterColorChanged) {
+      data.waterColor.r = waterColor.r;
+      data.waterColor.g = waterColor.g;
+      data.waterColor.b = waterColor.b;
+      data.waterColor.a = waterColor.a ?? 1;
     }
 
-    ImGui.Spacing();
+    EditorLayout.spacing();
 
     // waterOpacity slider
-    ImGui.Text('Water Opacity:');
-    const waterOpacity: [number] = [data.waterOpacity];
-    ImGui.SliderFloat('##waterOpacity', waterOpacity, 0.0, 1.0);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Strength of the color tint overlay');
-    }
-    data.waterOpacity = waterOpacity[0];
+    const [waterOpacity, waterOpacityChanged] = EditorLayout.numberField('Water Opacity', data.waterOpacity, {
+      min: 0,
+      max: 1,
+      useSlider: true,
+      tooltip: 'Strength of the color tint overlay',
+    });
+    if (waterOpacityChanged) data.waterOpacity = waterOpacity;
 
-    ImGui.Unindent();
+    EditorLayout.endLabelsWidth();
+    EditorLayout.endGroup();
   }
 }
 
 function renderWaveSection(data: Water2DData): void {
-  if (ImGui.CollapsingHeader('🌀 Wave Animation##waveAnimation')) {
-    ImGui.Indent();
+  if (EditorLayout.beginGroup('Wave Animation', false)) {
+    EditorLayout.beginLabelsWidth(['Wave Speed', 'Wave Distortion', 'Wave Multiplier']);
 
     // waveSpeed slider
-    ImGui.Text('Wave Speed:');
-    const waveSpeed: [number] = [data.waveSpeed];
-    ImGui.SliderFloat('##waveSpeed', waveSpeed, 0.0, 0.2);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Animation speed of wave movement');
-    }
-    data.waveSpeed = waveSpeed[0];
+    const [waveSpeed, waveSpeedChanged] = EditorLayout.numberField('Wave Speed', data.waveSpeed, {
+      min: 0,
+      max: 0.2,
+      useSlider: true,
+      tooltip: 'Animation speed of wave movement',
+    });
+    if (waveSpeedChanged) data.waveSpeed = waveSpeed;
 
-    ImGui.Spacing();
+    EditorLayout.spacing();
 
     // waveDistortion slider
-    ImGui.Text('Wave Distortion:');
-    const waveDistortion: [number] = [data.waveDistortion];
-    ImGui.SliderFloat('##waveDistortion', waveDistortion, 0.0, 1.0);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Warping strength of wave patterns');
-    }
-    data.waveDistortion = waveDistortion[0];
+    const [waveDistortion, waveDistortionChanged] = EditorLayout.numberField('Wave Distortion', data.waveDistortion, {
+      min: 0,
+      max: 1,
+      useSlider: true,
+      tooltip: 'Warping strength of wave patterns',
+    });
+    if (waveDistortionChanged) data.waveDistortion = waveDistortion;
 
-    ImGui.Spacing();
+    EditorLayout.spacing();
 
     // waveMultiplier slider
-    ImGui.Text('Wave Multiplier:');
-    const waveMultiplier: [number] = [data.waveMultiplier];
-    ImGui.SliderFloat('##waveMultiplier', waveMultiplier, 1, 30);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Frequency/density of waves (higher = more waves)');
-    }
-    data.waveMultiplier = waveMultiplier[0];
+    const [waveMultiplier, waveMultiplierChanged] = EditorLayout.numberField('Wave Multiplier', data.waveMultiplier, {
+      min: 1,
+      max: 30,
+      useSlider: true,
+      tooltip: 'Frequency/density of waves (higher = more waves)',
+    });
+    if (waveMultiplierChanged) data.waveMultiplier = waveMultiplier;
 
-    ImGui.Unindent();
+    EditorLayout.endLabelsWidth();
+    EditorLayout.endGroup();
   }
 }
 
 function renderReflectionSection(data: Water2DData): void {
-  if (ImGui.CollapsingHeader('🪞 Reflection##reflection')) {
-    ImGui.Indent();
+  if (EditorLayout.beginGroup('Reflection', false)) {
+    EditorLayout.beginLabelsWidth(['Offset X', 'Offset Y', 'Skew X', 'Skew Y']);
 
-    // reflectionOffset inline
-    ImGui.Text('Reflection Offset:');
-    const offsetX: [number] = [data.reflectionOffsetX];
-    const offsetY: [number] = [data.reflectionOffsetY];
-    ImGui.SetNextItemWidth(100);
-    ImGui.DragFloat('X##reflOffsetX', offsetX, 0.001, -1.0, 1.0);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Fine-tune reflection position offset horizontally');
-    }
-    ImGui.SameLine();
-    ImGui.SetNextItemWidth(100);
-    ImGui.DragFloat('Y##reflOffsetY', offsetY, 0.001, -1.0, 1.0);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Fine-tune reflection position offset vertically');
-    }
-    data.reflectionOffsetX = offsetX[0];
-    data.reflectionOffsetY = offsetY[0];
+    // reflectionOffset
+    const [offsetX, offsetXChanged] = EditorLayout.numberField('Offset X', data.reflectionOffsetX, {
+      speed: 0.001,
+      min: -1,
+      max: 1,
+      tooltip: 'Fine-tune reflection position offset horizontally',
+      id: 'reflOffsetX',
+    });
+    if (offsetXChanged) data.reflectionOffsetX = offsetX;
 
-    ImGui.Spacing();
+    const [offsetY, offsetYChanged] = EditorLayout.numberField('Offset Y', data.reflectionOffsetY, {
+      speed: 0.001,
+      min: -1,
+      max: 1,
+      tooltip: 'Fine-tune reflection position offset vertically',
+      id: 'reflOffsetY',
+    });
+    if (offsetYChanged) data.reflectionOffsetY = offsetY;
 
-    // reflectionSkew inline
-    ImGui.Text('Reflection Skew:');
-    const skewX: [number] = [data.reflectionSkewX];
-    const skewY: [number] = [data.reflectionSkewY];
-    ImGui.SetNextItemWidth(100);
-    ImGui.DragFloat('X##reflSkewX', skewX, 0.001, -0.5, 0.5);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Perspective distortion for reflection angle (horizontal)');
-    }
-    ImGui.SameLine();
-    ImGui.SetNextItemWidth(100);
-    ImGui.DragFloat('Y##reflSkewY', skewY, 0.001, -0.5, 0.5);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Perspective distortion for reflection angle (vertical)');
-    }
-    data.reflectionSkewX = skewX[0];
-    data.reflectionSkewY = skewY[0];
+    EditorLayout.spacing();
 
-    ImGui.Unindent();
+    // reflectionSkew
+    const [skewX, skewXChanged] = EditorLayout.numberField('Skew X', data.reflectionSkewX, {
+      speed: 0.001,
+      min: -0.5,
+      max: 0.5,
+      tooltip: 'Perspective distortion for reflection angle (horizontal)',
+      id: 'reflSkewX',
+    });
+    if (skewXChanged) data.reflectionSkewX = skewX;
+
+    const [skewY, skewYChanged] = EditorLayout.numberField('Skew Y', data.reflectionSkewY, {
+      speed: 0.001,
+      min: -0.5,
+      max: 0.5,
+      tooltip: 'Perspective distortion for reflection angle (vertical)',
+      id: 'reflSkewY',
+    });
+    if (skewYChanged) data.reflectionSkewY = skewY;
+
+    EditorLayout.endLabelsWidth();
+    EditorLayout.endGroup();
   }
 }
 
 function renderFoamSection(data: Water2DData): void {
-  if (ImGui.CollapsingHeader('🫧 Foam Effects##foamEffects')) {
-    ImGui.Indent();
+  if (EditorLayout.beginGroup('Foam Effects', false)) {
+    EditorLayout.beginLabelsWidth(['Enable Foam Texture']);
 
     // enableWaterTexture checkbox (master toggle)
-    const enableFoam: [boolean] = [data.enableWaterTexture];
-    ImGui.Checkbox('Enable Foam Texture', enableFoam);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Enable foam texture layer on water surface');
-    }
-    data.enableWaterTexture = enableFoam[0];
+    const [enableFoam, enableFoamChanged] = EditorLayout.checkboxField('Enable Foam Texture', data.enableWaterTexture, {
+      tooltip: 'Enable foam texture layer on water surface',
+    });
+    if (enableFoamChanged) data.enableWaterTexture = enableFoam;
+
+    EditorLayout.endLabelsWidth();
 
     // Only show foam settings if enabled
     if (data.enableWaterTexture) {
-      ImGui.Indent();
-      ImGui.Spacing();
+      EditorLayout.beginIndent();
+      EditorLayout.spacing();
 
-      // foamScale Vec2 inline
-      ImGui.Text('Foam Scale:');
-      const foamScaleX: [number] = [data.foamScale.x];
-      const foamScaleY: [number] = [data.foamScale.y];
-      ImGui.SetNextItemWidth(100);
-      ImGui.DragFloat('##foamScaleX', foamScaleX, 0.1, 0.1, 50);
-      if (ImGui.IsItemHovered()) {
-        ImGui.SetTooltip('Size of foam pattern (larger = bigger foam patches)');
-      }
-      ImGui.SameLine();
-      ImGui.Text('×');
-      ImGui.SameLine();
-      ImGui.SetNextItemWidth(100);
-      ImGui.DragFloat('##foamScaleY', foamScaleY, 0.1, 0.1, 50);
-      if (ImGui.IsItemHovered()) {
-        ImGui.SetTooltip('Size of foam pattern (larger = bigger foam patches)');
-      }
-      data.foamScale.x = foamScaleX[0];
-      data.foamScale.y = foamScaleY[0];
+      EditorLayout.beginLabelsWidth(['Foam Scale', 'Foam Speed', 'Foam Intensity', 'Foam Threshold', 'Foam Softness', 'Foam Turbulence', 'Foam Anim Speed', 'Foam Layer Count']);
 
-      ImGui.Spacing();
+      // foamScale Vec2
+      const [foamScale, foamScaleChanged] = EditorLayout.vector2Field('Foam Scale', data.foamScale, {
+        speed: 0.1,
+        min: 0.1,
+        max: 50,
+        tooltip: 'Size of foam pattern (larger = bigger foam patches)',
+      });
+      if (foamScaleChanged) {
+        data.foamScale.x = foamScale.x;
+        data.foamScale.y = foamScale.y;
+      }
+
+      EditorLayout.spacing();
 
       // foamSpeed slider
-      ImGui.Text('Foam Speed:');
-      const foamSpeed: [number] = [data.foamSpeed];
-      ImGui.SliderFloat('##foamSpeed', foamSpeed, 0.0, 0.1);
-      if (ImGui.IsItemHovered()) {
-        ImGui.SetTooltip('Animation speed of foam movement');
-      }
-      data.foamSpeed = foamSpeed[0];
+      const [foamSpeed, foamSpeedChanged] = EditorLayout.numberField('Foam Speed', data.foamSpeed, {
+        min: 0,
+        max: 0.1,
+        useSlider: true,
+        tooltip: 'Animation speed of foam movement',
+      });
+      if (foamSpeedChanged) data.foamSpeed = foamSpeed;
 
       // foamIntensity slider
-      ImGui.Text('Foam Intensity:');
-      const foamIntensity: [number] = [data.foamIntensity];
-      ImGui.SliderFloat('##foamIntensity', foamIntensity, 0.0, 1.0);
-      if (ImGui.IsItemHovered()) {
-        ImGui.SetTooltip('Visibility strength of foam (0=invisible, 1=opaque)');
-      }
-      data.foamIntensity = foamIntensity[0];
+      const [foamIntensity, foamIntensityChanged] = EditorLayout.numberField('Foam Intensity', data.foamIntensity, {
+        min: 0,
+        max: 1,
+        useSlider: true,
+        tooltip: 'Visibility strength of foam (0=invisible, 1=opaque)',
+      });
+      if (foamIntensityChanged) data.foamIntensity = foamIntensity;
 
       // foamThreshold slider
-      ImGui.Text('Foam Threshold:');
-      const foamThreshold: [number] = [data.foamThreshold];
-      ImGui.SliderFloat('##foamThreshold', foamThreshold, 0.0, 1.0);
-      if (ImGui.IsItemHovered()) {
-        ImGui.SetTooltip('Cutoff point for foam visibility (higher = less foam)');
-      }
-      data.foamThreshold = foamThreshold[0];
+      const [foamThreshold, foamThresholdChanged] = EditorLayout.numberField('Foam Threshold', data.foamThreshold, {
+        min: 0,
+        max: 1,
+        useSlider: true,
+        tooltip: 'Cutoff point for foam visibility (higher = less foam)',
+      });
+      if (foamThresholdChanged) data.foamThreshold = foamThreshold;
 
       // foamSoftness slider
-      ImGui.Text('Foam Softness:');
-      const foamSoftness: [number] = [data.foamSoftness];
-      ImGui.SliderFloat('##foamSoftness', foamSoftness, 0.0, 3.0);
-      if (ImGui.IsItemHovered()) {
-        ImGui.SetTooltip('Edge smoothness of foam patterns');
-      }
-      data.foamSoftness = foamSoftness[0];
+      const [foamSoftness, foamSoftnessChanged] = EditorLayout.numberField('Foam Softness', data.foamSoftness, {
+        min: 0,
+        max: 3,
+        useSlider: true,
+        tooltip: 'Edge smoothness of foam patterns',
+      });
+      if (foamSoftnessChanged) data.foamSoftness = foamSoftness;
 
       // foamTurbulence slider
-      ImGui.Text('Foam Turbulence:');
-      const foamTurbulence: [number] = [data.foamTurbulence];
-      ImGui.SliderFloat('##foamTurbulence', foamTurbulence, 0.0, 1.0);
-      if (ImGui.IsItemHovered()) {
-        ImGui.SetTooltip('Chaotic motion in foam animation');
-      }
-      data.foamTurbulence = foamTurbulence[0];
+      const [foamTurbulence, foamTurbulenceChanged] = EditorLayout.numberField('Foam Turbulence', data.foamTurbulence, {
+        min: 0,
+        max: 1,
+        useSlider: true,
+        tooltip: 'Chaotic motion in foam animation',
+      });
+      if (foamTurbulenceChanged) data.foamTurbulence = foamTurbulence;
 
       // foamAnimationSpeed slider
-      ImGui.Text('Foam Anim Speed:');
-      const foamAnimSpeed: [number] = [data.foamAnimationSpeed];
-      ImGui.SliderFloat('##foamAnimSpeed', foamAnimSpeed, 0.0, 2.0);
-      if (ImGui.IsItemHovered()) {
-        ImGui.SetTooltip('Pulsing/fading speed of foam');
-      }
-      data.foamAnimationSpeed = foamAnimSpeed[0];
+      const [foamAnimSpeed, foamAnimSpeedChanged] = EditorLayout.numberField('Foam Anim Speed', data.foamAnimationSpeed, {
+        min: 0,
+        max: 2,
+        useSlider: true,
+        tooltip: 'Pulsing/fading speed of foam',
+      });
+      if (foamAnimSpeedChanged) data.foamAnimationSpeed = foamAnimSpeed;
 
       // foamLayerCount slider (int)
-      ImGui.Text('Foam Layer Count:');
-      const foamLayers: [number] = [data.foamLayerCount];
-      ImGui.SliderInt('##foamLayerCount', foamLayers, 1, 3);
-      if (ImGui.IsItemHovered()) {
-        ImGui.SetTooltip('Detail layers for foam (more layers = finer detail)');
-      }
-      data.foamLayerCount = foamLayers[0];
+      const [foamLayers, foamLayersChanged] = EditorLayout.integerField('Foam Layer Count', data.foamLayerCount, {
+        min: 1,
+        max: 3,
+        useSlider: true,
+        tooltip: 'Detail layers for foam (more layers = finer detail)',
+      });
+      if (foamLayersChanged) data.foamLayerCount = foamLayers;
 
-      ImGui.Unindent();
+      EditorLayout.endLabelsWidth();
+      EditorLayout.endIndent();
     }
 
-    ImGui.Unindent();
+    EditorLayout.endGroup();
   }
 }
 
 function renderWetnessSection(data: Water2DData): void {
-  if (ImGui.CollapsingHeader('💦 Wetness Effects##wetnessEffects')) {
-    ImGui.Indent();
+  if (EditorLayout.beginGroup('Wetness Effects', false)) {
+    EditorLayout.beginLabelsWidth(['Wetness Intensity']);
 
     // wetnessIntensity slider (master control)
-    ImGui.Text('Wetness Intensity:');
-    const wetnessIntensity: [number] = [data.wetnessIntensity];
-    ImGui.SliderFloat('##wetnessIntensity', wetnessIntensity, 0.0, 1.0);
-    if (ImGui.IsItemHovered()) {
-      ImGui.SetTooltip('Overall strength of wetness effect (0=disabled)');
-    }
-    data.wetnessIntensity = wetnessIntensity[0];
+    const [wetnessIntensity, wetnessIntensityChanged] = EditorLayout.numberField('Wetness Intensity', data.wetnessIntensity, {
+      min: 0,
+      max: 1,
+      useSlider: true,
+      tooltip: 'Overall strength of wetness effect (0=disabled)',
+    });
+    if (wetnessIntensityChanged) data.wetnessIntensity = wetnessIntensity;
+
+    EditorLayout.endLabelsWidth();
 
     // Only show wetness settings if intensity > 0
     if (data.wetnessIntensity > 0) {
-      ImGui.Indent();
-      ImGui.Spacing();
+      EditorLayout.beginIndent();
+      EditorLayout.spacing();
+
+      EditorLayout.beginLabelsWidth(['Wetness Opacity', 'Wetness Scale', 'Wetness Speed', 'Wetness Detail Scale', 'Wetness Detail Speed', 'Wetness Contrast', 'Wetness Brightness', 'Wetness Color Tint', 'Tile Size']);
 
       // wetnessOpacity slider
-      ImGui.Text('Wetness Opacity:');
-      const wetnessOpacity: [number] = [data.wetnessOpacity];
-      ImGui.SliderFloat('##wetnessOpacity', wetnessOpacity, 0.0, 1.0);
-      if (ImGui.IsItemHovered()) {
-        ImGui.SetTooltip('Opacity of wetness pattern overlay');
-      }
-      data.wetnessOpacity = wetnessOpacity[0];
+      const [wetnessOpacity, wetnessOpacityChanged] = EditorLayout.numberField('Wetness Opacity', data.wetnessOpacity, {
+        min: 0,
+        max: 1,
+        useSlider: true,
+        tooltip: 'Opacity of wetness pattern overlay',
+      });
+      if (wetnessOpacityChanged) data.wetnessOpacity = wetnessOpacity;
 
-      ImGui.Spacing();
+      EditorLayout.spacing();
 
-      // wetnessScale Vec2 inline
-      ImGui.Text('Wetness Scale:');
-      const wetnessScaleX: [number] = [data.wetnessScale.x];
-      const wetnessScaleY: [number] = [data.wetnessScale.y];
-      ImGui.SetNextItemWidth(100);
-      ImGui.DragFloat('##wetnessScaleX', wetnessScaleX, 0.1, 0.1, 50);
-      if (ImGui.IsItemHovered()) {
-        ImGui.SetTooltip('Size of wetness pattern');
+      // wetnessScale Vec2
+      const [wetnessScale, wetnessScaleChanged] = EditorLayout.vector2Field('Wetness Scale', data.wetnessScale, {
+        speed: 0.1,
+        min: 0.1,
+        max: 50,
+        tooltip: 'Size of wetness pattern',
+      });
+      if (wetnessScaleChanged) {
+        data.wetnessScale.x = wetnessScale.x;
+        data.wetnessScale.y = wetnessScale.y;
       }
-      ImGui.SameLine();
-      ImGui.Text('×');
-      ImGui.SameLine();
-      ImGui.SetNextItemWidth(100);
-      ImGui.DragFloat('##wetnessScaleY', wetnessScaleY, 0.1, 0.1, 50);
-      if (ImGui.IsItemHovered()) {
-        ImGui.SetTooltip('Size of wetness pattern');
-      }
-      data.wetnessScale.x = wetnessScaleX[0];
-      data.wetnessScale.y = wetnessScaleY[0];
 
-      ImGui.Spacing();
+      EditorLayout.spacing();
 
       // wetnessSpeed slider
-      ImGui.Text('Wetness Speed:');
-      const wetnessSpeed: [number] = [data.wetnessSpeed];
-      ImGui.SliderFloat('##wetnessSpeed', wetnessSpeed, 0.0, 0.1);
-      if (ImGui.IsItemHovered()) {
-        ImGui.SetTooltip('Animation speed of wetness pattern');
-      }
-      data.wetnessSpeed = wetnessSpeed[0];
+      const [wetnessSpeed, wetnessSpeedChanged] = EditorLayout.numberField('Wetness Speed', data.wetnessSpeed, {
+        min: 0,
+        max: 0.1,
+        useSlider: true,
+        tooltip: 'Animation speed of wetness pattern',
+      });
+      if (wetnessSpeedChanged) data.wetnessSpeed = wetnessSpeed;
 
-      ImGui.Spacing();
+      EditorLayout.spacing();
 
-      // wetnessDetailScale Vec2 inline
-      ImGui.Text('Wetness Detail Scale:');
-      const detailScaleX: [number] = [data.wetnessDetailScale.x];
-      const detailScaleY: [number] = [data.wetnessDetailScale.y];
-      ImGui.SetNextItemWidth(100);
-      ImGui.DragFloat('##detailScaleX', detailScaleX, 0.1, 0.1, 100);
-      if (ImGui.IsItemHovered()) {
-        ImGui.SetTooltip('Size of detail layer for fine wetness variation');
+      // wetnessDetailScale Vec2
+      const [detailScale, detailScaleChanged] = EditorLayout.vector2Field('Wetness Detail Scale', data.wetnessDetailScale, {
+        speed: 0.1,
+        min: 0.1,
+        max: 100,
+        tooltip: 'Size of detail layer for fine wetness variation',
+      });
+      if (detailScaleChanged) {
+        data.wetnessDetailScale.x = detailScale.x;
+        data.wetnessDetailScale.y = detailScale.y;
       }
-      ImGui.SameLine();
-      ImGui.Text('×');
-      ImGui.SameLine();
-      ImGui.SetNextItemWidth(100);
-      ImGui.DragFloat('##detailScaleY', detailScaleY, 0.1, 0.1, 100);
-      if (ImGui.IsItemHovered()) {
-        ImGui.SetTooltip('Size of detail layer for fine wetness variation');
-      }
-      data.wetnessDetailScale.x = detailScaleX[0];
-      data.wetnessDetailScale.y = detailScaleY[0];
 
-      ImGui.Spacing();
+      EditorLayout.spacing();
 
       // wetnessDetailSpeed slider
-      ImGui.Text('Wetness Detail Speed:');
-      const detailSpeed: [number] = [data.wetnessDetailSpeed];
-      ImGui.SliderFloat('##wetnessDetailSpeed', detailSpeed, 0.0, 0.05);
-      if (ImGui.IsItemHovered()) {
-        ImGui.SetTooltip('Animation speed of detail layer');
-      }
-      data.wetnessDetailSpeed = detailSpeed[0];
+      const [detailSpeed, detailSpeedChanged] = EditorLayout.numberField('Wetness Detail Speed', data.wetnessDetailSpeed, {
+        min: 0,
+        max: 0.05,
+        useSlider: true,
+        tooltip: 'Animation speed of detail layer',
+      });
+      if (detailSpeedChanged) data.wetnessDetailSpeed = detailSpeed;
 
-      ImGui.Spacing();
+      EditorLayout.spacing();
 
       // wetnessContrast slider
-      ImGui.Text('Wetness Contrast:');
-      const wetnessContrast: [number] = [data.wetnessContrast];
-      ImGui.SliderFloat('##wetnessContrast', wetnessContrast, 0.0, 2.0);
-      if (ImGui.IsItemHovered()) {
-        ImGui.SetTooltip('Light/dark variation in wetness (1=normal)');
-      }
-      data.wetnessContrast = wetnessContrast[0];
+      const [wetnessContrast, wetnessContrastChanged] = EditorLayout.numberField('Wetness Contrast', data.wetnessContrast, {
+        min: 0,
+        max: 2,
+        useSlider: true,
+        tooltip: 'Light/dark variation in wetness (1=normal)',
+      });
+      if (wetnessContrastChanged) data.wetnessContrast = wetnessContrast;
 
       // wetnessBrightness slider
-      ImGui.Text('Wetness Brightness:');
-      const wetnessBrightness: [number] = [data.wetnessBrightness];
-      ImGui.SliderFloat('##wetnessBrightness', wetnessBrightness, -1.0, 1.0);
-      if (ImGui.IsItemHovered()) {
-        ImGui.SetTooltip('Brightness adjustment (-1=darker, 1=brighter)');
-      }
-      data.wetnessBrightness = wetnessBrightness[0];
+      const [wetnessBrightness, wetnessBrightnessChanged] = EditorLayout.numberField('Wetness Brightness', data.wetnessBrightness, {
+        min: -1,
+        max: 1,
+        useSlider: true,
+        tooltip: 'Brightness adjustment (-1=darker, 1=brighter)',
+      });
+      if (wetnessBrightnessChanged) data.wetnessBrightness = wetnessBrightness;
 
-      ImGui.Spacing();
+      EditorLayout.spacing();
 
       // wetnessColorTint RGB color picker
-      ImGui.Text('Wetness Color Tint:');
-      const tint: [number, number, number] = [
-        data.wetnessColorTint.r,
-        data.wetnessColorTint.g,
-        data.wetnessColorTint.b,
-      ];
-      if (ImGui.ColorEdit3('##wetnessColorTint', tint)) {
-        data.wetnessColorTint.r = tint[0];
-        data.wetnessColorTint.g = tint[1];
-        data.wetnessColorTint.b = tint[2];
-      }
-      if (ImGui.IsItemHovered()) {
-        ImGui.SetTooltip('Color tint for wetness effect (default: subtle blue)');
+      const [colorTint, colorTintChanged] = EditorLayout.colorField('Wetness Color Tint', data.wetnessColorTint, {
+        tooltip: 'Color tint for wetness effect (default: subtle blue)',
+      });
+      if (colorTintChanged) {
+        data.wetnessColorTint.r = colorTint.r;
+        data.wetnessColorTint.g = colorTint.g;
+        data.wetnessColorTint.b = colorTint.b;
       }
 
-      ImGui.Spacing();
+      EditorLayout.spacing();
 
       // tileSize input
-      ImGui.Text('Tile Size:');
-      const tileSize: [number] = [data.tileSize];
-      ImGui.DragFloat('##tileSize', tileSize, 1, 1, 500);
-      if (ImGui.IsItemHovered()) {
-        ImGui.SetTooltip('Texture repetition in world units (smaller = more tiling)');
-      }
-      data.tileSize = tileSize[0];
+      const [tileSize, tileSizeChanged] = EditorLayout.numberField('Tile Size', data.tileSize, {
+        speed: 1,
+        min: 1,
+        max: 500,
+        tooltip: 'Texture repetition in world units (smaller = more tiling)',
+      });
+      if (tileSizeChanged) data.tileSize = tileSize;
 
-      ImGui.Unindent();
+      EditorLayout.endLabelsWidth();
+      EditorLayout.endIndent();
     }
 
-    ImGui.Unindent();
+    EditorLayout.endGroup();
   }
 }
 
@@ -1051,8 +1010,8 @@ export const Water2D = component<Water2DData>(
     customEditor: ({ componentData }) => {
       // Preset selector at top
       renderPresetSelector(componentData);
-      ImGui.Separator();
-      ImGui.Spacing();
+      EditorLayout.separator();
+      EditorLayout.spacing();
 
       // Collapsible sections
       renderSurfaceSection(componentData);

@@ -14,6 +14,8 @@ import { setSelectedEntity, getSelectedEntity } from './inspector.js';
 import { duplicateEntity } from '../../ecs/entity-utils.js';
 import { globalBundleRegistry } from '../../ecs/bundle-registry.js';
 import { spawnBundleWithDefaults } from '../../ecs/bundle-utils.js';
+import { parseQuery, type ParsedQuery } from './entity-query-parser.js';
+import { evaluateQuery } from './entity-query-evaluator.js';
 
 /**
  * Render the hierarchy viewer window showing all entities in a tree structure
@@ -28,19 +30,40 @@ const autoExpandEntities = new Set<Entity>();
 // Search filter state
 let searchFilter = '';
 
+// Cached parsed query (re-parse only when filter changes)
+let cachedFilter = '';
+let cachedQuery: ParsedQuery | null = null;
+
 /**
- * Check if an entity name matches the search filter (case-insensitive)
+ * Check if an entity matches the search filter query
+ *
+ * Supports advanced query syntax:
+ * - `Test` - Entity name contains "test" (case-insensitive)
+ * - `Test C:Sprite2D` - Name contains "test" AND has Sprite2D
+ * - `C:Sprite2D,Transform3D` - Has BOTH Sprite2D AND Transform3D
+ * - `C:Sprite2D C:Camera` - Has Sprite2D OR Camera
+ * - `NC:Rigidbody2D` - Does NOT have Rigidbody2D
+ * - `Player | Enemy` - Name contains "player" OR "enemy"
+ * - `C:Sprite2D & NC:Camera` - Has Sprite2D AND lacks Camera
  */
 function entityMatchesFilter(
   entity: Entity,
   world: Application['world'],
   filter: string,
 ): boolean {
-  if (!filter) return true;
+  if (!filter.trim()) return true;
 
-  const nameComp = world.getComponent(entity, Name);
-  const displayName = nameComp?.name || `Entity #${entity}`;
-  return displayName.toLowerCase().includes(filter.toLowerCase());
+  // Re-parse only if filter changed
+  if (filter !== cachedFilter) {
+    cachedFilter = filter;
+    const result = parseQuery(filter);
+    cachedQuery = result.success ? result.query : null;
+  }
+
+  // Parse error = show all (graceful degradation)
+  if (!cachedQuery) return true;
+
+  return evaluateQuery(entity, world, cachedQuery);
 }
 
 /**

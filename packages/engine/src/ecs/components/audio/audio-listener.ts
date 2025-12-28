@@ -33,7 +33,7 @@
  */
 
 import { component } from '../../component.js';
-import { ImGui } from '@mori2003/jsimgui';
+import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 
 export interface AudioListenerData {
   /**
@@ -60,19 +60,21 @@ export const AudioListener = component<AudioListenerData>(
       volume: 1.0,
     }),
     customEditor: ({ componentData }) => {
-      ImGui.Text('Master Volume:');
+      EditorLayout.beginLabelsWidth(['Master Volume']);
 
-      const volume: [number] = [componentData.volume];
-      if (ImGui.SliderFloat('##volume_AudioListener', volume, 0.0, 1.0)) {
-        componentData.volume = Math.max(0, Math.min(1, volume[0]));
-      }
+      const [volume, volumeChanged] = EditorLayout.numberField('Master Volume', componentData.volume, {
+        min: 0, max: 1, useSlider: true, tooltip: 'Master volume for all audio (0-1)',
+      });
+      if (volumeChanged) componentData.volume = volume;
 
-      ImGui.SameLine();
-      ImGui.TextDisabled(`(${Math.round(componentData.volume * 100)}%)`);
+      EditorLayout.sameLine();
+      EditorLayout.textDisabled(`(${Math.round(componentData.volume * 100)}%)`);
 
-      ImGui.Separator();
-      ImGui.TextColored({ x: 0.7, y: 0.7, z: 0.7, w: 1.0 }, 'Note: Only one AudioListener should be active.');
-      ImGui.TextColored({ x: 0.7, y: 0.7, z: 0.7, w: 1.0 }, 'Audio only plays during Play Mode.');
+      EditorLayout.endLabelsWidth();
+
+      EditorLayout.separator();
+      EditorLayout.hint('Note: Only one AudioListener should be active.');
+      EditorLayout.hint('Audio only plays during Play Mode.');
     },
   },
 );

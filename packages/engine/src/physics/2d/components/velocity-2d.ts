@@ -16,6 +16,7 @@
 
 import { component } from '../../../ecs/component.js';
 import * as THREE from 'three';
+import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 
 export interface Velocity2DData {
   /** Linear velocity in pixels/second */
@@ -50,5 +51,35 @@ export const Velocity2D = component<Velocity2DData>(
     }),
     displayName: 'Velocity 2D',
     description: 'Linear and angular velocity for 2D physics',
+    customEditor: ({ componentData }) => {
+      EditorLayout.beginLabelsWidth(['Linear Velocity', 'Angular Velocity']);
+
+      const [linear, linearChanged] = EditorLayout.vector2Field(
+        'Linear Velocity',
+        componentData.linear,
+        {
+          speed: 1,
+          tooltip: 'Linear velocity in pixels/second',
+        }
+      );
+      if (linearChanged) {
+        componentData.linear.x = linear.x;
+        componentData.linear.y = linear.y;
+      }
+
+      const [angular, angularChanged] = EditorLayout.numberField(
+        'Angular Velocity',
+        componentData.angular,
+        {
+          speed: 0.1,
+          tooltip: 'Angular velocity in radians/second (positive = counter-clockwise)',
+        }
+      );
+      if (angularChanged) {
+        componentData.angular = angular;
+      }
+
+      EditorLayout.endLabelsWidth();
+    },
   },
 );
