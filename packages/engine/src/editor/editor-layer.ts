@@ -71,6 +71,7 @@ import {
   closeSpriteEditor,
 } from '../app/imgui/sprite-editor/index.js';
 import { renderImGuiResourceViewer } from '../app/imgui/resource-viewer.js';
+import { Input, KeyCode } from '../app/input.js';
 
 // ============================================================================
 // Editor Configuration
@@ -388,6 +389,19 @@ export class EditorLayer extends Layer {
       const io = ImGui.GetIO();
       const blockInput = (io.WantCaptureKeyboard || io.WantCaptureMouse) && !this.isSceneViewHovered;
       editorCameraManager.update(deltaTime, blockInput);
+
+      // Focus on selected entity with F key (when Scene View is hovered)
+      if (this.isSceneViewHovered && !io.WantTextInput) {
+        if (Input.isKeyJustPressed(KeyCode.KeyF)) {
+          const selectedEntity = getSelectedEntity();
+          if (selectedEntity !== undefined) {
+            const transform = app.getCommands().tryGetComponent(selectedEntity, Transform3D);
+            if (transform) {
+              editorCameraManager.focusOnPosition(transform.position);
+            }
+          }
+        }
+      }
     }
 
     // Sync debug helpers for entities with Collider2D/Camera

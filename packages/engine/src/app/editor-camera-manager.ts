@@ -385,6 +385,39 @@ export class EditorCameraManager {
   }
 
   /**
+   * Focus camera on a target position
+   * @param targetPosition The world position to focus on
+   */
+  focusOnPosition(targetPosition: { x: number; y: number; z: number }): void {
+    if (this._mode === '2d') {
+      // 2D mode: move to X/Y, keep Z (maintains zoom)
+      const camera = this.getEditorCamera();
+      camera.position.x = targetPosition.x;
+      camera.position.y = targetPosition.y;
+      // Keep camera.position.z unchanged to preserve zoom level
+    } else {
+      // 3D mode: position camera at fixed distance, look at target
+      // TODO: In the future, detect mesh bounds (via Render3DManager) to calculate
+      // optimal distance that frames the entire object in view
+      const distance = 5;
+      const target = new THREE.Vector3(targetPosition.x, targetPosition.y, targetPosition.z);
+
+      // Position camera behind and above the target
+      this.perspectiveCamera.position.set(
+        target.x,
+        target.y + distance * 0.5,
+        target.z + distance
+      );
+      this.perspectiveCamera.lookAt(target);
+
+      // Update yaw/pitch to match the new rotation (so mouse look continues from here)
+      const euler = new THREE.Euler().setFromQuaternion(this.perspectiveCamera.quaternion, 'YXZ');
+      this.yaw = euler.y;
+      this.pitch = euler.x;
+    }
+  }
+
+  /**
    * Get current 2D zoom level
    */
   getZoom2D(): number {
