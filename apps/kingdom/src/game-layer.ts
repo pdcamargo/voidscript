@@ -9,6 +9,7 @@ import { playerMovementSystem } from './systems/player-movement-system.js';
 import { forestLightSystem } from './systems/forest-light-system.js';
 import { gameTimeSystem } from './systems/game-time-system.js';
 import { weatherScheduleSystem } from './systems/weather-schedule-system.js';
+import { campFireSyncSystem } from './systems/camp-fire-sync-system.js';
 
 /**
  * Main loop layer for the Kingdom game
@@ -33,6 +34,9 @@ export class GameLayer extends Layer {
     app.addUpdateSystem(cloudMovementSystem);
     app.addUpdateSystem(fogSkySyncSystem);
     app.addUpdateSystem(forestLightSystem);
+
+    // Building sync systems (runs in editor and play mode)
+    app.addUpdateSystem(campFireSyncSystem);
   }
 
   override onDetach(): void {}

@@ -72,8 +72,8 @@ export function renderImGuiResourceViewer(app: Application): void {
       ImGui.TextDisabled('Select a resource to view details');
     }
 
-    ImGui.End();
   }
+  ImGui.End();
 }
 
 /**

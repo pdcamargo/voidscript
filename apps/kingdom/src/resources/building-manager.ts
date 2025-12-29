@@ -7,6 +7,9 @@
 
 import { BuildingType } from '../types/enums.js';
 
+/** Default X position for the camp building */
+export const DEFAULT_CAMP_POSITION_X = -120;
+
 /**
  * Configuration for a building type.
  */
@@ -150,6 +153,11 @@ export class BuildingManager {
    */
   private _idCounter = 0;
 
+  /**
+   * Camp building ID (the camp always exists and there's only one).
+   */
+  private _campId: string | null = null;
+
   // ============================================================================
   // Constructor
   // ============================================================================
@@ -159,6 +167,9 @@ export class BuildingManager {
     for (const type of Object.values(BuildingType)) {
       this._buildings.set(type, []);
     }
+
+    // Auto-create the camp building at default position
+    this._campId = this.addBuilding(BuildingType.Camp, DEFAULT_CAMP_POSITION_X, 1);
   }
 
   // ============================================================================
@@ -184,6 +195,34 @@ export class BuildingManager {
    */
   getBuildingCount(type: BuildingType): number {
     return this._buildings.get(type)?.length ?? 0;
+  }
+
+  /**
+   * Get the camp building ID.
+   */
+  get campId(): string | null {
+    return this._campId;
+  }
+
+  /**
+   * Get the camp's X position.
+   * Returns DEFAULT_CAMP_POSITION_X if no camp exists.
+   */
+  get campPositionX(): number {
+    if (!this._campId) return DEFAULT_CAMP_POSITION_X;
+    const camp = this._buildingsById.get(this._campId);
+    return camp?.positionX ?? DEFAULT_CAMP_POSITION_X;
+  }
+
+  /**
+   * Set the camp's X position.
+   */
+  setCampPositionX(x: number): void {
+    if (!this._campId) return;
+    const camp = this._buildingsById.get(this._campId);
+    if (camp) {
+      camp.positionX = x;
+    }
   }
 
   // ============================================================================
@@ -216,6 +255,11 @@ export class BuildingManager {
     this._buildings.get(type)!.push(building);
     this._buildingsById.set(id, building);
 
+    // Track camp ID if this is a camp building
+    if (type === BuildingType.Camp) {
+      this._campId = id;
+    }
+
     this.recalculatePopulationCap();
 
     return id;
@@ -242,6 +286,11 @@ export class BuildingManager {
 
     // Remove from ID map
     this._buildingsById.delete(id);
+
+    // Clear camp ID if camp was removed
+    if (this._campId === id) {
+      this._campId = null;
+    }
 
     this.recalculatePopulationCap();
 
@@ -390,6 +439,10 @@ export class BuildingManager {
     this._buildingsById.clear();
     this._totalPopulationCap = 0;
     this._idCounter = 0;
+    this._campId = null;
+
+    // Re-create the camp at default position
+    this._campId = this.addBuilding(BuildingType.Camp, DEFAULT_CAMP_POSITION_X, 1);
   }
 }
 

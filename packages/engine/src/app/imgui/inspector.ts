@@ -74,46 +74,44 @@ export function renderImGuiInspector(app: Application, entity?: Entity): void {
     // Check if a keyframe is selected in the animation editor - show keyframe editor instead
     if (hasSelectedKeyframe()) {
       renderKeyframeEditor(currentRenderer, app.world);
-      ImGui.End();
-      return;
-    }
-
-    // Keyboard shortcuts (only when window focused and not typing in text fields)
-    if (
-      targetEntity !== undefined &&
-      ImGui.IsWindowFocused() &&
-      !ImGui.GetIO().WantTextInput
-    ) {
-      // Ctrl+D to duplicate
-      if (Input.isCtrlPressed() && Input.isKeyJustPressed(KeyCode.KeyD)) {
-        const duplicate = duplicateEntity(
-          targetEntity,
-          app.world,
-          app.getCommands(),
-        );
-        if (duplicate !== undefined) {
-          setSelectedEntity(duplicate); // Auto-select the duplicate
-          console.log(
-            `[Inspector] Duplicated entity #${targetEntity} → #${duplicate}`,
+    } else {
+      // Keyboard shortcuts (only when window focused and not typing in text fields)
+      if (
+        targetEntity !== undefined &&
+        ImGui.IsWindowFocused() &&
+        !ImGui.GetIO().WantTextInput
+      ) {
+        // Ctrl+D to duplicate
+        if (Input.isCtrlPressed() && Input.isKeyJustPressed(KeyCode.KeyD)) {
+          const duplicate = duplicateEntity(
+            targetEntity,
+            app.world,
+            app.getCommands(),
           );
+          if (duplicate !== undefined) {
+            setSelectedEntity(duplicate); // Auto-select the duplicate
+            console.log(
+              `[Inspector] Duplicated entity #${targetEntity} → #${duplicate}`,
+            );
+          }
+        }
+
+        // Delete key to delete
+        if (Input.isKeyJustPressed(KeyCode.Delete)) {
+          app.getCommands().entity(targetEntity).destroyRecursive();
+          setSelectedEntity(undefined); // Clear selection
+          console.log(`[Inspector] Deleted entity #${targetEntity}`);
         }
       }
 
-      // Delete key to delete
-      if (Input.isKeyJustPressed(KeyCode.Delete)) {
-        app.getCommands().entity(targetEntity).destroyRecursive();
-        setSelectedEntity(undefined); // Clear selection
-        console.log(`[Inspector] Deleted entity #${targetEntity}`);
+      if (targetEntity === undefined) {
+        ImGui.Text('No entity selected');
+      } else {
+        renderEntityInspector(app, targetEntity);
       }
     }
-
-    if (targetEntity === undefined) {
-      ImGui.Text('No entity selected');
-    } else {
-      renderEntityInspector(app, targetEntity);
-    }
-    ImGui.End();
   }
+  ImGui.End();
 }
 
 function renderEntityInspector(app: Application, entity: Entity): void {

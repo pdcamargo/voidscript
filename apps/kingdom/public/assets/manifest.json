@@ -4,6 +4,62 @@
     "type": "audio",
     "path": "/assets/audio/woods.ogg"
   },
+  "fire": {
+    "type": "texture",
+    "path": "/assets/sprites/Fire.png",
+    "magFilter": "nearest",
+    "minFilter": "nearest",
+    "wrapS": "clamp",
+    "wrapT": "clamp",
+    "width": 468,
+    "height": 38,
+    "sprites": [
+      {
+        "id": "fire-1",
+        "name": "Fire 1",
+        "x": 0,
+        "y": 0,
+        "width": 38,
+        "height": 38,
+        "pivot": {
+          "x": 0.5,
+          "y": 0.5
+        }
+      },
+      {
+        "id": "fire-2",
+        "name": "Fire 2",
+        "x": 38,
+        "y": 0,
+        "width": 38,
+        "height": 38
+      },
+      {
+        "id": "fire-3",
+        "name": "Fire 3",
+        "x": 76,
+        "y": 0,
+        "width": 38,
+        "height": 38
+      },
+      {
+        "id": "fire-4",
+        "name": "Fire 4",
+        "x": 114,
+        "y": 0,
+        "width": 38,
+        "height": 38
+      },
+      {
+        "id": "fire-5",
+        "name": "Fire 5",
+        "x": 152,
+        "y": 0,
+        "width": 38,
+        "height": 38
+      }
+    ]
+  },
   "mountain-grass-1": {
     "type": "texture",
     "path": "/assets/sprites/Mountain Grass 1.png",

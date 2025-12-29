@@ -358,12 +358,12 @@ export function renderComponentPicker(options: ComponentPickerOptions): void {
     if (ImGui.IsKeyPressed(ImGui.Key._Escape)) {
       closeComponentPicker();
     }
-
-    ImGui.End();
-  } else {
-    // Window was closed via X button
-    closeComponentPicker();
   }
+  ImGui.End();
+
+  // Check if window was closed via X button (handled after End)
+  // Note: When Begin returns false, the window is collapsed or closed
+  // but we still need to call End() unconditionally
 }
 
 /**

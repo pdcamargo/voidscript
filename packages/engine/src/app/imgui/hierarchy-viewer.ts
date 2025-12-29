@@ -204,8 +204,8 @@ export function renderImGuiHierarchy(app: Application): void {
       ImGui.EndPopup();
     }
 
-    ImGui.End();
   }
+  ImGui.End();
 }
 
 /**

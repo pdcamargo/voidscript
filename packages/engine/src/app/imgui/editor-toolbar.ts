@@ -85,8 +85,8 @@ export function renderEditorToolbar(state: EditorToolbarState): void {
       ImGui.TextColored({ x: 0.7, y: 0.7, z: 0.7, w: 1.0 }, fpsText);
     }
 
-    ImGui.End();
   }
+  ImGui.End();
 }
 
 /**

@@ -54,6 +54,7 @@ import './components/sun-light.js';
 import './components/villager.js';
 import './components/homeless.js';
 import './components/building.js';
+import './components/camp-fire.js';
 
 async function main() {
   const app = new Application({
