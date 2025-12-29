@@ -54,10 +54,8 @@ export { Name } from "./ecs/components/name.js";
 export type { NameData } from "./ecs/components/name.js";
 export { Parent } from "./ecs/components/parent.js";
 export { Children } from "./ecs/components/children.js";
-export { SceneRoot } from "./ecs/components/scene-root.js";
-export type { SceneRootData } from "./ecs/components/scene-root.js";
-export { SceneChild } from "./ecs/components/scene-child.js";
-export type { SceneChildData } from "./ecs/components/scene-child.js";
+export { PrefabInstance } from "./ecs/components/prefab-instance.js";
+export type { PrefabInstanceData } from "./ecs/components/prefab-instance.js";
 
 // ECS Serialization
 export {
@@ -87,16 +85,16 @@ export type {
   WorldData,
 } from "./ecs/serialization/index.js";
 
-// Scene System
-export { SceneManager } from "./ecs/scene-manager.js";
-export { SceneSerializer } from "./ecs/scene-serializer.js";
+// Prefab System
+export { PrefabManager } from "./ecs/prefab-manager.js";
+export { PrefabSerializer } from "./ecs/prefab-serializer.js";
 export type {
-  SceneAsset,
-  SceneData,
-  InstantiateSceneOptions,
-  InstantiateSceneResult,
-} from "./ecs/scene-asset.js";
-export type { SaveSceneOptions } from "./ecs/scene-serializer.js";
+  PrefabAsset,
+  PrefabData,
+  InstantiatePrefabOptions,
+  InstantiatePrefabResult,
+  SavePrefabOptions,
+} from "./ecs/prefab-asset.js";
 
 // Asset System
 export { RuntimeAsset, isRuntimeAsset } from "./ecs/runtime-asset.js";
@@ -112,7 +110,7 @@ export {
   TextureFilter,
   TextureWrap,
   isTextureMetadata,
-  isSceneMetadata,
+  isPrefabMetadata,
   isAnimationMetadata,
   isAudioAssetMetadata,
   isUnknownAssetMetadata,
@@ -123,7 +121,7 @@ export type {
   GUID,
   BaseAssetMetadata,
   TextureMetadata,
-  SceneMetadata,
+  PrefabMetadata,
   AnimationMetadata,
   AudioAssetMetadata,
   UnknownAssetMetadata,

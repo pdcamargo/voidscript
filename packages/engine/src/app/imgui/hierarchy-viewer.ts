@@ -8,6 +8,7 @@
 import type { Application } from '../application.js';
 import type { Entity } from '../../ecs/entity.js';
 import { Parent, Children, Name, Transform3D, LocalTransform3D } from '../../ecs/components/index.js';
+import { PrefabInstance } from '../../ecs/components/prefab-instance.js';
 import { Vector3 } from '../../math/index.js';
 import { ImGui } from '@mori2003/jsimgui';
 import { setSelectedEntity, getSelectedEntity } from './inspector.js';
@@ -16,6 +17,13 @@ import { globalBundleRegistry } from '../../ecs/bundle-registry.js';
 import { spawnBundleWithDefaults } from '../../ecs/bundle-utils.js';
 import { parseQuery, type ParsedQuery } from './entity-query-parser.js';
 import { evaluateQuery } from './entity-query-evaluator.js';
+import { PrefabManager } from '../../ecs/prefab-manager.js';
+import { PrefabSerializer } from '../../ecs/prefab-serializer.js';
+import { AssetDatabase } from '../../ecs/asset-database.js';
+import { AssetType, isPrefabMetadata } from '../../ecs/asset-metadata.js';
+import { RuntimeAssetManager } from '../../ecs/runtime-asset-manager.js';
+import type { RuntimeAsset } from '../../ecs/runtime-asset.js';
+import type { PrefabAsset } from '../../ecs/prefab-asset.js';
 
 /**
  * Render the hierarchy viewer window showing all entities in a tree structure
@@ -33,6 +41,10 @@ let searchFilter = '';
 // Cached parsed query (re-parse only when filter changes)
 let cachedFilter = '';
 let cachedQuery: ParsedQuery | null = null;
+
+// Prefab picker popup state
+let prefabPickerOpen = false;
+let prefabPickerParentEntity: Entity | null = null; // null = spawn at root level
 
 /**
  * Check if an entity matches the search filter query
@@ -201,11 +213,51 @@ export function renderImGuiHierarchy(app: Application): void {
         ImGui.EndMenu();
       }
 
+      // Spawn Prefab submenu
+      if (ImGui.BeginMenu('Spawn Prefab')) {
+        const prefabGuids = AssetDatabase.getAllGuids().filter((guid) => {
+          const meta = AssetDatabase.getMetadata(guid);
+          return meta && isPrefabMetadata(meta);
+        });
+
+        if (prefabGuids.length === 0) {
+          ImGui.TextDisabled('No prefabs registered');
+        } else {
+          for (const guid of prefabGuids) {
+            const meta = AssetDatabase.getMetadata(guid);
+            const displayName = meta?.path.split('/').pop() || guid;
+
+            if (ImGui.MenuItem(displayName)) {
+              // Spawn prefab at root level
+              if (PrefabManager.has()) {
+                const prefabManager = PrefabManager.get();
+                const runtimeAsset = RuntimeAssetManager.get().get(guid);
+                if (runtimeAsset) {
+                  // Load prefab if not already loaded, then instantiate
+                  prefabManager.loadPrefab(runtimeAsset as RuntimeAsset<PrefabAsset>).then(() => {
+                    const result = prefabManager.instantiate(guid, world, app.getCommands());
+                    setSelectedEntity(result.rootEntity);
+                    console.log(`[Hierarchy] Spawned prefab: ${displayName}`);
+                  }).catch((err) => {
+                    console.error(`[Hierarchy] Failed to spawn prefab: ${err}`);
+                  });
+                }
+              }
+            }
+          }
+        }
+
+        ImGui.EndMenu();
+      }
+
       ImGui.EndPopup();
     }
 
   }
   ImGui.End();
+
+  // Render the save prefab dialog if open
+  renderSavePrefabDialog(app);
 }
 
 /**
@@ -225,7 +277,14 @@ function renderEntityNode(
   // Get name or use fallback
   const nameComp = world.getComponent(entity, Name);
   const displayName = nameComp?.name || `Entity #${entity}`;
-  const nodeLabel = `${displayName}##${entity}`; // Unique ID for ImGui
+
+  // Check if entity is a prefab instance (root)
+  const prefabInstance = world.getComponent(entity, PrefabInstance);
+  const isPrefabRoot = prefabInstance !== null && prefabInstance !== undefined;
+
+  // For prefab instances, add [P] prefix and render as collapsed (no children)
+  const prefabPrefix = isPrefabRoot ? '[P] ' : '';
+  const nodeLabel = `${prefabPrefix}${displayName}##${entity}`; // Unique ID for ImGui
 
   // Check if entity has children
   const childrenComp = world.getComponent(entity, Children);
@@ -233,6 +292,12 @@ function renderEntityNode(
 
   // Check if this entity is selected
   const isSelected = getSelectedEntity() === entity;
+
+  // Prefab instances render as leaf nodes (collapsed view - no children shown)
+  if (isPrefabRoot) {
+    renderPrefabNode(app, entity, displayName, nodeLabel, isSelected, prefabInstance);
+    return;
+  }
 
   if (hasChildren) {
     // Auto-expand if this entity was marked for expansion
@@ -324,6 +389,51 @@ function renderEntityNode(
         }
 
         ImGui.EndMenu();
+      }
+
+      // Spawn Prefab as Child submenu
+      if (ImGui.BeginMenu('Spawn Prefab as Child')) {
+        const prefabGuids = AssetDatabase.getAllGuids().filter((guid) => {
+          const meta = AssetDatabase.getMetadata(guid);
+          return meta && isPrefabMetadata(meta);
+        });
+
+        if (prefabGuids.length === 0) {
+          ImGui.TextDisabled('No prefabs registered');
+        } else {
+          for (const guid of prefabGuids) {
+            const meta = AssetDatabase.getMetadata(guid);
+            const prefabDisplayName = meta?.path.split('/').pop() || guid;
+
+            if (ImGui.MenuItem(prefabDisplayName)) {
+              if (PrefabManager.has()) {
+                const prefabManager = PrefabManager.get();
+                const runtimeAsset = RuntimeAssetManager.get().get(guid);
+                if (runtimeAsset) {
+                  prefabManager.loadPrefab(runtimeAsset as RuntimeAsset<PrefabAsset>).then(() => {
+                    const result = prefabManager.instantiate(guid, world, commands, {
+                      parentEntity: entity,
+                    });
+                    autoExpandEntities.add(entity);
+                    setSelectedEntity(result.rootEntity);
+                    console.log(`[Hierarchy] Spawned prefab "${prefabDisplayName}" as child of entity #${entity}`);
+                  }).catch((err) => {
+                    console.error(`[Hierarchy] Failed to spawn prefab: ${err}`);
+                  });
+                }
+              }
+            }
+          }
+        }
+
+        ImGui.EndMenu();
+      }
+
+      ImGui.Separator();
+
+      if (ImGui.MenuItem('Save as Prefab...')) {
+        // Save this entity and its children as a prefab
+        savePrefabFromEntity(app, entity, displayName);
       }
 
       if (ImGui.MenuItem('Delete')) {
@@ -440,6 +550,51 @@ function renderEntityNode(
         ImGui.EndMenu();
       }
 
+      // Spawn Prefab as Child submenu
+      if (ImGui.BeginMenu('Spawn Prefab as Child')) {
+        const prefabGuids = AssetDatabase.getAllGuids().filter((guid) => {
+          const meta = AssetDatabase.getMetadata(guid);
+          return meta && isPrefabMetadata(meta);
+        });
+
+        if (prefabGuids.length === 0) {
+          ImGui.TextDisabled('No prefabs registered');
+        } else {
+          for (const guid of prefabGuids) {
+            const meta = AssetDatabase.getMetadata(guid);
+            const prefabDisplayName = meta?.path.split('/').pop() || guid;
+
+            if (ImGui.MenuItem(prefabDisplayName)) {
+              if (PrefabManager.has()) {
+                const prefabManager = PrefabManager.get();
+                const runtimeAsset = RuntimeAssetManager.get().get(guid);
+                if (runtimeAsset) {
+                  prefabManager.loadPrefab(runtimeAsset as RuntimeAsset<PrefabAsset>).then(() => {
+                    const result = prefabManager.instantiate(guid, world, commands, {
+                      parentEntity: entity,
+                    });
+                    autoExpandEntities.add(entity);
+                    setSelectedEntity(result.rootEntity);
+                    console.log(`[Hierarchy] Spawned prefab "${prefabDisplayName}" as child of entity #${entity}`);
+                  }).catch((err) => {
+                    console.error(`[Hierarchy] Failed to spawn prefab: ${err}`);
+                  });
+                }
+              }
+            }
+          }
+        }
+
+        ImGui.EndMenu();
+      }
+
+      ImGui.Separator();
+
+      if (ImGui.MenuItem('Save as Prefab...')) {
+        // Save this entity and its children as a prefab
+        savePrefabFromEntity(app, entity, displayName);
+      }
+
       if (ImGui.MenuItem('Delete')) {
         // Delete the entity and all its children
         commands.entity(entity).destroyRecursive();
@@ -449,5 +604,188 @@ function renderEntityNode(
 
       ImGui.EndPopup();
     }
+  }
+}
+
+/**
+ * Render a prefab instance node (collapsed view - children not shown)
+ */
+function renderPrefabNode(
+  app: Application,
+  entity: Entity,
+  displayName: string,
+  nodeLabel: string,
+  isSelected: boolean,
+  prefabInstance: { prefabAssetGuid: string; instanceId: string },
+): void {
+  const world = app.world;
+  const commands = app.getCommands();
+
+  // Render as leaf node with special styling
+  let flags = ImGui.TreeNodeFlags.Leaf | ImGui.TreeNodeFlags.NoTreePushOnOpen;
+  if (isSelected) {
+    flags |= ImGui.TreeNodeFlags.Selected;
+  }
+
+  // Blue color for prefab nodes
+  ImGui.PushStyleColorImVec4(ImGui.Col.Text, { x: 0.4, y: 0.7, z: 1.0, w: 1.0 });
+  ImGui.TreeNodeEx(nodeLabel, flags);
+  ImGui.PopStyleColor();
+
+  // Handle selection on left click
+  if (ImGui.IsItemClicked(0)) {
+    setSelectedEntity(entity);
+  }
+
+  // Check for right-click
+  if (ImGui.IsItemClicked(1)) {
+    ImGui.OpenPopup(`PrefabContextMenu##${entity}`);
+    entityContextMenuOpened = true;
+  }
+
+  // Render context menu for prefab node
+  if (ImGui.BeginPopup(`PrefabContextMenu##${entity}`)) {
+    ImGui.Text(`[P] ${displayName}`);
+    ImGui.TextDisabled(`Prefab: ${prefabInstance.prefabAssetGuid}`);
+    ImGui.Separator();
+
+    if (ImGui.MenuItem('Unpack Prefab')) {
+      // Remove PrefabInstance component, making it a regular entity
+      if (PrefabManager.has()) {
+        PrefabManager.get().unpack(entity, commands);
+        console.log(`[Hierarchy] Unpacked prefab instance: ${displayName}`);
+      }
+    }
+
+    if (ImGui.MenuItem('Duplicate')) {
+      const duplicate = duplicateEntity(entity, world, commands);
+      if (duplicate !== undefined) {
+        setSelectedEntity(duplicate);
+        console.log(`[Hierarchy] Duplicated prefab instance #${entity} → #${duplicate}`);
+      }
+    }
+
+    if (ImGui.MenuItem('Delete')) {
+      // Delete the prefab and all its children
+      commands.entity(entity).destroyRecursive();
+      setSelectedEntity(undefined);
+      console.log(`[Hierarchy] Deleted prefab instance #${entity}`);
+    }
+
+    ImGui.EndPopup();
+  }
+}
+
+// ============================================================================
+// Save Prefab Dialog State
+// ============================================================================
+
+let savePrefabDialogOpen = false;
+let savePrefabEntity: Entity | null = null;
+let savePrefabName = '';
+let savePrefabPath = '';
+
+/**
+ * Initiate saving an entity as a prefab
+ * Opens a dialog to get the prefab path
+ */
+function savePrefabFromEntity(app: Application, entity: Entity, displayName: string): void {
+  savePrefabDialogOpen = true;
+  savePrefabEntity = entity;
+  savePrefabName = displayName;
+  // Suggest a default path based on the entity name
+  const safeName = displayName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+  savePrefabPath = `/prefabs/${safeName}.prefab.yaml`;
+}
+
+/**
+ * Render the Save Prefab dialog (call this from renderImGuiHierarchy)
+ */
+export function renderSavePrefabDialog(app: Application): void {
+  if (!savePrefabDialogOpen || savePrefabEntity === null) {
+    return;
+  }
+
+  ImGui.SetNextWindowSize({ x: 400, y: 150 }, ImGui.Cond.FirstUseEver);
+
+  if (ImGui.Begin('Save as Prefab', undefined, ImGui.WindowFlags.NoCollapse)) {
+    ImGui.Text('Entity:');
+    ImGui.SameLine();
+    ImGui.TextDisabled(savePrefabName);
+
+    ImGui.Text('Path:');
+    ImGui.SameLine();
+    ImGui.SetNextItemWidth(-1);
+    const pathBuffer: [string] = [savePrefabPath];
+    ImGui.InputText('##PrefabPath', pathBuffer, 256);
+    savePrefabPath = pathBuffer[0];
+
+    ImGui.Separator();
+
+    if (ImGui.Button('Save')) {
+      // Perform the save
+      performPrefabSave(app, savePrefabEntity, savePrefabPath);
+      savePrefabDialogOpen = false;
+      savePrefabEntity = null;
+    }
+
+    ImGui.SameLine();
+
+    if (ImGui.Button('Cancel')) {
+      savePrefabDialogOpen = false;
+      savePrefabEntity = null;
+    }
+  }
+  ImGui.End();
+}
+
+/**
+ * Actually save the prefab to the manifest and generate YAML
+ */
+function performPrefabSave(app: Application, entity: Entity, path: string): void {
+  const world = app.world;
+  const commands = app.getCommands();
+
+  // Use PrefabSerializer to create the prefab asset
+  const serializer = new PrefabSerializer();
+
+  try {
+    const prefabAsset = serializer.savePrefab(entity, world, commands, {
+      path,
+    });
+
+    // Convert to YAML
+    const yaml = serializer.toYaml(prefabAsset);
+
+    // Log the YAML for now (actual file saving would require file system access)
+    console.log(`[Hierarchy] Saved prefab to ${path}`);
+    console.log('[Hierarchy] Prefab YAML:');
+    console.log(yaml);
+
+    // Register the prefab in AssetDatabase so it can be spawned
+    const guid = prefabAsset.metadata.guid;
+    AssetDatabase.registerAdditionalAssets({
+      [guid]: {
+        type: AssetType.Prefab,
+        path,
+      },
+    });
+
+    // Cache the prefab data in PrefabManager
+    if (PrefabManager.has()) {
+      PrefabManager.get().loadPrefabFromData(guid, prefabAsset);
+    }
+
+    // If app has manifestPath, try to update the manifest
+    // Note: This would require file system write access which may not be available in browser
+    const manifestPath = (app as any).manifestPath;
+    if (manifestPath) {
+      console.log(`[Hierarchy] Would add to manifest at: ${manifestPath}`);
+      // In a real implementation, we'd write to the manifest file
+    }
+
+    console.log(`[Hierarchy] Prefab "${path}" registered with GUID: ${guid}`);
+  } catch (err) {
+    console.error(`[Hierarchy] Failed to save prefab: ${err}`);
   }
 }

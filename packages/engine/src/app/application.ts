@@ -78,6 +78,7 @@ import {
   tiledObjectCollisionSystem,
 } from "../tiled/systems/index.js";
 import { AssetDatabase, type AssetsConfig } from "../ecs/asset-database.js";
+import { PrefabManager } from "../ecs/prefab-manager.js";
 import { EditorCameraManager } from "./editor-camera-manager.js";
 import { EditorManager } from "../editor/editor-manager.js";
 import { ConsoleLogger } from "./console-logger.js";
@@ -1220,6 +1221,9 @@ export class Application {
     const consoleLogger = new ConsoleLogger();
     consoleLogger.startIntercepting();
     this.insertResource(consoleLogger);
+
+    // Prefab system (singleton manager for prefab instantiation)
+    PrefabManager.initialize();
 
     // Tween system
     this.insertResource(new TweenManager());

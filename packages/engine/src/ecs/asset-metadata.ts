@@ -18,7 +18,7 @@ export type GUID = string;
 export enum AssetType {
   Texture = 'texture',
   Material = 'material',
-  Scene = 'scene',
+  Prefab = 'prefab',
   Model3D = 'model3d',
   TiledMap = 'tiledmap',
   Animation = 'animation',
@@ -190,19 +190,19 @@ export interface TextureMetadata extends BaseAssetMetadata {
 }
 
 /**
- * Scene metadata interface
+ * Prefab metadata interface
  */
-export interface SceneMetadata extends BaseAssetMetadata {
-  type: AssetType.Scene;
+export interface PrefabMetadata extends BaseAssetMetadata {
+  type: AssetType.Prefab;
 
-  /** Number of entities in the scene */
+  /** Number of entities in the prefab */
   entityCount: number;
 
-  /** Component types used in the scene (for dependency tracking) */
+  /** Component types used in the prefab (for dependency tracking) */
   componentTypes: string[];
 
-  /** GUIDs of nested scenes referenced within this scene */
-  nestedScenes: string[];
+  /** GUIDs of nested prefabs referenced within this prefab */
+  nestedPrefabs: string[];
 
   /** Optional preview image path (relative from project root) */
   thumbnailPath?: string;
@@ -508,7 +508,7 @@ export interface UnknownAssetMetadata extends BaseAssetMetadata {
 export type AssetMetadata =
   | TextureMetadata
   | MaterialMetadata
-  | SceneMetadata
+  | PrefabMetadata
   | Model3DMetadata
   | TiledMapMetadata
   | AnimationMetadata
@@ -538,12 +538,12 @@ export function isMaterialMetadata(
 }
 
 /**
- * Type guard for SceneMetadata
+ * Type guard for PrefabMetadata
  */
-export function isSceneMetadata(
+export function isPrefabMetadata(
   metadata: AssetMetadata,
-): metadata is SceneMetadata {
-  return metadata.type === AssetType.Scene;
+): metadata is PrefabMetadata {
+  return metadata.type === AssetType.Prefab;
 }
 
 /**

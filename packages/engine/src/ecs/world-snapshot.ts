@@ -11,7 +11,6 @@ import type { Command } from "./command.js";
 import type { Entity } from "./entity.js";
 import { Parent } from "./components/parent.js";
 import { Children } from "./components/children.js";
-import { SceneRoot } from "./components/scene-root.js";
 
 /**
  * Entity snapshot with components and hierarchy info
@@ -73,12 +72,6 @@ export function createWorldSnapshot(
 
   // Iterate all entities
   world.query().each((entityId: Entity) => {
-    // Skip SceneRoot virtual container entities (they're not real scene entities)
-    const sceneRootData = commands.tryGetComponent(entityId, SceneRoot);
-    if (sceneRootData) {
-      return; // Skip this entity
-    }
-
     // Get all components for this entity
     const componentsMap = world.getAllComponents(entityId);
 

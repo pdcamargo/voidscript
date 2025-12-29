@@ -112,10 +112,8 @@ export { Name } from "./components/name.js";
 export type { NameData } from "./components/name.js";
 export { Parent } from "./components/parent.js";
 export { Children } from "./components/children.js";
-export { SceneRoot } from "./components/scene-root.js";
-export type { SceneRootData } from "./components/scene-root.js";
-export { SceneChild } from "./components/scene-child.js";
-export type { SceneChildData } from "./components/scene-child.js";
+export { PrefabInstance } from "./components/prefab-instance.js";
+export type { PrefabInstanceData } from "./components/prefab-instance.js";
 
 // Serialization
 export {
@@ -145,16 +143,16 @@ export type {
   WorldData,
 } from "./serialization/index.js";
 
-// Scene System
-export { SceneManager } from "./scene-manager.js";
-export { SceneSerializer } from "./scene-serializer.js";
+// Prefab System
+export { PrefabManager } from "./prefab-manager.js";
+export { PrefabSerializer } from "./prefab-serializer.js";
 export type {
-  SceneAsset,
-  SceneData,
-  InstantiateSceneOptions,
-  InstantiateSceneResult,
-} from "./scene-asset.js";
-export type { SaveSceneOptions } from "./scene-serializer.js";
+  PrefabAsset,
+  PrefabData,
+  InstantiatePrefabOptions,
+  InstantiatePrefabResult,
+  SavePrefabOptions,
+} from "./prefab-asset.js";
 
 // Asset System
 export { RuntimeAsset, isRuntimeAsset } from "./runtime-asset.js";
@@ -166,7 +164,7 @@ export {
   TextureFilter,
   TextureWrap,
   isTextureMetadata,
-  isSceneMetadata,
+  isPrefabMetadata,
   isAnimationMetadata,
   isUnknownAssetMetadata,
 } from "./asset-metadata.js";
@@ -174,7 +172,7 @@ export type {
   GUID,
   BaseAssetMetadata,
   TextureMetadata,
-  SceneMetadata,
+  PrefabMetadata,
   AnimationMetadata,
   UnknownAssetMetadata,
   AssetMetadata,

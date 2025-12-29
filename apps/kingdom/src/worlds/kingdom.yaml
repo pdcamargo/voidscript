@@ -61,9 +61,11 @@ componentRegistry:
   - id: 29
     name: FogSkySync
   - id: 30
-    name: Rain2D
-  - id: 31
     name: LightningField2D
+  - id: 31
+    name: PrefabInstance
+  - id: 32
+    name: Rain2D
 entities:
   - id: 0
     generation: 0
@@ -1263,6 +1265,71 @@ entities:
       - typeId: 1
         typeName: Name
         data:
+          name: Lightining Field
+      - typeId: 2
+        typeName: Transform3D
+        data:
+          position:
+            x: 15.199999809265137
+            y: 5.400000095367432
+            z: -5
+          rotation:
+            x: 0
+            y: 0
+            z: 0
+          scale:
+            x: 1
+            y: 1
+            z: 1
+      - typeId: 30
+        typeName: LightningField2D
+        data:
+          baseSize:
+            x: 3000
+            y: 12
+          visible: false
+          sortingLayer: 0
+          sortingOrder: 0
+          minInterval: 3.617000102996826
+          maxInterval: 22.33799934387207
+          strikeDuration: 0.5
+          simultaneousStrikes: 1
+          boltColor:
+            r: 1
+            g: 1
+            b: 1
+          glowColor:
+            r: 0.502
+            g: 0.753
+            b: 1
+          boltWidth: 1.0119999647140503
+          glowRadius: 28.96500015258789
+          glowIntensity: 1
+          pixelSize: 0.10000000149011612
+          segments: 21
+          displacement: 1
+          noiseStrength: 1
+          branchProbability: 0.4099999964237213
+          branchLengthFactor: 0.4880000054836273
+          subBranchProbability: 0.6050000190734863
+          seed: 210
+          fadeMode: fade
+          flickerSpeed: 5
+          strikeDirection: top-down
+          angleVariation: 0.5
+          enableScreenFlash: true
+          flashIntensity: 0.671999990940094
+          enableGroundGlow: false
+          groundGlowRadius: 20
+  - id: 21
+    generation: 1
+    components:
+      - typeId: 31
+        typeName: PrefabInstance
+        data: {}
+      - typeId: 1
+        typeName: Name
+        data:
           name: Rain
       - typeId: 2
         typeName: Transform3D
@@ -1279,7 +1346,7 @@ entities:
             x: 1
             y: 1
             z: 1
-      - typeId: 30
+      - typeId: 32
         typeName: Rain2D
         data:
           baseSize:
@@ -1330,70 +1397,8 @@ entities:
           lightningDuration: 0.15000000596046448
           lightningIntensity: 0.9959999918937683
           stormIntensity: 0.8500000238418579
-  - id: 21
-    generation: 0
-    components:
-      - typeId: 1
-        typeName: Name
-        data:
-          name: Lightining Field
-      - typeId: 2
-        typeName: Transform3D
-        data:
-          position:
-            x: 15.199999809265137
-            y: 5.400000095367432
-            z: -5
-          rotation:
-            x: 0
-            y: 0
-            z: 0
-          scale:
-            x: 1
-            y: 1
-            z: 1
-      - typeId: 31
-        typeName: LightningField2D
-        data:
-          baseSize:
-            x: 3000
-            y: 12
-          visible: false
-          sortingLayer: 0
-          sortingOrder: 0
-          minInterval: 3.617000102996826
-          maxInterval: 22.33799934387207
-          strikeDuration: 0.5
-          simultaneousStrikes: 1
-          boltColor:
-            r: 1
-            g: 1
-            b: 1
-          glowColor:
-            r: 0.502
-            g: 0.753
-            b: 1
-          boltWidth: 1.0119999647140503
-          glowRadius: 28.96500015258789
-          glowIntensity: 1
-          pixelSize: 0.10000000149011612
-          segments: 21
-          displacement: 1
-          noiseStrength: 1
-          branchProbability: 0.4099999964237213
-          branchLengthFactor: 0.4880000054836273
-          subBranchProbability: 0.6050000190734863
-          seed: 210
-          fadeMode: fade
-          flickerSpeed: 5
-          strikeDirection: top-down
-          angleVariation: 0.5
-          enableScreenFlash: true
-          flashIntensity: 0.671999990940094
-          enableGroundGlow: false
-          groundGlowRadius: 20
 metadata:
-  createdAt: 2025-12-29T04:38:58.415Z
-  modifiedAt: 2025-12-29T04:38:58.415Z
+  createdAt: 2025-12-29T05:14:46.941Z
+  modifiedAt: 2025-12-29T05:14:46.941Z
   entityCount: 22
-  archetypeCount: 58
+  archetypeCount: 61

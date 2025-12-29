@@ -34,6 +34,7 @@ import type {
   TiledMapMetadata,
   AnimationMetadata,
   AudioAssetMetadata,
+  PrefabMetadata,
   SpriteDefinition,
 } from './asset-metadata.js';
 import { AssetType, TextureFilter, TextureWrap, ModelFormat, isTextureMetadata } from './asset-metadata.js';
@@ -124,6 +125,16 @@ export interface AudioAssetConfig extends BaseAssetConfig {
   type: AssetType.Audio;
   path: string;
 }
+
+/**
+ * Prefab asset configuration
+ * Used in ApplicationConfig.assets
+ */
+export interface PrefabAssetConfig extends BaseAssetConfig {
+  type: AssetType.Prefab;
+  path: string;
+}
+
 /**
  * Discriminated union of all asset configs
  */
@@ -132,7 +143,8 @@ export type AssetConfig =
   | Model3DAssetConfig
   | TiledMapAssetConfig
   | AnimationAssetConfig
-  | AudioAssetConfig;
+  | AudioAssetConfig
+  | PrefabAssetConfig;
 
 /**
  * Assets configuration for ApplicationConfig
@@ -421,6 +433,15 @@ export class AssetDatabase {
           break;
         }
 
+        case AssetType.Prefab: {
+          const prefabConfig: PrefabAssetConfig = {
+            type: AssetType.Prefab,
+            path: config['path'] as string,
+          };
+          result[guid] = prefabConfig;
+          break;
+        }
+
         default:
           console.warn(`[AssetDatabase] Unsupported asset type "${type}" for ${guid}, skipping`);
       }
@@ -608,6 +629,13 @@ export class AssetDatabase {
         };
       }
 
+      case AssetType.Prefab: {
+        return {
+          type: 'prefab',
+          path: metadata.path,
+        };
+      }
+
       default:
         // Fallback for unknown types
         return {
@@ -726,6 +754,16 @@ export class AssetDatabase {
           ...base,
           type: AssetType.Audio,
         } satisfies AudioAssetMetadata;
+      }
+
+      case AssetType.Prefab: {
+        return {
+          ...base,
+          type: AssetType.Prefab,
+          entityCount: 0,
+          componentTypes: [],
+          nestedPrefabs: [],
+        } satisfies PrefabMetadata;
       }
 
       default:

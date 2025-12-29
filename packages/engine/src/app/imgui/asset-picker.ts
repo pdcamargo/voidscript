@@ -378,7 +378,7 @@ function getAssetTypeLabel(type: AssetType): string {
     case AssetType.Animation: return '[An]';
     case AssetType.TiledMap: return '[M]';
     case AssetType.Material: return '[Mt]';
-    case AssetType.Scene: return '[Sc]';
+    case AssetType.Prefab: return '[P]';
     default: return '[?]';
   }
 }

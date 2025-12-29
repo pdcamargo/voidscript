@@ -197,3 +197,44 @@ AssetLoaderRegistry.register(AssetType.Audio, async (asset) => {
   const audioLoader = new THREE.AudioLoader();
   return await audioLoader.loadAsync(url);
 });
+
+/**
+ * Default loader for Prefab assets
+ * Fetches YAML/JSON and parses into PrefabAsset
+ */
+AssetLoaderRegistry.register(AssetType.Prefab, async (asset) => {
+  const url = asset.getLoadableUrl();
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`[PrefabLoader] Failed to load prefab from "${url}": ${response.statusText}`);
+  }
+
+  const text = await response.text();
+
+  // Dynamically import to avoid circular dependencies
+  const { yamlToJson, isYamlFile } = await import('./serialization/yaml-utils.js');
+
+  // Try YAML first if file extension suggests it, otherwise try JSON
+  try {
+    if (isYamlFile(url)) {
+      const json = yamlToJson(text);
+      return JSON.parse(json);
+    } else {
+      return JSON.parse(text);
+    }
+  } catch {
+    // If JSON parse failed, try YAML as fallback
+    try {
+      const json = yamlToJson(text);
+      return JSON.parse(json);
+    } catch {
+      // Provide helpful error message
+      const preview = text.slice(0, 200);
+      throw new Error(
+        `[PrefabLoader] Failed to parse prefab from "${url}". ` +
+          `Expected YAML/JSON but received: ${preview}${text.length > 200 ? '...' : ''}`,
+      );
+    }
+  }
+});

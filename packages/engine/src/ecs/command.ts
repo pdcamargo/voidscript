@@ -8,9 +8,9 @@ import type { Entity } from "./entity.js";
 import type { ComponentType } from "./component.js";
 import { Parent } from "./components/parent.js";
 import { Children } from "./components/children.js";
-import type { SceneAsset, InstantiateSceneOptions } from "./scene-asset.js";
-import type { SaveSceneOptions } from "./scene-serializer.js";
-import { SceneManager } from "./scene-manager.js";
+import type { PrefabAsset, InstantiatePrefabOptions } from "./prefab-asset.js";
+import type { SavePrefabOptions } from "./prefab-asset.js";
+import { PrefabManager } from "./prefab-manager.js";
 import type { BundleType, BundleSpawnData } from "./bundle.js";
 import { resolveBundleComponents } from "./bundle.js";
 import { Events, EventWriter, EventReader, type EventClass } from "./events.js";
@@ -57,25 +57,25 @@ export class EntityHandle {
   }
 
   // ============================================================================
-  // Scene Methods
+  // Prefab Methods
   // ============================================================================
 
   /**
-   * Instantiate a scene as a child of this entity
+   * Instantiate a prefab as a child of this entity
    *
-   * The scene's root entities will become children of this entity.
+   * The prefab's root entity will become a child of this entity.
    *
-   * @param guid - Scene asset GUID
+   * @param guid - Prefab asset GUID
    * @param options - Instantiation options (position offset, overrides)
    * @returns Instantiation result with entity IDs and mapping
-   * @throws Error if SceneManager not initialized or scene not loaded
+   * @throws Error if PrefabManager not initialized or prefab not loaded
    */
-  instantiateSceneAsChild(
+  instantiatePrefabAsChild(
     guid: string,
-    options?: Omit<InstantiateSceneOptions, "parentEntity">
+    options?: Omit<InstantiatePrefabOptions, "parentEntity">
   ) {
-    const sceneManager = SceneManager.get();
-    return sceneManager.instantiateScene(
+    const prefabManager = PrefabManager.get();
+    return prefabManager.instantiate(
       guid,
       this.command["world"],
       this.command,
@@ -87,16 +87,16 @@ export class EntityHandle {
   }
 
   /**
-   * Save this entity and its descendants as a scene asset
+   * Save this entity and its descendants as a prefab asset
    *
    * @param options - Save options (GUID, path, metadata)
-   * @returns Scene asset ready to be serialized to JSON
-   * @throws Error if SceneManager not initialized
+   * @returns Prefab asset ready to be serialized to YAML
+   * @throws Error if PrefabManager not initialized
    */
-  saveAsScene(options: SaveSceneOptions): SceneAsset {
-    const sceneManager = SceneManager.get();
-    return sceneManager.saveScene(
-      [this.entityId],
+  saveAsPrefab(options: SavePrefabOptions): PrefabAsset {
+    const prefabManager = PrefabManager.get();
+    return prefabManager.getSerializer().savePrefab(
+      this.entityId,
       this.command["world"],
       this.command,
       options
@@ -104,26 +104,26 @@ export class EntityHandle {
   }
 
   /**
-   * Despawn this entity as a scene (if it's a scene root)
+   * Despawn this entity as a prefab (if it's a prefab root)
    *
-   * Destroys the scene root container and all scene entities.
+   * Destroys the prefab root and all child entities.
    *
-   * @throws Error if entity is not a scene root or SceneManager not initialized
+   * @throws Error if entity is not a prefab root or PrefabManager not initialized
    */
-  despawnAsScene(): void {
-    const sceneManager = SceneManager.get();
-    sceneManager.despawnSceneByRootEntity(this.entityId, this.command);
+  despawnAsPrefab(): void {
+    const prefabManager = PrefabManager.get();
+    prefabManager.despawn(this.entityId, this.command);
   }
 
   /**
-   * Get the scene root entity (if this entity is part of a scene)
+   * Get the prefab root entity (if this entity is part of a prefab)
    *
-   * @returns Scene root entity ID or null if not in a scene
-   * @throws Error if SceneManager not initialized
+   * @returns Prefab root entity ID or null if not in a prefab
+   * @throws Error if PrefabManager not initialized
    */
-  getSceneRoot(): number | null {
-    const sceneManager = SceneManager.get();
-    return sceneManager.getSceneRoot(this.entityId, this.command);
+  getPrefabRoot(): number | null {
+    const prefabManager = PrefabManager.get();
+    return prefabManager.getPrefabRoot(this.entityId, this.command);
   }
 }
 
