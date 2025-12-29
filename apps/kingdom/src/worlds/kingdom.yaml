@@ -1326,7 +1326,8 @@ entities:
     components:
       - typeId: 31
         typeName: PrefabInstance
-        data: {}
+        data:
+          prefabAssetGuid: fe28a3a2-7584-4b06-a5a0-ef066846ddba
       - typeId: 1
         typeName: Name
         data:
@@ -1346,59 +1347,8 @@ entities:
             x: 1
             y: 1
             z: 1
-      - typeId: 32
-        typeName: Rain2D
-        data:
-          baseSize:
-            x: 3000
-            y: 3000
-          tileSize: 3
-          visible: false
-          sortingLayer: 500000000
-          sortingOrder: 1783793664
-          density: 300
-          fallSpeed: 448.8909912109375
-          speedVariation: 0.6079999804496765
-          angle: 0.15000000596046448
-          windStrength: 0.30000001192092896
-          windSpeed: 1.5
-          dropletMinLength: 12.420999526977539
-          dropletMaxLength: 26.94499969482422
-          dropletWidth: 1.5019999742507935
-          seed: 20
-          dropletColor:
-            r: 1
-            g: 1
-            b: 1
-          dropletOpacity: 1
-          enableLayers: true
-          nearLayerSpeed: 3
-          nearLayerOpacity: 0.8500000238418579
-          nearLayerScale: 1.2999999523162842
-          midLayerSpeed: 3
-          midLayerOpacity: 0.6000000238418579
-          midLayerScale: 1
-          farLayerSpeed: 2
-          farLayerOpacity: 0.3499999940395355
-          farLayerScale: 1.2640000581741333
-          enableWetnessTint: true
-          wetnessTintColor:
-            r: 0.4
-            g: 0.5
-            b: 0.6
-          wetnessTintIntensity: 0.15000000596046448
-          enableLightning: false
-          lightningColor:
-            r: 1
-            g: 1
-            b: 1
-          lightningMinInterval: 3.2980000972747803
-          lightningMaxInterval: 9.140000343322754
-          lightningDuration: 0.15000000596046448
-          lightningIntensity: 0.9959999918937683
-          stormIntensity: 0.8500000238418579
 metadata:
-  createdAt: 2025-12-29T05:14:46.941Z
-  modifiedAt: 2025-12-29T05:14:46.941Z
+  createdAt: 2025-12-29T14:30:43.806Z
+  modifiedAt: 2025-12-29T14:30:43.806Z
   entityCount: 22
   archetypeCount: 61

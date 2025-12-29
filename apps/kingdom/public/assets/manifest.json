@@ -338,5 +338,9 @@
         "height": 96
       }
     ]
+  },
+  "fe28a3a2-7584-4b06-a5a0-ef066846ddba": {
+    "type": "prefab",
+    "path": "/prefabs/rain.prefab.yaml"
   }
 }

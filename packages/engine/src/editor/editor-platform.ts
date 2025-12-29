@@ -87,6 +87,12 @@ export interface EditorPlatform {
   exists?(path: string): Promise<boolean>;
 
   /**
+   * Ensure a directory exists, creating it (and parent directories) if necessary.
+   * @param path The directory path to ensure exists
+   */
+  ensureDir?(path: string): Promise<void>;
+
+  /**
    * Get the application's resource directory (where assets are bundled).
    * For Tauri, this uses @tauri-apps/api/path resourceDir().
    * NOTE: This returns the BUNDLED resources path, not the source project path.
@@ -188,6 +194,10 @@ export class WebPlatform implements EditorPlatform {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  }
+
+  async ensureDir(path: string): Promise<void> {
+    throw new Error(`Cannot create directories on web platform: ${path}`);
   }
 }
 

@@ -201,6 +201,7 @@ AssetLoaderRegistry.register(AssetType.Audio, async (asset) => {
 /**
  * Default loader for Prefab assets
  * Fetches YAML/JSON and parses into PrefabAsset
+ * Also caches the prefab in PrefabManager for instantiation
  */
 AssetLoaderRegistry.register(AssetType.Prefab, async (asset) => {
   const url = asset.getLoadableUrl();
@@ -214,20 +215,23 @@ AssetLoaderRegistry.register(AssetType.Prefab, async (asset) => {
 
   // Dynamically import to avoid circular dependencies
   const { yamlToJson, isYamlFile } = await import('./serialization/yaml-utils.js');
+  const { PrefabManager } = await import('./prefab-manager.js');
+
+  let prefabData;
 
   // Try YAML first if file extension suggests it, otherwise try JSON
   try {
     if (isYamlFile(url)) {
       const json = yamlToJson(text);
-      return JSON.parse(json);
+      prefabData = JSON.parse(json);
     } else {
-      return JSON.parse(text);
+      prefabData = JSON.parse(text);
     }
   } catch {
     // If JSON parse failed, try YAML as fallback
     try {
       const json = yamlToJson(text);
-      return JSON.parse(json);
+      prefabData = JSON.parse(json);
     } catch {
       // Provide helpful error message
       const preview = text.slice(0, 200);
@@ -237,4 +241,13 @@ AssetLoaderRegistry.register(AssetType.Prefab, async (asset) => {
       );
     }
   }
+
+  // Cache the prefab in PrefabManager for instantiation
+  if (PrefabManager.has()) {
+    PrefabManager.get().loadPrefabFromData(asset.guid, prefabData);
+  } else {
+    console.warn(`[PrefabLoader] PrefabManager not initialized, cannot cache prefab ${asset.guid}`);
+  }
+
+  return prefabData;
 });

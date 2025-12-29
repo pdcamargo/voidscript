@@ -1,0 +1,109 @@
+version: 1.0.0
+metadata:
+  guid: fe28a3a2-7584-4b06-a5a0-ef066846ddba
+  path: /prefabs/rain.prefab.yaml
+  type: prefab
+  entityCount: 1
+  componentTypes:
+    - Name
+    - Transform3D
+    - Rain2D
+  nestedPrefabs: []
+  importedAt: 2025-12-29T14:30:22.973Z
+  modifiedAt: 2025-12-29T14:30:22.973Z
+world:
+  version: 1.0.0
+  componentRegistry:
+    - id: 0
+      name: Name
+    - id: 1
+      name: Transform3D
+    - id: 2
+      name: RenderObject
+    - id: 3
+      name: Rain2D
+    - id: 4
+      name: __PrefabSerializerMarker__
+  entities:
+    - id: 0
+      generation: 0
+      components:
+        - typeId: 0
+          typeName: Name
+          data:
+            name: Rain
+        - typeId: 1
+          typeName: Transform3D
+          data:
+            position:
+              x: 0
+              y: 0
+              z: 0
+            rotation:
+              x: 0
+              y: 0
+              z: 0
+            scale:
+              x: 1
+              y: 1
+              z: 1
+        - typeId: 3
+          typeName: Rain2D
+          data:
+            baseSize:
+              x: 3000
+              y: 3000
+            tileSize: 3
+            visible: false
+            sortingLayer: 500000000
+            sortingOrder: 1783793664
+            density: 300
+            fallSpeed: 448.8909912109375
+            speedVariation: 0.6079999804496765
+            angle: 0.15000000596046448
+            windStrength: 0.30000001192092896
+            windSpeed: 1.5
+            dropletMinLength: 12.420999526977539
+            dropletMaxLength: 26.94499969482422
+            dropletWidth: 1.5019999742507935
+            seed: 20
+            dropletColor:
+              r: 1
+              g: 1
+              b: 1
+            dropletOpacity: 1
+            enableLayers: true
+            nearLayerSpeed: 3
+            nearLayerOpacity: 0.8500000238418579
+            nearLayerScale: 1.2999999523162842
+            midLayerSpeed: 3
+            midLayerOpacity: 0.6000000238418579
+            midLayerScale: 1
+            farLayerSpeed: 2
+            farLayerOpacity: 0.3499999940395355
+            farLayerScale: 1.2640000581741333
+            enableWetnessTint: true
+            wetnessTintColor:
+              r: 0.4
+              g: 0.5
+              b: 0.6
+            wetnessTintIntensity: 0.15000000596046448
+            enableLightning: false
+            lightningColor:
+              r: 1
+              g: 1
+              b: 1
+            lightningMinInterval: 3.2980000972747803
+            lightningMaxInterval: 9.140000343322754
+            lightningDuration: 0.15000000596046448
+            lightningIntensity: 0.9959999918937683
+            stormIntensity: 0.8500000238418579
+  metadata:
+    createdAt: 2025-12-29T14:30:22.973Z
+    modifiedAt: 2025-12-29T14:30:22.973Z
+    entityCount: 1
+    archetypeCount: 59
+prefabData:
+  entityIdMap:
+    "0": 02e15a31-0dd1-4d85-9768-56e31d04f286
+  rootEntityId: 02e15a31-0dd1-4d85-9768-56e31d04f286

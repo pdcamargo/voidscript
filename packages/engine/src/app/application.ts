@@ -160,6 +160,7 @@ import { EditorLayer, type EditorConfig as EditorLayerConfig } from "../editor/e
 import type { MenuBarCallbacks } from "./imgui/menu-bar.js";
 import type { WorldData } from "../ecs/serialization/schemas.js";
 import { WorldLoader } from "./world-loader.js";
+import { preloadAssets } from "../ecs/asset-preloader.js";
 
 /**
  * Default world configuration for loading a scene on startup
@@ -483,6 +484,14 @@ export class Application {
   async run(): Promise<void> {
     // Load asset manifest if specified (before other initialization)
     await this.loadAssetManifest();
+
+    // Preload all registered assets (especially prefabs needed for world deserialization)
+    const allGuids = AssetDatabase.getAllGuids();
+    if (allGuids.length > 0) {
+      console.log(`[Application] Preloading ${allGuids.length} assets...`);
+      await preloadAssets(...allGuids);
+      console.log(`[Application] Asset preloading complete`);
+    }
 
     // Detect target FPS if not specified
     if (this.targetFPS === 60) {

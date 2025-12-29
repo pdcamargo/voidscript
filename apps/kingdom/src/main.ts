@@ -7,7 +7,7 @@ import {
   isGameplayActive,
 } from '@voidscript/engine';
 import { save, open } from '@tauri-apps/plugin-dialog';
-import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
+import { readTextFile, writeTextFile, mkdir } from '@tauri-apps/plugin-fs';
 import { resourceDir, join } from '@tauri-apps/api/path';
 
 import { GameLayer } from './game-layer.js';
@@ -90,6 +90,8 @@ async function main() {
       pathUtils: { resourceDir, join },
       // Source assets directory for saving manifest during development
       sourceAssetsDir: '/Users/pdcamargo/dev/dreampact/apps/kingdom/public',
+      // Directory creation for prefab saving
+      mkdir,
     }),
 
     // defaultWorld: {
@@ -167,8 +169,6 @@ async function main() {
   app.insertResource(new BuildingManager());
   app.insertResource(new EconomyManager());
   app.insertResource(new ProgressManager());
-
-  await preloadAssets(...AssetDatabase.getAllGuids());
 
   app.addUpdateSystem(
     system(({ commands }) => {

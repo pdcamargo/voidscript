@@ -17,7 +17,9 @@ import { globalResourceRegistry } from "../resource.js";
 import type { ResourceSerializerConfig, ResourceType } from "../resource.js";
 import { Parent } from "../components/parent.js";
 import { Children } from "../components/children.js";
+import { PrefabInstance } from "../components/prefab-instance.js";
 import type { Entity } from "../entity.js";
+import { PrefabManager } from "../prefab-manager.js";
 import type {
   ComponentSerializer,
   SerializationContext,
@@ -80,6 +82,32 @@ export class WorldSerializer {
    */
   invalidateCache(): void {
     this.skipChildrenComponentTypes = null;
+  }
+
+  /**
+   * Components that are always serialized for prefab instances.
+   * All other components are skipped - they come from the prefab asset.
+   *
+   * Phase 1: Only serialize instance-specific data:
+   * - PrefabInstance: To know which prefab to instantiate
+   * - Transform3D: World position of the instance
+   * - LocalTransform3D: Position relative to parent
+   * - Parent: Hierarchy relationship
+   * - Name: Entity name (may be customized per-instance)
+   */
+  private static readonly PREFAB_INSTANCE_COMPONENTS = new Set([
+    'PrefabInstance',
+    'Transform3D',
+    'LocalTransform3D',
+    'Parent',
+    'Name',
+  ]);
+
+  /**
+   * Check if a component should be serialized for a prefab instance
+   */
+  private shouldSerializeComponentForPrefab(componentName: string): boolean {
+    return WorldSerializer.PREFAB_INSTANCE_COMPONENTS.has(componentName);
   }
 
   /**
@@ -868,6 +896,9 @@ export class WorldSerializer {
       const serializedComponents: SerializedComponent[] = [];
       let entityName: string | undefined;
 
+      // Check if this entity is a prefab instance root
+      const isPrefabInstance = commands.hasComponent(entity, PrefabInstance);
+
       for (const [componentType, data] of components) {
         const typeId = componentTypeMap.get(componentType);
         if (typeId === undefined) {
@@ -876,6 +907,13 @@ export class WorldSerializer {
 
         // Skip non-serializable components (marked with false)
         if (componentType.serializerConfig === false) {
+          continue;
+        }
+
+        // For prefab instances, only serialize instance-specific components
+        // (Transform3D, LocalTransform3D, Parent, Name, PrefabInstance)
+        // All other components come from the prefab asset
+        if (isPrefabInstance && !this.shouldSerializeComponentForPrefab(componentType.name)) {
           continue;
         }
 
@@ -1055,21 +1093,73 @@ export class WorldSerializer {
       componentTypeByName.set(entry.name, componentType);
     }
 
-    // PASS 1: Create empty entities and build entity mapping
+    // PASS 1: Create entities and build entity mapping
+    // For prefab instances, we create the root entity now but will instantiate
+    // the prefab's children in Pass 1.5
     const entityMapping = new Map<number, number>();
     const entitiesToPopulate: Array<{ serializedEntity: SerializedEntity; entity: number }> = [];
+    const prefabInstancesToLoad: Array<{
+      serializedEntity: SerializedEntity;
+      entity: number;
+      prefabGuid: string;
+      transformData?: any;
+      localTransformData?: any;
+      parentData?: any;
+      nameData?: any;
+    }> = [];
 
     for (const serializedEntity of worldData.entities) {
       try {
-        // Create new entity (without components yet)
-        const entityBuilder = commands.spawn();
-        const newEntity = entityBuilder.build();
+        // Check if this entity has a PrefabInstance component
+        const prefabInstanceComponent = serializedEntity.components.find(
+          (c) => c.typeName === 'PrefabInstance'
+        );
 
-        // Build entity mapping immediately
-        const newEntityId = newEntity.id();
-        entityMapping.set(serializedEntity.id, newEntityId);
-        entitiesToPopulate.push({ serializedEntity, entity: newEntityId });
-        entitiesCreated++;
+        if (prefabInstanceComponent) {
+          // This is a prefab instance - we'll handle it specially in Pass 1.5
+          // For now, just create a placeholder entity for the mapping
+          const entityBuilder = commands.spawn();
+          const newEntity = entityBuilder.build();
+          const newEntityId = newEntity.id();
+          entityMapping.set(serializedEntity.id, newEntityId);
+
+          // Extract instance-specific component data
+          const transformComp = serializedEntity.components.find((c) => c.typeName === 'Transform3D');
+          const localTransformComp = serializedEntity.components.find((c) => c.typeName === 'LocalTransform3D');
+          const parentComp = serializedEntity.components.find((c) => c.typeName === 'Parent');
+          const nameComp = serializedEntity.components.find((c) => c.typeName === 'Name');
+
+          // Extract prefabAssetGuid from the serialized data
+          const prefabData = prefabInstanceComponent.data as { prefabAssetGuid?: string } | undefined;
+          const prefabGuid = prefabData?.prefabAssetGuid;
+
+          if (!prefabGuid) {
+            warnings.push(
+              `PrefabInstance component missing prefabAssetGuid for entity ${serializedEntity.id}`
+            );
+            // Fall back to regular entity creation
+            entitiesToPopulate.push({ serializedEntity, entity: newEntityId });
+          } else {
+            prefabInstancesToLoad.push({
+              serializedEntity,
+              entity: newEntityId,
+              prefabGuid,
+              transformData: transformComp?.data,
+              localTransformData: localTransformComp?.data,
+              parentData: parentComp?.data,
+              nameData: nameComp?.data,
+            });
+          }
+          entitiesCreated++;
+        } else {
+          // Regular entity - create normally
+          const entityBuilder = commands.spawn();
+          const newEntity = entityBuilder.build();
+          const newEntityId = newEntity.id();
+          entityMapping.set(serializedEntity.id, newEntityId);
+          entitiesToPopulate.push({ serializedEntity, entity: newEntityId });
+          entitiesCreated++;
+        }
       } catch (error) {
         if (continueOnError) {
           warnings.push(
@@ -1090,7 +1180,124 @@ export class WorldSerializer {
       }
     }
 
-    // PASS 2: Add components with complete entity mapping
+    // PASS 1.5: Instantiate prefabs for PrefabInstance entities
+    // This happens before regular component population so entity references work correctly
+    for (const prefabInfo of prefabInstancesToLoad) {
+      try {
+        if (!PrefabManager.has()) {
+          warnings.push(
+            `PrefabManager not initialized, skipping prefab instance for entity ${prefabInfo.serializedEntity.id}`
+          );
+          continue;
+        }
+
+        const prefabManager = PrefabManager.get();
+
+        // Check if prefab is loaded
+        if (!prefabManager.isLoaded(prefabInfo.prefabGuid)) {
+          warnings.push(
+            `Prefab "${prefabInfo.prefabGuid}" not loaded for entity ${prefabInfo.serializedEntity.id}. ` +
+            `Prefabs must be preloaded before world deserialization.`
+          );
+          continue;
+        }
+
+        // Delete the placeholder entity - we'll use the prefab's root instead
+        commands.entity(prefabInfo.entity).destroy();
+        entityMapping.delete(prefabInfo.serializedEntity.id);
+
+        // Instantiate the prefab
+        const result = prefabManager.instantiate(
+          prefabInfo.prefabGuid,
+          world,
+          commands,
+          {
+            assetMetadataResolver: options.assetMetadataResolver,
+          }
+        );
+
+        // Update entity mapping with the actual prefab root
+        entityMapping.set(prefabInfo.serializedEntity.id, result.rootEntity);
+
+        // Apply instance-specific transform data
+        if (prefabInfo.transformData) {
+          const transformType = componentTypeByName.get('Transform3D');
+          if (transformType && transformType.serializerConfig) {
+            const transformData = this.deserializeWithPropertyConfig(
+              prefabInfo.transformData,
+              transformType.serializerConfig,
+              { entityMapping, assetMetadataResolver: options.assetMetadataResolver }
+            );
+            const existingTransform = commands.tryGetComponent(result.rootEntity, transformType);
+            if (existingTransform) {
+              Object.assign(existingTransform, transformData);
+            } else {
+              world.addComponent(result.rootEntity, transformType, transformData);
+            }
+          }
+        }
+
+        // Apply instance-specific local transform data
+        if (prefabInfo.localTransformData) {
+          const localTransformType = componentTypeByName.get('LocalTransform3D');
+          if (localTransformType && localTransformType.serializerConfig) {
+            const localTransformData = this.deserializeWithPropertyConfig(
+              prefabInfo.localTransformData,
+              localTransformType.serializerConfig,
+              { entityMapping, assetMetadataResolver: options.assetMetadataResolver }
+            );
+            const existingLocalTransform = commands.tryGetComponent(result.rootEntity, localTransformType);
+            if (existingLocalTransform) {
+              Object.assign(existingLocalTransform, localTransformData);
+            } else {
+              world.addComponent(result.rootEntity, localTransformType, localTransformData);
+            }
+          }
+        }
+
+        // Apply instance-specific name if provided
+        if (prefabInfo.nameData) {
+          const nameType = componentTypeByName.get('Name');
+          if (nameType) {
+            const existingName = commands.tryGetComponent(result.rootEntity, nameType);
+            if (existingName) {
+              Object.assign(existingName, prefabInfo.nameData);
+            } else {
+              world.addComponent(result.rootEntity, nameType, prefabInfo.nameData);
+            }
+          }
+        }
+
+        // Apply parent relationship if specified
+        // Note: We need to remap the serialized parent ID to the runtime entity ID
+        if (prefabInfo.parentData && typeof prefabInfo.parentData.id === 'number') {
+          const parentRuntimeId = entityMapping.get(prefabInfo.parentData.id);
+          if (parentRuntimeId !== undefined) {
+            // Use addChild to properly set up the parent-child relationship
+            commands.entity(parentRuntimeId).addChild(result.rootEntity);
+          }
+        }
+
+      } catch (error) {
+        if (continueOnError) {
+          warnings.push(
+            `Failed to instantiate prefab for entity ${prefabInfo.serializedEntity.id}: ${error instanceof Error ? error.message : String(error)}`
+          );
+          continue;
+        } else {
+          return {
+            success: false,
+            entitiesCreated,
+            entitiesSkipped,
+            warnings,
+            error: `Failed to instantiate prefab for entity ${prefabInfo.serializedEntity.id}: ${error instanceof Error ? error.message : String(error)}`,
+            entityMapping,
+          };
+        }
+      }
+    }
+
+    // PASS 2: Add components with complete entity mapping (for non-prefab entities)
     for (const { serializedEntity, entity } of entitiesToPopulate) {
       // Add all components - each component has its own try/catch to avoid skipping remaining components on failure
       for (const serializedComponent of serializedEntity.components) {

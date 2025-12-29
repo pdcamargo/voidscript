@@ -343,6 +343,11 @@ export class AssetDatabase {
     const result: AssetsConfig = {};
 
     for (const [guid, rawConfig] of Object.entries(parsed)) {
+      // Skip special JSON schema key (used for IDE validation)
+      if (guid === '$schema') {
+        continue;
+      }
+
       if (!rawConfig || typeof rawConfig !== 'object') {
         console.warn(`[AssetDatabase] Invalid asset config for GUID ${guid}, skipping`);
         continue;

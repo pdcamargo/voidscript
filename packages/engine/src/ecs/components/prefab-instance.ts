@@ -50,14 +50,22 @@ export interface PrefabInstanceData {
 /**
  * PrefabInstance component - marks the root of an instantiated prefab.
  *
- * NOT serialized when saving world (instance-specific runtime data).
- * When saving a world to disk, PrefabInstance components should be stripped
- * and the prefab reference stored differently if persistence is needed.
+ * Serialization behavior (Phase 1 - No Overrides):
+ * - prefabAssetGuid: Serialized to know which prefab to instantiate on load
+ * - instanceId: Not serialized (generated fresh on instantiation)
+ * - entityMapping: Not serialized (rebuilt on instantiation)
+ * - overrides: Not serialized yet (Phase 2 feature)
+ *
+ * When loading a world with PrefabInstance:
+ * 1. WorldSerializer detects PrefabInstance component
+ * 2. Loads/instantiates the prefab from prefabAssetGuid
+ * 3. Applies stored Transform3D/LocalTransform3D/Parent to the root
+ * 4. Prefab children come from the prefab asset, not the world file
  */
 export const PrefabInstance = component<PrefabInstanceData>(
   'PrefabInstance',
   {
-    prefabAssetGuid: { serializable: false },
+    prefabAssetGuid: { serializable: true },
     instanceId: { serializable: false },
     entityMapping: { serializable: false },
     overrides: { serializable: false },
@@ -65,5 +73,7 @@ export const PrefabInstance = component<PrefabInstanceData>(
   {
     path: 'prefab',
     description: 'Marks an entity as the root of an instantiated prefab',
+    // Skip serializing children of this entity - they come from the prefab asset
+    skipChildrenSerialization: true,
   },
 );

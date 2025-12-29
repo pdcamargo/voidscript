@@ -24,6 +24,7 @@ import { AssetType, isPrefabMetadata } from '../../ecs/asset-metadata.js';
 import { RuntimeAssetManager } from '../../ecs/runtime-asset-manager.js';
 import type { RuntimeAsset } from '../../ecs/runtime-asset.js';
 import type { PrefabAsset } from '../../ecs/prefab-asset.js';
+import type { EditorPlatform } from '../../editor/editor-platform.js';
 
 /**
  * Render the hierarchy viewer window showing all entities in a tree structure
@@ -45,6 +46,9 @@ let cachedQuery: ParsedQuery | null = null;
 // Prefab picker popup state
 let prefabPickerOpen = false;
 let prefabPickerParentEntity: Entity | null = null; // null = spawn at root level
+
+// Platform reference for file operations
+let currentPlatform: EditorPlatform | null = null;
 
 /**
  * Check if an entity matches the search filter query
@@ -115,7 +119,10 @@ function collectVisibleEntities(
   return visible;
 }
 
-export function renderImGuiHierarchy(app: Application): void {
+export function renderImGuiHierarchy(app: Application, platform?: EditorPlatform | null): void {
+  // Store platform reference for use in other functions
+  currentPlatform = platform ?? null;
+
   // Setup window position and size (only on first use)
   ImGui.SetNextWindowPos({ x: 10, y: 10 }, ImGui.Cond.FirstUseEver);
   ImGui.SetNextWindowSize({ x: 300, y: 500 }, ImGui.Cond.FirstUseEver);
@@ -742,9 +749,10 @@ export function renderSavePrefabDialog(app: Application): void {
 /**
  * Actually save the prefab to the manifest and generate YAML
  */
-function performPrefabSave(app: Application, entity: Entity, path: string): void {
+async function performPrefabSave(app: Application, entity: Entity, path: string): Promise<void> {
   const world = app.world;
   const commands = app.getCommands();
+  const platform = currentPlatform;
 
   // Use PrefabSerializer to create the prefab asset
   const serializer = new PrefabSerializer();
@@ -756,35 +764,73 @@ function performPrefabSave(app: Application, entity: Entity, path: string): void
 
     // Convert to YAML
     const yaml = serializer.toYaml(prefabAsset);
-
-    // Log the YAML for now (actual file saving would require file system access)
-    console.log(`[Hierarchy] Saved prefab to ${path}`);
-    console.log('[Hierarchy] Prefab YAML:');
-    console.log(yaml);
-
-    // Register the prefab in AssetDatabase so it can be spawned
     const guid = prefabAsset.metadata.guid;
-    AssetDatabase.registerAdditionalAssets({
-      [guid]: {
-        type: AssetType.Prefab,
-        path,
-      },
-    });
 
-    // Cache the prefab data in PrefabManager
-    if (PrefabManager.has()) {
-      PrefabManager.get().loadPrefabFromData(guid, prefabAsset);
+    // Write the prefab YAML file to disk
+    if (platform && platform.sourceAssetsDir && platform.joinPath) {
+      // Convert web path like "/prefabs/foo.prefab.yaml" to absolute path
+      const relativePath = path.startsWith('/') ? path.slice(1) : path;
+      const absolutePath = await platform.joinPath(platform.sourceAssetsDir, relativePath);
+
+      // Ensure the directory exists before writing
+      const dirPath = relativePath.split('/').slice(0, -1).join('/');
+      if (dirPath && platform.ensureDir) {
+        try {
+          const absoluteDirPath = await platform.joinPath(platform.sourceAssetsDir, dirPath);
+          await platform.ensureDir(absoluteDirPath);
+        } catch (dirErr) {
+          console.error(`[Hierarchy] Failed to create directory: ${dirErr}`);
+          return; // Don't attempt to write if directory creation failed
+        }
+      }
+
+      try {
+        await platform.writeTextFile(absolutePath, yaml);
+        console.log(`[Hierarchy] Saved prefab to disk: ${absolutePath}`);
+      } catch (writeErr) {
+        console.error(`[Hierarchy] Failed to write prefab file: ${writeErr}`);
+        return; // Don't register the prefab if file write failed
+      }
+
+      // Register the prefab in AssetDatabase AFTER successful file write
+      AssetDatabase.registerAdditionalAssets({
+        [guid]: {
+          type: AssetType.Prefab,
+          path,
+        },
+      });
+
+      // Update the manifest.json if available
+      const assetsManifest = app.getAssetsManifestPath();
+      if (assetsManifest) {
+        // Save the updated manifest
+        const manifestRelativePath = assetsManifest.startsWith('/')
+          ? assetsManifest.slice(1)
+          : assetsManifest;
+        const manifestAbsPath = await platform.joinPath(platform.sourceAssetsDir, manifestRelativePath);
+        const manifestJson = AssetDatabase.serializeToJson(true);
+        await platform.writeTextFile(manifestAbsPath, manifestJson);
+        console.log(`[Hierarchy] Updated manifest at: ${manifestAbsPath}`);
+      }
+
+      // Cache the prefab data in PrefabManager
+      if (PrefabManager.has()) {
+        PrefabManager.get().loadPrefabFromData(guid, prefabAsset);
+      }
+
+      console.log(`[Hierarchy] Prefab "${path}" registered with GUID: ${guid}`);
+    } else if (platform) {
+      // Web platform fallback - trigger download
+      // Don't register in AssetDatabase since file won't persist
+      await platform.writeTextFile(path, yaml);
+      console.log(`[Hierarchy] Triggered prefab download: ${path}`);
+      console.log(`[Hierarchy] Note: Prefab not registered (web platform - file won't persist)`);
+    } else {
+      // No platform, just log
+      console.log(`[Hierarchy] Prefab YAML (no platform for saving):`);
+      console.log(yaml);
+      console.log(`[Hierarchy] Note: Prefab not registered (no platform available)`);
     }
-
-    // If app has manifestPath, try to update the manifest
-    // Note: This would require file system write access which may not be available in browser
-    const manifestPath = (app as any).manifestPath;
-    if (manifestPath) {
-      console.log(`[Hierarchy] Would add to manifest at: ${manifestPath}`);
-      // In a real implementation, we'd write to the manifest file
-    }
-
-    console.log(`[Hierarchy] Prefab "${path}" registered with GUID: ${guid}`);
   } catch (err) {
     console.error(`[Hierarchy] Failed to save prefab: ${err}`);
   }

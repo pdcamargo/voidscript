@@ -1502,7 +1502,7 @@ export class EditorLayer extends Layer {
   // ============================================================================
 
   private renderHierarchyPanel(app: Application): void {
-    renderImGuiHierarchy(app);
+    renderImGuiHierarchy(app, this.config.platform);
   }
 
   private renderInspectorPanel(app: Application): void {

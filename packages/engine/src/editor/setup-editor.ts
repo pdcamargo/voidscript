@@ -214,6 +214,11 @@ export interface TauriPlatformOptions {
    * Example: '/Users/dev/myproject/apps/game/public'
    */
   sourceAssetsDir?: string;
+  /**
+   * Function to create directories recursively.
+   * From @tauri-apps/plugin-fs: mkdir(path, { recursive: true })
+   */
+  mkdir?: (path: string, options?: { recursive?: boolean }) => Promise<void>;
 }
 
 /**
@@ -222,7 +227,7 @@ export interface TauriPlatformOptions {
  * @example
  * ```typescript
  * import { save, open } from '@tauri-apps/plugin-dialog';
- * import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
+ * import { readTextFile, writeTextFile, mkdir } from '@tauri-apps/plugin-fs';
  * import { resourceDir, join } from '@tauri-apps/api/path';
  *
  * const platform = createTauriPlatform(
@@ -230,6 +235,7 @@ export interface TauriPlatformOptions {
  *   {
  *     pathUtils: { resourceDir, join },
  *     sourceAssetsDir: '/absolute/path/to/public',
+ *     mkdir,
  *   }
  * );
  * ```
@@ -242,9 +248,10 @@ export function createTauriPlatform(
   options?: TauriPlatformOptions | TauriPathUtils
 ): EditorPlatform {
   // Support both old signature (TauriPathUtils) and new signature (TauriPlatformOptions)
-  const isNewOptions = options && ('pathUtils' in options || 'sourceAssetsDir' in options);
+  const isNewOptions = options && ('pathUtils' in options || 'sourceAssetsDir' in options || 'mkdir' in options);
   const pathUtils = isNewOptions ? (options as TauriPlatformOptions).pathUtils : (options as TauriPathUtils | undefined);
   const sourceAssetsDir = isNewOptions ? (options as TauriPlatformOptions).sourceAssetsDir : undefined;
+  const mkdir = isNewOptions ? (options as TauriPlatformOptions).mkdir : undefined;
 
   return {
     name: 'tauri',
@@ -284,6 +291,14 @@ export function createTauriPlatform(
       }
       // Fallback: simple join with /
       return paths.join('/');
+    },
+
+    async ensureDir(path: string): Promise<void> {
+      if (mkdir) {
+        await mkdir(path, { recursive: true });
+      } else {
+        throw new Error(`ensureDir not available: mkdir function not provided to createTauriPlatform`);
+      }
     },
   };
 }
