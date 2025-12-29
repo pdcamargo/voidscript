@@ -1660,3 +1660,500 @@ describe("WorldSerializer - Property-Level Serialization Config", () => {
       });
   });
 });
+
+describe("WorldSerializer - Nested Object Reference Independence", () => {
+  let world: World;
+  let commands: Command;
+  let serializer: WorldSerializer;
+
+  // Component with nested plain objects similar to SpriteAreaGenerator
+  interface SpriteAreaLikeData {
+    boundsMin: { x: number; y: number; z: number };
+    boundsMax: { x: number; y: number; z: number };
+    tintColor: { r: number; g: number; b: number; a: number };
+    anchor: { x: number; y: number };
+    name: string;
+  }
+
+  const SpriteAreaLikeComponent = component<SpriteAreaLikeData>(
+    "SpriteAreaLikeComponent",
+    {
+      boundsMin: { serializable: true },
+      boundsMax: { serializable: true },
+      tintColor: { serializable: true },
+      anchor: { serializable: true },
+      name: { serializable: true },
+    }
+  );
+
+  beforeEach(() => {
+    world = new World();
+    commands = new Command(world);
+    serializer = new WorldSerializer();
+  });
+
+  it("should not share object references between serialized entities", () => {
+    // Create multiple entities with nested objects
+    commands
+      .spawn()
+      .with(SpriteAreaLikeComponent, {
+        boundsMin: { x: -10, y: 0, z: -5 },
+        boundsMax: { x: 10, y: 20, z: 5 },
+        tintColor: { r: 1, g: 0, b: 0, a: 1 },
+        anchor: { x: 0.5, y: 0.5 },
+        name: "Entity 1",
+      })
+      .build();
+
+    commands
+      .spawn()
+      .with(SpriteAreaLikeComponent, {
+        boundsMin: { x: -50, y: 0, z: -10 },
+        boundsMax: { x: 50, y: 100, z: 10 },
+        tintColor: { r: 0, g: 1, b: 0, a: 0.5 },
+        anchor: { x: 0, y: 1 },
+        name: "Entity 2",
+      })
+      .build();
+
+    commands
+      .spawn()
+      .with(SpriteAreaLikeComponent, {
+        boundsMin: { x: -100, y: -100, z: -100 },
+        boundsMax: { x: 100, y: 100, z: 100 },
+        tintColor: { r: 0, g: 0, b: 1, a: 0.8 },
+        anchor: { x: 1, y: 0 },
+        name: "Entity 3",
+      })
+      .build();
+
+    const data = serializer.serialize(world, commands);
+
+    // Verify all entities have different data
+    expect(data.entities.length).toBe(3);
+
+    const entity1Data = data.entities[0]?.components[0]?.data as SpriteAreaLikeData;
+    const entity2Data = data.entities[1]?.components[0]?.data as SpriteAreaLikeData;
+    const entity3Data = data.entities[2]?.components[0]?.data as SpriteAreaLikeData;
+
+    // Verify names are unique (not corrupted)
+    expect(entity1Data.name).toBe("Entity 1");
+    expect(entity2Data.name).toBe("Entity 2");
+    expect(entity3Data.name).toBe("Entity 3");
+
+    // Verify nested objects are unique
+    expect(entity1Data.boundsMin).toEqual({ x: -10, y: 0, z: -5 });
+    expect(entity2Data.boundsMin).toEqual({ x: -50, y: 0, z: -10 });
+    expect(entity3Data.boundsMin).toEqual({ x: -100, y: -100, z: -100 });
+
+    expect(entity1Data.tintColor).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+    expect(entity2Data.tintColor).toEqual({ r: 0, g: 1, b: 0, a: 0.5 });
+    expect(entity3Data.tintColor).toEqual({ r: 0, g: 0, b: 1, a: 0.8 });
+
+    // Verify objects are not the same reference (mutation test)
+    (entity1Data.boundsMin as any).x = 999;
+    expect(entity2Data.boundsMin.x).not.toBe(999);
+    expect(entity3Data.boundsMin.x).not.toBe(999);
+  });
+
+  it("should correctly round-trip multiple entities with nested objects", () => {
+    // Create 3 entities with different data
+    commands
+      .spawn()
+      .with(SpriteAreaLikeComponent, {
+        boundsMin: { x: 1, y: 2, z: 3 },
+        boundsMax: { x: 4, y: 5, z: 6 },
+        tintColor: { r: 0.1, g: 0.2, b: 0.3, a: 0.4 },
+        anchor: { x: 0.1, y: 0.2 },
+        name: "First",
+      })
+      .build();
+
+    commands
+      .spawn()
+      .with(SpriteAreaLikeComponent, {
+        boundsMin: { x: 10, y: 20, z: 30 },
+        boundsMax: { x: 40, y: 50, z: 60 },
+        tintColor: { r: 0.5, g: 0.6, b: 0.7, a: 0.8 },
+        anchor: { x: 0.3, y: 0.4 },
+        name: "Second",
+      })
+      .build();
+
+    commands
+      .spawn()
+      .with(SpriteAreaLikeComponent, {
+        boundsMin: { x: 100, y: 200, z: 300 },
+        boundsMax: { x: 400, y: 500, z: 600 },
+        tintColor: { r: 0.9, g: 1, b: 0, a: 1 },
+        anchor: { x: 0.5, y: 0.6 },
+        name: "Third",
+      })
+      .build();
+
+    // Serialize and deserialize
+    const data = serializer.serialize(world, commands);
+    const targetWorld = new World();
+    const targetCommands = new Command(targetWorld);
+    const result = serializer.deserialize(targetWorld, targetCommands, data);
+
+    expect(result.success).toBe(true);
+    expect(targetWorld.getEntityCount()).toBe(3);
+
+    // Collect all deserialized entities
+    const entities: SpriteAreaLikeData[] = [];
+    targetCommands
+      .query()
+      .all(SpriteAreaLikeComponent)
+      .each((_, comp) => {
+        entities.push({
+          boundsMin: { ...comp.boundsMin },
+          boundsMax: { ...comp.boundsMax },
+          tintColor: { ...comp.tintColor },
+          anchor: { ...comp.anchor },
+          name: comp.name,
+        });
+      });
+
+    // Verify all 3 entities have unique names
+    const names = entities.map((e) => e.name).sort();
+    expect(names).toEqual(["First", "Second", "Third"]);
+
+    // Find each entity and verify its data
+    const first = entities.find((e) => e.name === "First");
+    const second = entities.find((e) => e.name === "Second");
+    const third = entities.find((e) => e.name === "Third");
+
+    expect(first?.boundsMin).toEqual({ x: 1, y: 2, z: 3 });
+    expect(first?.tintColor).toEqual({ r: 0.1, g: 0.2, b: 0.3, a: 0.4 });
+
+    expect(second?.boundsMin).toEqual({ x: 10, y: 20, z: 30 });
+    expect(second?.tintColor).toEqual({ r: 0.5, g: 0.6, b: 0.7, a: 0.8 });
+
+    expect(third?.boundsMin).toEqual({ x: 100, y: 200, z: 300 });
+    expect(third?.tintColor).toEqual({ r: 0.9, g: 1, b: 0, a: 1 });
+  });
+
+  it("nested objects should be independent after round-trip", () => {
+    // Create 2 entities
+    commands
+      .spawn()
+      .with(SpriteAreaLikeComponent, {
+        boundsMin: { x: 1, y: 1, z: 1 },
+        boundsMax: { x: 2, y: 2, z: 2 },
+        tintColor: { r: 1, g: 1, b: 1, a: 1 },
+        anchor: { x: 0.5, y: 0.5 },
+        name: "A",
+      })
+      .build();
+
+    commands
+      .spawn()
+      .with(SpriteAreaLikeComponent, {
+        boundsMin: { x: 10, y: 10, z: 10 },
+        boundsMax: { x: 20, y: 20, z: 20 },
+        tintColor: { r: 0.5, g: 0.5, b: 0.5, a: 0.5 },
+        anchor: { x: 0, y: 0 },
+        name: "B",
+      })
+      .build();
+
+    // Serialize and deserialize
+    const data = serializer.serialize(world, commands);
+    const targetWorld = new World();
+    const targetCommands = new Command(targetWorld);
+    serializer.deserialize(targetWorld, targetCommands, data);
+
+    // Get references to the deserialized components
+    const components: SpriteAreaLikeData[] = [];
+    targetCommands
+      .query()
+      .all(SpriteAreaLikeComponent)
+      .each((_, comp) => {
+        components.push(comp);
+      });
+
+    expect(components.length).toBe(2);
+
+    const compA = components.find((c) => c.name === "A")!;
+    const compB = components.find((c) => c.name === "B")!;
+
+    // Modify one entity's nested object
+    compA.boundsMin.x = 999;
+    compA.tintColor.r = 0;
+
+    // Verify the other entity is NOT affected
+    expect(compB.boundsMin.x).toBe(10);
+    expect(compB.tintColor.r).toBe(0.5);
+  });
+
+  it("should handle deeply nested objects", () => {
+    interface DeeplyNestedData {
+      level1: {
+        level2: {
+          value: number;
+        };
+        array: number[];
+      };
+    }
+
+    const DeeplyNestedComponent = component<DeeplyNestedData>(
+      "DeeplyNestedComponent",
+      {
+        level1: { serializable: true },
+      }
+    );
+
+    commands
+      .spawn()
+      .with(DeeplyNestedComponent, {
+        level1: { level2: { value: 100 }, array: [1, 2, 3] },
+      })
+      .build();
+
+    commands
+      .spawn()
+      .with(DeeplyNestedComponent, {
+        level1: { level2: { value: 200 }, array: [4, 5, 6] },
+      })
+      .build();
+
+    const data = serializer.serialize(world, commands);
+
+    const entity1Data = data.entities[0]?.components[0]?.data as DeeplyNestedData;
+    const entity2Data = data.entities[1]?.components[0]?.data as DeeplyNestedData;
+
+    // Verify data is correct and independent
+    expect(entity1Data.level1.level2.value).toBe(100);
+    expect(entity2Data.level1.level2.value).toBe(200);
+
+    expect(entity1Data.level1.array).toEqual([1, 2, 3]);
+    expect(entity2Data.level1.array).toEqual([4, 5, 6]);
+
+    // Verify they are not the same reference
+    (entity1Data.level1.level2 as any).value = 999;
+    expect(entity2Data.level1.level2.value).toBe(200);
+  });
+});
+
+describe("WorldSerializer - YAML Round-trip Reference Independence", () => {
+  let world: World;
+  let commands: Command;
+  let serializer: WorldSerializer;
+
+  // Component with nested plain objects that could be aliased in YAML
+  interface SpriteAreaLikeData {
+    boundsMin: { x: number; y: number; z: number };
+    boundsMax: { x: number; y: number; z: number };
+    tintColor: { r: number; g: number; b: number; a: number };
+    name: string;
+    seed: number;
+  }
+
+  const YamlTestComponent = component<SpriteAreaLikeData>(
+    "YamlTestComponent",
+    {
+      boundsMin: { serializable: true },
+      boundsMax: { serializable: true },
+      tintColor: { serializable: true },
+      name: { serializable: true },
+      seed: { serializable: true },
+    }
+  );
+
+  beforeEach(() => {
+    world = new World();
+    commands = new Command(world);
+    serializer = new WorldSerializer();
+  });
+
+  it("should preserve unique entity data through YAML round-trip", () => {
+    // Create 3 entities similar to the SpriteAreaGenerator bug scenario
+    commands
+      .spawn()
+      .with(YamlTestComponent, {
+        boundsMin: { x: -90, y: 0, z: -0.02 },
+        boundsMax: { x: 90, y: 0, z: -0.01 },
+        tintColor: { r: 1, g: 1, b: 1, a: 1 },
+        name: "Forest Tree Close",
+        seed: 288293,
+      })
+      .build();
+
+    commands
+      .spawn()
+      .with(YamlTestComponent, {
+        boundsMin: { x: -80, y: 0, z: -1 },
+        boundsMax: { x: 80, y: 0, z: -0.5 },
+        tintColor: { r: 0.8, g: 0.8, b: 0.8, a: 1 },
+        name: "Forest Tree MID",
+        seed: 123456,
+      })
+      .build();
+
+    commands
+      .spawn()
+      .with(YamlTestComponent, {
+        boundsMin: { x: -70, y: 0, z: -2 },
+        boundsMax: { x: 70, y: 0, z: -1.5 },
+        tintColor: { r: 0.6, g: 0.6, b: 0.6, a: 1 },
+        name: "Forest Tree BG",
+        seed: 789012,
+      })
+      .build();
+
+    // Serialize to YAML and back
+    const yaml = serializer.serializeToYaml(world, commands);
+
+    const targetWorld = new World();
+    const targetCommands = new Command(targetWorld);
+    const result = serializer.deserializeFromYaml(
+      targetWorld,
+      targetCommands,
+      yaml
+    );
+
+    expect(result.success).toBe(true);
+    expect(targetWorld.getEntityCount()).toBe(3);
+
+    // Collect all entities and verify they have unique data
+    const entities: SpriteAreaLikeData[] = [];
+    targetCommands
+      .query()
+      .all(YamlTestComponent)
+      .each((_, comp) => {
+        entities.push({
+          boundsMin: { ...comp.boundsMin },
+          boundsMax: { ...comp.boundsMax },
+          tintColor: { ...comp.tintColor },
+          name: comp.name,
+          seed: comp.seed,
+        });
+      });
+
+    // Verify all 3 entities have unique names (the bug was causing all to have the same name)
+    const names = entities.map((e) => e.name).sort();
+    expect(names).toEqual(["Forest Tree BG", "Forest Tree Close", "Forest Tree MID"]);
+
+    // Verify each entity has its original seed value
+    const seeds = entities.map((e) => e.seed).sort((a, b) => a - b);
+    expect(seeds).toEqual([123456, 288293, 789012]);
+
+    // Find each entity and verify its complete data
+    const closeEntity = entities.find((e) => e.name === "Forest Tree Close")!;
+    const midEntity = entities.find((e) => e.name === "Forest Tree MID")!;
+    const bgEntity = entities.find((e) => e.name === "Forest Tree BG")!;
+
+    expect(closeEntity.seed).toBe(288293);
+    expect(closeEntity.boundsMin).toEqual({ x: -90, y: 0, z: -0.02 });
+    expect(closeEntity.tintColor.r).toBe(1);
+
+    expect(midEntity.seed).toBe(123456);
+    expect(midEntity.boundsMin).toEqual({ x: -80, y: 0, z: -1 });
+    expect(midEntity.tintColor.r).toBe(0.8);
+
+    expect(bgEntity.seed).toBe(789012);
+    expect(bgEntity.boundsMin).toEqual({ x: -70, y: 0, z: -2 });
+    expect(bgEntity.tintColor.r).toBe(0.6);
+  });
+
+  it("should not create YAML aliases for similar objects", () => {
+    // Create 2 entities with some identical nested objects
+    commands
+      .spawn()
+      .with(YamlTestComponent, {
+        boundsMin: { x: 0, y: 0, z: 0 }, // Same as entity 2
+        boundsMax: { x: 10, y: 10, z: 10 },
+        tintColor: { r: 1, g: 1, b: 1, a: 1 }, // Same as entity 2
+        name: "Entity A",
+        seed: 111,
+      })
+      .build();
+
+    commands
+      .spawn()
+      .with(YamlTestComponent, {
+        boundsMin: { x: 0, y: 0, z: 0 }, // Same as entity 1
+        boundsMax: { x: 20, y: 20, z: 20 },
+        tintColor: { r: 1, g: 1, b: 1, a: 1 }, // Same as entity 1
+        name: "Entity B",
+        seed: 222,
+      })
+      .build();
+
+    const yaml = serializer.serializeToYaml(world, commands);
+
+    // YAML should NOT contain anchors (&) or aliases (*)
+    // These are used by the yaml library to represent shared references
+    expect(yaml).not.toContain("&");
+    expect(yaml).not.toContain("*");
+
+    // Deserialize and verify entities are still independent
+    const targetWorld = new World();
+    const targetCommands = new Command(targetWorld);
+    serializer.deserializeFromYaml(targetWorld, targetCommands, yaml);
+
+    const components: SpriteAreaLikeData[] = [];
+    targetCommands
+      .query()
+      .all(YamlTestComponent)
+      .each((_, comp) => {
+        components.push(comp);
+      });
+
+    expect(components.length).toBe(2);
+
+    const entityA = components.find((c) => c.name === "Entity A")!;
+    const entityB = components.find((c) => c.name === "Entity B")!;
+
+    // Modify entity A's nested object
+    entityA.boundsMin.x = 999;
+
+    // Entity B should NOT be affected (they should NOT share references)
+    expect(entityB.boundsMin.x).toBe(0);
+  });
+
+  it("should handle multiple YAML round-trips without data corruption", () => {
+    // Initial entities
+    commands
+      .spawn()
+      .with(YamlTestComponent, {
+        boundsMin: { x: 1, y: 2, z: 3 },
+        boundsMax: { x: 4, y: 5, z: 6 },
+        tintColor: { r: 0.1, g: 0.2, b: 0.3, a: 0.4 },
+        name: "Persistent Entity",
+        seed: 42,
+      })
+      .build();
+
+    // Round-trip 1
+    let yaml = serializer.serializeToYaml(world, commands);
+    let targetWorld = new World();
+    let targetCommands = new Command(targetWorld);
+    serializer.deserializeFromYaml(targetWorld, targetCommands, yaml);
+
+    // Round-trip 2
+    yaml = serializer.serializeToYaml(targetWorld, targetCommands);
+    targetWorld = new World();
+    targetCommands = new Command(targetWorld);
+    serializer.deserializeFromYaml(targetWorld, targetCommands, yaml);
+
+    // Round-trip 3
+    yaml = serializer.serializeToYaml(targetWorld, targetCommands);
+    targetWorld = new World();
+    targetCommands = new Command(targetWorld);
+    serializer.deserializeFromYaml(targetWorld, targetCommands, yaml);
+
+    // Verify data is still correct after 3 round-trips
+    targetCommands
+      .query()
+      .all(YamlTestComponent)
+      .each((_, comp) => {
+        expect(comp.name).toBe("Persistent Entity");
+        expect(comp.seed).toBe(42);
+        expect(comp.boundsMin).toEqual({ x: 1, y: 2, z: 3 });
+        expect(comp.boundsMax).toEqual({ x: 4, y: 5, z: 6 });
+        expect(comp.tintColor).toEqual({ r: 0.1, g: 0.2, b: 0.3, a: 0.4 });
+      });
+  });
+});

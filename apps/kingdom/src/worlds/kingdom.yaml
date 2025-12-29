@@ -71,8 +71,8 @@ entities:
         data:
           ids:
             - 3
-            - 15
             - 16
+            - 17
       - typeId: 1
         typeName: Name
         data:
@@ -131,7 +131,7 @@ entities:
       - typeId: 4
         typeName: VirtualCameraFollow
         data:
-          target: 10
+          target: 11
           mode: transposer
           offset:
             x: 0
@@ -219,9 +219,9 @@ entities:
         typeName: Children
         data:
           ids:
-            - 7
             - 8
-            - 6
+            - 10
+            - 7
             - 9
       - typeId: 1
         typeName: Name
@@ -391,6 +391,69 @@ entities:
   - id: 6
     generation: 0
     components:
+      - typeId: 0
+        typeName: Children
+        data:
+          ids: []
+      - typeId: 1
+        typeName: Name
+        data:
+          name: Ground Sprites
+      - typeId: 2
+        typeName: Transform3D
+        data:
+          position:
+            x: 0
+            y: 0
+            z: 0
+          rotation:
+            x: 0
+            y: 0
+            z: 0
+          scale:
+            x: 1
+            y: 1
+            z: 1
+      - typeId: 14
+        typeName: SpriteAreaGenerator
+        data:
+          boundsMin:
+            x: -165
+            y: 0
+            z: 0
+          boundsMax:
+            x: 165
+            y: 0
+            z: 0
+          spriteTexture:
+            guid: ground
+          seed: 42
+          spriteCount: 10
+          minScale: 1
+          maxScale: 1
+          minDistance: 0
+          uniformDistanceX: true
+          uniformDistanceY: true
+          uniformDistanceZ: true
+          uniformDistanceSpacing:
+            x: 16.5
+            y: 0
+            z: 0
+          sortingLayer: 0
+          sortingOrder: 0
+          isLit: true
+          tintColor:
+            r: 1
+            g: 1
+            b: 1
+            a: 1
+          anchor:
+            x: 0.5
+            y: 0.5
+          additionalComponents: []
+  - id: 7
+    generation: 0
+    components:
       - typeId: 9
         typeName: Parent
         data:
@@ -437,11 +500,11 @@ entities:
         typeName: SpriteAreaGenerator
         data:
           boundsMin:
-            x: -60
+            x: -80
             y: 0
             z: -0.019999999552965164
           boundsMax:
-            x: 60
+            x: 80
             y: 0
             z: -0.009999999776482582
           spriteTexture:
@@ -463,81 +526,6 @@ entities:
             x: 0.5
             y: 0
           additionalComponents: []
-  - id: 7
-    generation: 0
-    components:
-      - typeId: 9
-        typeName: Parent
-        data:
-          id: 3
-      - typeId: 0
-        typeName: Children
-        data:
-          ids: []
-      - typeId: 1
-        typeName: Name
-        data:
-          name: Forest Rock MID
-      - typeId: 2
-        typeName: Transform3D
-        data:
-          position:
-            x: 0
-            y: 0.46000000834465027
-            z: -2.0999999046325684
-          rotation:
-            x: 0
-            y: 0
-            z: 0
-          scale:
-            x: 1
-            y: 1
-            z: 1
-      - typeId: 10
-        typeName: LocalTransform3D
-        data:
-          position:
-            x: 0
-            y: 0.46000000834465027
-            z: -2.0999999046325684
-          rotation:
-            x: 0
-            y: 0
-            z: 0
-          scale:
-            x: 1
-            y: 1
-            z: 1
-      - typeId: 14
-        typeName: SpriteAreaGenerator
-        data:
-          boundsMin:
-            x: -50
-            y: 0
-            z: 0
-          boundsMax:
-            x: 50
-            y: 0
-            z: 0
-          spriteTexture:
-            guid: rocks
-          seed: 3874234
-          spriteCount: 10
-          minScale: 1
-          maxScale: 1
-          minDistance: 5
-          sortingLayer: 0
-          sortingOrder: 0
-          isLit: true
-          tintColor:
-            r: 0.5696202516555786
-            g: 0.5696202516555786
-            b: 0.5696202516555786
-            a: 1
-          anchor:
-            x: 0.5
-            y: 0
-          additionalComponents: []
   - id: 8
     generation: 0
     components:
@@ -552,14 +540,14 @@ entities:
       - typeId: 1
         typeName: Name
         data:
-          name: Forest Rock MID
+          name: Forest Tree BG
       - typeId: 2
         typeName: Transform3D
         data:
           position:
             x: 0
-            y: 0.46000000834465027
-            z: -2.0999999046325684
+            y: -0.699999988079071
+            z: -3
           rotation:
             x: 0
             y: 0
@@ -573,8 +561,8 @@ entities:
         data:
           position:
             x: 0
-            y: 0.46000000834465027
-            z: -2.0999999046325684
+            y: -0.699999988079071
+            z: -3
           rotation:
             x: 0
             y: 0
@@ -587,27 +575,27 @@ entities:
         typeName: SpriteAreaGenerator
         data:
           boundsMin:
-            x: -50
+            x: -70
             y: 0
-            z: 0
+            z: -0.10000000149011612
           boundsMax:
-            x: 50
+            x: 70
             y: 0
             z: 0
           spriteTexture:
-            guid: rocks
-          seed: 3874234
-          spriteCount: 10
-          minScale: 1
-          maxScale: 1
-          minDistance: 5
+            guid: trees
+          seed: 312209
+          spriteCount: 61
+          minScale: 4
+          maxScale: 4.050000190734863
+          minDistance: 1.5
           sortingLayer: 0
           sortingOrder: 0
           isLit: true
           tintColor:
-            r: 0.5696202516555786
-            g: 0.5696202516555786
-            b: 0.5696202516555786
+            r: 0.2236286997795105
+            g: 0.2236286997795105
+            b: 0.2236286997795105
             a: 1
           anchor:
             x: 0.5
@@ -662,17 +650,17 @@ entities:
         typeName: SpriteAreaGenerator
         data:
           boundsMin:
-            x: -50
+            x: -71
             y: 0
             z: 0
           boundsMax:
-            x: 50
+            x: 71
             y: 0
             z: 0
           spriteTexture:
             guid: rocks
           seed: 3874234
-          spriteCount: 10
+          spriteCount: 20
           minScale: 1
           maxScale: 1
           minDistance: 5
@@ -689,6 +677,81 @@ entities:
             y: 0
           additionalComponents: []
   - id: 10
+    generation: 0
+    components:
+      - typeId: 9
+        typeName: Parent
+        data:
+          id: 3
+      - typeId: 0
+        typeName: Children
+        data:
+          ids: []
+      - typeId: 1
+        typeName: Name
+        data:
+          name: Forest Tree MID
+      - typeId: 2
+        typeName: Transform3D
+        data:
+          position:
+            x: 0
+            y: -0.5
+            z: -2
+          rotation:
+            x: 0
+            y: 0
+            z: 0
+          scale:
+            x: 1
+            y: 1
+            z: 1
+      - typeId: 10
+        typeName: LocalTransform3D
+        data:
+          position:
+            x: 0
+            y: -0.5
+            z: -2
+          rotation:
+            x: 0
+            y: 0
+            z: 0
+          scale:
+            x: 1
+            y: 1
+            z: 1
+      - typeId: 14
+        typeName: SpriteAreaGenerator
+        data:
+          boundsMin:
+            x: -75
+            y: 0
+            z: -0.20000000298023224
+          boundsMax:
+            x: 75
+            y: 0
+            z: 0
+          spriteTexture:
+            guid: trees
+          seed: 85653
+          spriteCount: 50
+          minScale: 3.299999952316284
+          maxScale: 3.305000066757202
+          minDistance: 2
+          sortingLayer: 0
+          sortingOrder: 0
+          isLit: true
+          tintColor:
+            r: 0.5316455364227295
+            g: 0.5316455364227295
+            b: 0.5316455364227295
+            a: 1
+          anchor:
+            x: 0.5
+            y: 0
+          additionalComponents: []
+  - id: 11
     generation: 0
     components:
       - typeId: 1
@@ -803,7 +866,7 @@ entities:
         typeName: Player2D
         data:
           movementSpeed: 20
-  - id: 11
+  - id: 12
     generation: 0
     components:
       - typeId: 1
@@ -846,7 +909,7 @@ entities:
         typeName: SunLight
         data:
           isAmbient: false
-  - id: 12
+  - id: 13
     generation: 0
     components:
       - typeId: 1
@@ -889,7 +952,7 @@ entities:
         typeName: SunLight
         data:
           isAmbient: true
-  - id: 13
+  - id: 14
     generation: 0
     components:
       - typeId: 1
@@ -941,7 +1004,7 @@ entities:
           starSeed: 30
           flickerSpeed: 2
           flickerIntensity: 0.3
-  - id: 14
+  - id: 15
     generation: 0
     components:
       - typeId: 1
@@ -988,8 +1051,8 @@ entities:
       - typeId: 28
         typeName: FogSkySync
         data:
-          skyEntity: 13
-  - id: 15
+          skyEntity: 14
+  - id: 16
     generation: 0
     components:
       - typeId: 9
@@ -1034,7 +1097,7 @@ entities:
         typeName: Fog2D
         data:
           baseSize:
-            x: 110
+            x: 170
             y: 16.200000762939453
           fogColor:
             r: 0.658823549747467
@@ -1055,8 +1118,8 @@ entities:
       - typeId: 28
         typeName: FogSkySync
         data:
-          skyEntity: 13
-  - id: 16
+          skyEntity: 14
+  - id: 17
     generation: 0
     components:
       - typeId: 9
@@ -1101,7 +1164,7 @@ entities:
         typeName: Fog2D
         data:
           baseSize:
-            x: 110
+            x: 170
             y: 16.200000762939453
           fogColor:
             r: 0.658823549747467
@@ -1122,8 +1185,8 @@ entities:
       - typeId: 28
         typeName: FogSkySync
         data:
-          skyEntity: 13
-  - id: 17
+          skyEntity: 14
+  - id: 18
     generation: 0
     components:
       - typeId: 1
@@ -1196,7 +1259,7 @@ entities:
           lightningDuration: 0.15000000596046448
           lightningIntensity: 0.9959999918937683
           stormIntensity: 0.8500000238418579
-  - id: 18
+  - id: 19
     generation: 0
     components:
       - typeId: 1
@@ -1259,7 +1322,7 @@ entities:
           enableGroundGlow: false
           groundGlowRadius: 20
 metadata:
-  createdAt: 2025-12-28T23:21:34.626Z
-  modifiedAt: 2025-12-28T23:21:34.626Z
-  entityCount: 19
-  archetypeCount: 63
+  createdAt: 2025-12-29T03:33:57.457Z
+  modifiedAt: 2025-12-29T03:33:57.457Z
+  entityCount: 20
+  archetypeCount: 58

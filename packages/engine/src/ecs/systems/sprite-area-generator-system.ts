@@ -116,51 +116,164 @@ function generateSpritesForEntity(
     .map((name: string) => globalComponentRegistry.getByName(name))
     .filter((comp: unknown) => comp !== undefined);
 
-  // 5. Generate sprites with optional minimum distance constraint
+  // 5. Generate sprite positions
   const rng = new SeededRandom(data.seed);
   const childIds: number[] = [];
-  const generatedPositions: { x: number; y: number; z: number }[] = [];
-  const minDistSquared = data.minDistance * data.minDistance;
-  const maxAttempts = 100;
-
   const anchor = data.anchor ?? { x: 0.5, y: 0.5 };
 
-  for (let i = 0; i < data.spriteCount; i++) {
-    let attempts = 0;
-    let validPosition = false;
-    let x = 0,
-      y = 0,
-      z = 0;
+  // Determine if we're in fully random mode (no uniform axes)
+  // Use explicit === true check to handle undefined values correctly
+  const uniformX = data.uniformDistanceX === true;
+  const uniformY = data.uniformDistanceY === true;
+  const uniformZ = data.uniformDistanceZ === true;
+  const isFullyRandom = !uniformX && !uniformY && !uniformZ;
 
-    while (attempts < maxAttempts && !validPosition) {
-      x = rng.range(minX, maxX);
-      y = rng.range(minY, maxY);
-      z = rng.range(minZ, maxZ);
+  // Generate positions based on mode
+  const positions: { x: number; y: number; z: number }[] = [];
 
-      if (data.minDistance > 0) {
-        validPosition = true;
-        for (const existing of generatedPositions) {
-          const dx = x - existing.x;
-          const dy = y - existing.y;
-          const dz = z - existing.z;
-          const distSquared = dx * dx + dy * dy + dz * dz;
-          if (distSquared < minDistSquared) {
-            validPosition = false;
-            break;
+  if (isFullyRandom) {
+    // Random placement with minDistance constraint
+    const minDistSquared = data.minDistance * data.minDistance;
+    const maxAttempts = 100;
+
+    for (let i = 0; i < data.spriteCount; i++) {
+      let attempts = 0;
+      let validPosition = false;
+      let x = 0,
+        y = 0,
+        z = 0;
+
+      while (attempts < maxAttempts && !validPosition) {
+        x = rng.range(minX, maxX);
+        y = rng.range(minY, maxY);
+        z = rng.range(minZ, maxZ);
+
+        if (data.minDistance > 0) {
+          validPosition = true;
+          for (const existing of positions) {
+            const dx = x - existing.x;
+            const dy = y - existing.y;
+            const dz = z - existing.z;
+            const distSquared = dx * dx + dy * dy + dz * dz;
+            if (distSquared < minDistSquared) {
+              validPosition = false;
+              break;
+            }
           }
+        } else {
+          validPosition = true;
+        }
+        attempts++;
+      }
+
+      if (!validPosition) {
+        continue;
+      }
+
+      positions.push({ x, y, z });
+    }
+  } else {
+    // Uniform distance mode - expand from center outward
+    const spacing = data.uniformDistanceSpacing ?? { x: 5, y: 5, z: 5 };
+
+    // Calculate center of bounds
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    const centerZ = (minZ + maxZ) / 2;
+
+    // Check if bounds have any range (min != max)
+    const hasRangeX = maxX - minX > 0;
+    const hasRangeY = maxY - minY > 0;
+    const hasRangeZ = maxZ - minZ > 0;
+
+    // Calculate actual spacing for each axis
+    const spacingX = uniformX
+      ? spacing.x > 0
+        ? spacing.x
+        : hasRangeX
+          ? rng.range(1, 5)
+          : 0
+      : 0;
+    const spacingY = uniformY
+      ? spacing.y > 0
+        ? spacing.y
+        : hasRangeY
+          ? rng.range(1, 5)
+          : 0
+      : 0;
+    const spacingZ = uniformZ
+      ? spacing.z > 0
+        ? spacing.z
+        : hasRangeZ
+          ? rng.range(1, 5)
+          : 0
+      : 0;
+
+    // Generate uniform positions for an axis
+    const generateUniformPositions = (
+      count: number,
+      spacingVal: number,
+      center: number
+    ): number[] => {
+      const result: number[] = [];
+      if (spacingVal === 0) {
+        for (let i = 0; i < count; i++) {
+          result.push(center);
         }
       } else {
-        validPosition = true;
+        const halfSpan = ((count - 1) * spacingVal) / 2;
+        for (let i = 0; i < count; i++) {
+          result.push(center - halfSpan + i * spacingVal);
+        }
       }
-      attempts++;
+      return result;
+    };
+
+    // For each sprite index, calculate position on each axis
+    for (let i = 0; i < data.spriteCount; i++) {
+      let x: number;
+      let y: number;
+      let z: number;
+
+      if (uniformX) {
+        const xPositions = generateUniformPositions(
+          data.spriteCount,
+          spacingX,
+          centerX
+        );
+        x = xPositions[i]!;
+      } else {
+        x = rng.range(minX, maxX);
+      }
+
+      if (uniformY) {
+        const yPositions = generateUniformPositions(
+          data.spriteCount,
+          spacingY,
+          centerY
+        );
+        y = yPositions[i]!;
+      } else {
+        y = rng.range(minY, maxY);
+      }
+
+      if (uniformZ) {
+        const zPositions = generateUniformPositions(
+          data.spriteCount,
+          spacingZ,
+          centerZ
+        );
+        z = zPositions[i]!;
+      } else {
+        z = rng.range(minZ, maxZ);
+      }
+
+      positions.push({ x, y, z });
     }
+  }
 
-    if (!validPosition) {
-      continue;
-    }
-
-    generatedPositions.push({ x, y, z });
-
+  // Spawn sprites at generated positions
+  for (const pos of positions) {
     const scale = rng.range(data.minScale, data.maxScale);
     const sprite = rng.pick(sprites);
     if (!sprite) continue;
@@ -168,7 +281,7 @@ function generateSpritesForEntity(
     let builder = commands
       .spawn()
       .with(LocalTransform3D, {
-        position: new Vector3(x, y, z),
+        position: new Vector3(pos.x, pos.y, pos.z),
         rotation: new Vector3(0, 0, 0),
         scale: new Vector3(scale, scale, scale),
       })

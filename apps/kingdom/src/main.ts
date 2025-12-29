@@ -49,7 +49,6 @@ import { EconomyManager } from './resources/economy-manager.js';
 import { ProgressManager } from './resources/progress-manager.js';
 
 // Import components to register them with the ECS
-import './components/sprite-area-generator.js';
 import './components/cloud-2d.js';
 import './components/sun-light.js';
 import './components/villager.js';

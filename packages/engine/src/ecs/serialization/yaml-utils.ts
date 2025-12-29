@@ -7,7 +7,16 @@ import YAML from 'yaml';
  */
 export function jsonToYaml(jsonString: string): string {
   const data = JSON.parse(jsonString);
-  return YAML.stringify(data, { lineWidth: 0 });
+  return YAML.stringify(data, {
+    lineWidth: 0,
+    // CRITICAL: Disable YAML anchors/aliases for duplicate objects.
+    // When enabled (default), the YAML library creates anchors (&anchor) for the first
+    // occurrence of an object and aliases (*anchor) for subsequent identical objects.
+    // This causes a serious bug: when parsed back, ALL aliases resolve to the SAME
+    // JavaScript object instance, causing entity data corruption where multiple
+    // entities share the same component data.
+    aliasDuplicateObjects: false,
+  });
 }
 
 /**

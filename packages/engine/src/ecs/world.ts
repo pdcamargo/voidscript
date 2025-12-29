@@ -177,16 +177,21 @@ export class World {
     // Remove from archetype
     const archetype = this.archetypeGraph.getArchetype(meta.archetypeId);
     if (archetype) {
+      // IMPORTANT: Capture the actual row from archetype BEFORE removeEntity
+      // meta.row might be stale if a previous operation failed to update it
+      const actualRow = (archetype as any).entityToRow?.get(entity) ?? meta.row;
+
       const removedComponents = archetype.removeEntity(entity);
 
       // If we swapped with last entity, update its metadata
-      if (meta.row < archetype.getEntityCount()) {
-        const swappedEntity = archetype.entities[meta.row];
+      // Use actualRow (captured before removal) to find the swapped entity
+      if (actualRow < archetype.getEntityCount()) {
+        const swappedEntity = archetype.entities[actualRow];
         if (swappedEntity !== undefined) {
           this.entityManager.setLocation(
             swappedEntity,
             meta.archetypeId,
-            meta.row,
+            actualRow,
           );
         }
       }
@@ -255,6 +260,11 @@ export class World {
       return;
     }
 
+    // IMPORTANT: Capture the actual row from archetype BEFORE removeEntity
+    // meta.row might be stale if a previous operation failed to update it
+    const actualRow =
+      (currentArchetype as any).entityToRow?.get(entity) ?? meta.row;
+
     // Remove from current archetype
     const components = currentArchetype.removeEntity(entity);
     if (!components) {
@@ -271,13 +281,14 @@ export class World {
     this.entityManager.setLocation(entity, newArchetype.id, newRow);
 
     // Update swapped entity metadata
-    if (meta.row < currentArchetype.getEntityCount()) {
-      const swappedEntity = currentArchetype.entities[meta.row];
+    // Use actualRow (captured before removal) to find the swapped entity
+    if (actualRow < currentArchetype.getEntityCount()) {
+      const swappedEntity = currentArchetype.entities[actualRow];
       if (swappedEntity !== undefined) {
         this.entityManager.setLocation(
           swappedEntity,
           currentArchetype.id,
-          meta.row,
+          actualRow,
         );
       }
     }
@@ -336,6 +347,11 @@ export class World {
       return;
     }
 
+    // IMPORTANT: Capture the actual row from archetype BEFORE removeEntity
+    // meta.row might be stale if a previous operation failed to update it
+    const actualRow =
+      (currentArchetype as any).entityToRow?.get(entity) ?? meta.row;
+
     // Remove from current archetype
     const components = currentArchetype.removeEntity(entity);
     if (!components) {
@@ -352,13 +368,14 @@ export class World {
     this.entityManager.setLocation(entity, newArchetype.id, newRow);
 
     // Update swapped entity metadata
-    if (meta.row < currentArchetype.getEntityCount()) {
-      const swappedEntity = currentArchetype.entities[meta.row];
+    // Use actualRow (captured before removal) to find the swapped entity
+    if (actualRow < currentArchetype.getEntityCount()) {
+      const swappedEntity = currentArchetype.entities[actualRow];
       if (swappedEntity !== undefined) {
         this.entityManager.setLocation(
           swappedEntity,
           currentArchetype.id,
-          meta.row,
+          actualRow,
         );
       }
     }
@@ -418,6 +435,35 @@ export class World {
 
     // Get entity row
     const row = meta.row;
+
+    // VALIDATION: Check that archetype's view of this entity matches EntityManager
+    // This catches bugs where entity metadata row is out of sync with archetype storage
+    const archetypeEntity = archetype.entities[row];
+    if (archetypeEntity !== entity) {
+      console.error(
+        `[World.getAllComponents] ENTITY ROW MISMATCH DETECTED!\n` +
+        `  Entity: ${entity}\n` +
+        `  meta.row: ${row}\n` +
+        `  archetype.entities[${row}]: ${archetypeEntity}\n` +
+        `  meta.archetypeId: ${meta.archetypeId}\n` +
+        `  archetype.id: ${archetype.id}\n` +
+        `  archetype.entityCount: ${archetype.getEntityCount()}`
+      );
+      // Return undefined to avoid returning wrong entity's components
+      return undefined;
+    }
+
+    // ADDITIONAL VALIDATION: Check archetype's entityToRow consistency
+    const archetypeRowCheck = (archetype as any).entityToRow?.get(entity);
+    if (archetypeRowCheck !== undefined && archetypeRowCheck !== row) {
+      console.error(
+        `[World.getAllComponents] ARCHETYPE entityToRow MISMATCH!\n` +
+        `  Entity: ${entity}\n` +
+        `  meta.row: ${row}\n` +
+        `  archetype.entityToRow.get(entity): ${archetypeRowCheck}`
+      );
+    }
+
     const components = new Map<ComponentType<any>, any>();
 
     // Collect all components for this entity using global registry
@@ -518,6 +564,19 @@ export class World {
         for (let row = 0; row < entityCount; row++) {
           const entity = archetype.entities[row];
           if (entity === undefined) continue;
+
+          // VALIDATION: Verify entity metadata matches iteration row
+          const meta = this.entityManager.getMetadata(entity);
+          if (meta && meta.row !== row) {
+            console.error(
+              `[World.executeQuery] ROW MISMATCH in query iteration!\n` +
+              `  Entity: ${entity}\n` +
+              `  iteration row: ${row}\n` +
+              `  meta.row: ${meta.row}\n` +
+              `  archetype.id: ${archetype.id}\n` +
+              `  meta.archetypeId: ${meta.archetypeId}`
+            );
+          }
 
           // Direct parameter passing based on component count (zero allocations)
           switch (numComponents) {

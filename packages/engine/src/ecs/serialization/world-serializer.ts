@@ -260,7 +260,12 @@ export class WorldSerializer {
       return value;
     }
 
-    // Default: pass through
+    // Deep-clone plain objects to prevent reference sharing between entities
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      return structuredClone(value);
+    }
+
+    // Default: pass through (primitives)
     return value;
   }
 
@@ -830,7 +835,21 @@ export class WorldSerializer {
     const context: SerializationContext = { entityMapping };
     const entities: SerializedEntity[] = [];
 
+    // DEBUG: Track Name components to detect duplicates
+    const nameToEntities = new Map<string, number[]>();
+    // DEBUG: Track entities we've seen to detect duplicates
+    const seenEntities = new Set<number>();
+    // DEBUG: Track component data objects to detect shared references
+    const componentDataObjects = new Map<any, number[]>();
+
     commands.query().all().each((entity) => {
+      // DEBUG: Check for duplicate entity handles in the same iteration
+      if (seenEntities.has(entity)) {
+        console.error(
+          `[WorldSerializer] DUPLICATE ENTITY HANDLE! Entity ${entity} appeared twice in query iteration`
+        );
+      }
+      seenEntities.add(entity);
       // Skip entities not in filter
       if (entityFilter && !entityFilter.has(entity)) {
         return;
@@ -847,6 +866,7 @@ export class WorldSerializer {
       }
 
       const serializedComponents: SerializedComponent[] = [];
+      let entityName: string | undefined;
 
       for (const [componentType, data] of components) {
         const typeId = componentTypeMap.get(componentType);
@@ -857,6 +877,24 @@ export class WorldSerializer {
         // Skip non-serializable components (marked with false)
         if (componentType.serializerConfig === false) {
           continue;
+        }
+
+        // DEBUG: Check if this component data object is shared with another entity
+        if (data !== null && typeof data === 'object') {
+          const existingEntities = componentDataObjects.get(data);
+          if (existingEntities) {
+            existingEntities.push(entity);
+            console.error(
+              `[WorldSerializer] SHARED COMPONENT DATA! Component ${componentType.name} data object is shared between entities: ${existingEntities.join(', ')}`
+            );
+          } else {
+            componentDataObjects.set(data, [entity]);
+          }
+        }
+
+        // DEBUG: Track Name component
+        if (componentType.name === 'Name' && data?.name) {
+          entityName = data.name;
         }
 
         let serializedData: any;
@@ -883,6 +921,13 @@ export class WorldSerializer {
         });
       }
 
+      // DEBUG: Track entity names
+      if (entityName) {
+        const existing = nameToEntities.get(entityName) || [];
+        existing.push(entity);
+        nameToEntities.set(entityName, existing);
+      }
+
       // Get generation for entity validation
       const generation = world.getGeneration(entity);
 
@@ -892,6 +937,15 @@ export class WorldSerializer {
         components: serializedComponents,
       });
     });
+
+    // DEBUG: Check for duplicate names (potential corruption indicator)
+    for (const [name, entityIds] of nameToEntities) {
+      if (entityIds.length > 1 && name.includes('Forest')) {
+        console.warn(
+          `[WorldSerializer] POTENTIAL CORRUPTION: Multiple entities (${entityIds.join(', ')}) have the same name "${name}"`
+        );
+      }
+    }
 
     // Serialize resources if app is provided
     let resourceRegistry: ResourceRegistryEntry[] = [];
