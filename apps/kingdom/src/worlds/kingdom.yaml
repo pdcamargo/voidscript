@@ -61,11 +61,11 @@ componentRegistry:
   - id: 29
     name: FogSkySync
   - id: 30
-    name: LightningField2D
-  - id: 31
     name: PrefabInstance
-  - id: 32
+  - id: 31
     name: Rain2D
+  - id: 32
+    name: LightningField2D
 entities:
   - id: 0
     generation: 0
@@ -119,7 +119,7 @@ entities:
         typeName: Transform3D
         data:
           position:
-            x: -13.600000381469727
+            x: -10.484401816396781
             y: 1.0000000223517418
             z: 10
           rotation:
@@ -183,7 +183,7 @@ entities:
         typeName: Transform3D
         data:
           position:
-            x: -13.600000381469727
+            x: -10.484401816396781
             y: 1.0000000223517418
             z: 10
           rotation:
@@ -778,7 +778,7 @@ entities:
         typeName: Transform3D
         data:
           position:
-            x: -13.600000381469727
+            x: -10.484401816396781
             y: 1.100000023841858
             z: 0
           rotation:
@@ -1260,6 +1260,32 @@ entities:
         data:
           skyEntity: 16
   - id: 20
+    generation: 1
+    components:
+      - typeId: 30
+        typeName: PrefabInstance
+        data:
+          prefabAssetGuid: fe28a3a2-7584-4b06-a5a0-ef066846ddba
+      - typeId: 1
+        typeName: Name
+        data:
+          name: Rain
+      - typeId: 2
+        typeName: Transform3D
+        data:
+          position:
+            x: 0
+            y: 0
+            z: 0
+          rotation:
+            x: 0
+            y: 0
+            z: 0
+          scale:
+            x: 1
+            y: 1
+            z: 1
+  - id: 21
     generation: 0
     components:
       - typeId: 1
@@ -1281,7 +1307,7 @@ entities:
             x: 1
             y: 1
             z: 1
-      - typeId: 30
+      - typeId: 32
         typeName: LightningField2D
         data:
           baseSize:
@@ -1321,34 +1347,8 @@ entities:
           flashIntensity: 0.671999990940094
           enableGroundGlow: false
           groundGlowRadius: 20
-  - id: 21
-    generation: 1
-    components:
-      - typeId: 31
-        typeName: PrefabInstance
-        data:
-          prefabAssetGuid: fe28a3a2-7584-4b06-a5a0-ef066846ddba
-      - typeId: 1
-        typeName: Name
-        data:
-          name: Rain
-      - typeId: 2
-        typeName: Transform3D
-        data:
-          position:
-            x: 0
-            y: 0
-            z: 0
-          rotation:
-            x: 0
-            y: 0
-            z: 0
-          scale:
-            x: 1
-            y: 1
-            z: 1
 metadata:
-  createdAt: 2025-12-29T14:30:43.806Z
-  modifiedAt: 2025-12-29T14:30:43.806Z
+  createdAt: 2025-12-29T21:57:29.564Z
+  modifiedAt: 2025-12-29T21:57:29.564Z
   entityCount: 22
-  archetypeCount: 61
+  archetypeCount: 59

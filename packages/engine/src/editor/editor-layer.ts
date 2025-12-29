@@ -72,6 +72,11 @@ import {
 } from '../app/imgui/sprite-editor/index.js';
 import { renderImGuiResourceViewer } from '../app/imgui/resource-viewer.js';
 import { Input, KeyCode } from '../app/input.js';
+import { SceneViewBounds } from './scene-view-bounds.js';
+import { TransformControlsManager } from './transform-controls-manager.js';
+import { TRANSFORM_MODE_SHORTCUTS } from './transform-mode-constants.js';
+import { LocalTransform3D } from '../ecs/components/rendering/local-transform-3d.js';
+import { Parent } from '../ecs/components/parent.js';
 
 // ============================================================================
 // Editor Configuration
@@ -190,6 +195,13 @@ export class EditorLayer extends Layer {
   // Helper management (internal, not ECS)
   private helperManager: HelperManager | null = null;
 
+  // Scene View bounds tracking (for TransformControls mouse handling)
+  private sceneViewBounds: SceneViewBounds | null = null;
+
+  // TransformControls manager
+  private transformControlsManager: TransformControlsManager | null = null;
+  private lastSelectedEntity: Entity | undefined = undefined;
+
   constructor(config: EditorConfig = {}) {
     super('EditorLayer');
     this.config = config;
@@ -219,6 +231,20 @@ export class EditorLayer extends Layer {
       scene: renderer.getScene(),
       showHelpers: this.config.showHelpers ?? true,
     });
+
+    // Initialize SceneViewBounds for TransformControls mouse coordinate transformation
+    this.sceneViewBounds = new SceneViewBounds();
+
+    // Initialize TransformControlsManager for visual entity manipulation
+    const editorCameraManager = app.getResource(EditorCameraManager);
+    if (editorCameraManager && this.sceneViewBounds) {
+      this.transformControlsManager = new TransformControlsManager(
+        renderer.getScene(),
+        editorCameraManager.getEditorCamera(),
+        app.getWindow().getCanvas(),
+        this.sceneViewBounds,
+      );
+    }
 
     // NOTE: Auto-loading of last scene is now handled by Application.loadDefaultWorld()
     // The Application checks localStorage first (in editor mode) before falling back to defaultWorld.
@@ -344,6 +370,10 @@ export class EditorLayer extends Layer {
     this.helperManager?.dispose();
     this.helperManager = null;
 
+    // Dispose TransformControlsManager
+    this.transformControlsManager?.dispose();
+    this.transformControlsManager = null;
+
     // Tell EditorManager we're no longer handling viewport rendering
     const app = this.getApplication();
     const editorManager = app.getResource(EditorManager);
@@ -382,16 +412,28 @@ export class EditorLayer extends Layer {
   override onUpdate(deltaTime: number): void {
     const app = this.getApplication();
     const editorCameraManager = app.getResource(EditorCameraManager);
+    const io = ImGui.GetIO();
+
+    // Block camera input when TransformControls is dragging
+    if (this.transformControlsManager && editorCameraManager) {
+      const isDragging = this.transformControlsManager.getIsDragging();
+      editorCameraManager.setExternalInputBlock(isDragging);
+    }
 
     if (editorCameraManager) {
       // Allow camera input when Scene View is hovered, even though ImGui wants mouse
       // Block input only if ImGui wants it AND we're not hovering Scene View
-      const io = ImGui.GetIO();
       const blockInput = (io.WantCaptureKeyboard || io.WantCaptureMouse) && !this.isSceneViewHovered;
       editorCameraManager.update(deltaTime, blockInput);
 
-      // Focus on selected entity with F key (when Scene View is hovered)
+      // Update TransformControls camera when editor camera mode changes
+      if (this.transformControlsManager) {
+        this.transformControlsManager.setCamera(editorCameraManager.getEditorCamera());
+      }
+
+      // Keyboard shortcuts when Scene View is hovered and not typing
       if (this.isSceneViewHovered && !io.WantTextInput) {
+        // Focus on selected entity with F key
         if (Input.isKeyJustPressed(KeyCode.KeyF)) {
           const selectedEntity = getSelectedEntity();
           if (selectedEntity !== undefined) {
@@ -401,11 +443,119 @@ export class EditorLayer extends Layer {
             }
           }
         }
+
+        // Transform mode keyboard shortcuts (W=translate, E=rotate, R=scale)
+        if (this.transformControlsManager) {
+          if (Input.isKeyJustPressed(TRANSFORM_MODE_SHORTCUTS.TRANSLATE)) {
+            this.transformControlsManager.setMode('translate');
+          }
+          if (Input.isKeyJustPressed(TRANSFORM_MODE_SHORTCUTS.ROTATE)) {
+            this.transformControlsManager.setMode('rotate');
+          }
+          if (Input.isKeyJustPressed(TRANSFORM_MODE_SHORTCUTS.SCALE)) {
+            this.transformControlsManager.setMode('scale');
+          }
+        }
       }
     }
 
+    // Update TransformControls based on selected entity
+    this.updateTransformControls(app);
+
     // Sync debug helpers for entities with Collider2D/Camera
     this.syncHelpers(app);
+  }
+
+  /**
+   * Update TransformControls based on selected entity.
+   * Handles selection changes and syncs transform data back to ECS.
+   */
+  private updateTransformControls(app: Application): void {
+    if (!this.transformControlsManager) return;
+
+    const selectedEntity = getSelectedEntity();
+    const commands = app.getCommands();
+
+    // Selection changed?
+    if (selectedEntity !== this.lastSelectedEntity) {
+      this.lastSelectedEntity = selectedEntity;
+
+      if (selectedEntity === undefined) {
+        // No selection - hide controls
+        this.transformControlsManager.setSelectedEntity(null, null, false);
+        return;
+      }
+
+      // Check for LocalTransform3D first (takes priority if entity has Parent)
+      const localTransform = commands.tryGetComponent(selectedEntity, LocalTransform3D);
+      const hasParent = commands.tryGetComponent(selectedEntity, Parent) !== undefined;
+
+      if (localTransform && hasParent) {
+        // Entity has LocalTransform3D and a parent - edit local transform
+        this.transformControlsManager.setSelectedEntity(selectedEntity, localTransform, true);
+      } else {
+        // Entity has Transform3D only - edit world transform
+        const transform = commands.tryGetComponent(selectedEntity, Transform3D);
+        if (transform) {
+          this.transformControlsManager.setSelectedEntity(selectedEntity, transform, false);
+        } else {
+          // No transform at all - hide controls
+          this.transformControlsManager.setSelectedEntity(null, null, false);
+        }
+      }
+    }
+
+    // Handle transform sync bidirectionally
+    if (selectedEntity !== undefined) {
+      const localTransform = commands.tryGetComponent(selectedEntity, LocalTransform3D);
+      const hasParent = commands.tryGetComponent(selectedEntity, Parent) !== undefined;
+      const isUsingLocal = localTransform && hasParent;
+
+      if (this.transformControlsManager.getIsDragging()) {
+        // When dragging: sync ghost transform → ECS component
+        const transformChanges = this.transformControlsManager.getTransformChanges();
+
+        if (transformChanges) {
+          if (isUsingLocal) {
+            // Update LocalTransform3D
+            localTransform.position.x = transformChanges.position.x;
+            localTransform.position.y = transformChanges.position.y;
+            localTransform.position.z = transformChanges.position.z;
+            localTransform.rotation.x = transformChanges.rotation.x;
+            localTransform.rotation.y = transformChanges.rotation.y;
+            localTransform.rotation.z = transformChanges.rotation.z;
+            localTransform.scale.x = transformChanges.scale.x;
+            localTransform.scale.y = transformChanges.scale.y;
+            localTransform.scale.z = transformChanges.scale.z;
+          } else {
+            // Update Transform3D
+            const transform = commands.tryGetComponent(selectedEntity, Transform3D);
+            if (transform) {
+              transform.position.x = transformChanges.position.x;
+              transform.position.y = transformChanges.position.y;
+              transform.position.z = transformChanges.position.z;
+              transform.rotation.x = transformChanges.rotation.x;
+              transform.rotation.y = transformChanges.rotation.y;
+              transform.rotation.z = transformChanges.rotation.z;
+              transform.scale.x = transformChanges.scale.x;
+              transform.scale.y = transformChanges.scale.y;
+              transform.scale.z = transformChanges.scale.z;
+            }
+          }
+        }
+      } else {
+        // When NOT dragging: sync ECS component → ghost transform
+        // This ensures the ghost always follows the entity (e.g., when edited via Inspector)
+        if (isUsingLocal) {
+          this.transformControlsManager.updateGhostFromTransform(localTransform);
+        } else {
+          const transform = commands.tryGetComponent(selectedEntity, Transform3D);
+          if (transform) {
+            this.transformControlsManager.updateGhostFromTransform(transform);
+          }
+        }
+      }
+    }
   }
 
   // ============================================================================
@@ -1109,6 +1259,7 @@ export class EditorLayer extends Layer {
         editorCameraManager,
         editorManager,
         helperManager: this.helperManager ?? undefined,
+        transformControlsManager: this.transformControlsManager ?? undefined,
         currentFPS: app.getCurrentFPS(),
       });
     }
@@ -1296,6 +1447,9 @@ export class EditorLayer extends Layer {
     // Determine which camera to use
     let camera: THREE.Camera;
     if (useEditorCamera && editorCameraManager) {
+      // Update editor camera aspect ratio to match Scene View viewport
+      // This is critical for correct TransformControls interaction
+      editorCameraManager.onResize(viewport.width, viewport.height);
       camera = editorCameraManager.getEditorCamera();
     } else {
       // For Game View, use the game camera from ECS (not the renderer's camera)
@@ -1558,6 +1712,11 @@ export class EditorLayer extends Layer {
 
         // Display the rendered texture (only if texture is ready)
         if (textureId !== null) {
+          // Capture cursor position BEFORE rendering the image
+          // This gives us the cursor position at the start of the image content
+          const cursorPosXBeforeImage = ImGui.GetCursorPosX();
+          const cursorPosYBeforeImage = ImGui.GetCursorPosY();
+
           // UV coordinates flipped vertically because WebGL textures are upside down
           ImGui.Image(
             new ImTextureRef(textureId),
@@ -1565,6 +1724,64 @@ export class EditorLayer extends Layer {
             { x: 0, y: 1 }, // UV min (flipped)
             { x: 1, y: 0 }  // UV max (flipped)
           );
+
+          // Update Scene View bounds when image is hovered.
+          // We compute the image's top-left corner in canvas coordinates using:
+          //
+          // 1. cursorPosBeforeImage = where image starts in window (window-local coords)
+          // 2. After ImGui.Image(), we can get the current cursor pos which is AFTER the image
+          // 3. The mouse position relative to the image can be computed from the
+          //    relationship between cursor positions and mouse position
+          //
+          // Key insight: GetCursorPosX/Y() gives window-local cursor position.
+          // The image spans from cursorPosBeforeImage to cursorPosAfterImage.
+          // We can compute mouseInImage = mouseWindowLocal - cursorPosBeforeImage
+          if (ImGui.IsItemHovered() && this.sceneViewBounds) {
+            const io = ImGui.GetIO();
+            const mouseScreenPos = io.MousePos;
+
+            // Convert mouse from screen coords to canvas coords
+            const canvas = app.getWindow().getCanvas();
+            const rect = canvas.getBoundingClientRect();
+            const mouseCanvasX = mouseScreenPos.x - rect.left;
+            const mouseCanvasY = mouseScreenPos.y - rect.top;
+
+            // Get scroll offset
+            const scrollX = ImGui.GetScrollX();
+            const scrollY = ImGui.GetScrollY();
+
+            // Image position in window-local coords (adjusted for scroll)
+            const imagePosInWindow_X = cursorPosXBeforeImage - scrollX;
+            const imagePosInWindow_Y = cursorPosYBeforeImage - scrollY;
+
+            // Compute minimum possible Y for Scene View image:
+            // = toolbar height + Scene View title bar height (imgPosInWindow_Y)
+            const toolbarHeight = getEditorToolbarHeight();
+            const sceneViewTitleBarHeight = imagePosInWindow_Y;  // This is ~22 for the title bar
+            const minPossibleY = toolbarHeight + sceneViewTitleBarHeight;
+
+            this.sceneViewBounds.updateFromHover(
+              mouseCanvasX,
+              mouseCanvasY,
+              imagePosInWindow_X,
+              imagePosInWindow_Y,
+              contentWidth,
+              contentHeight,
+              minPossibleY,
+            );
+          } else if (this.sceneViewBounds) {
+            // Not hovered - notify to reset tracking state and update mouse position for edge detection
+            const io = ImGui.GetIO();
+            const mouseScreenPos = io.MousePos;
+            const canvas = app.getWindow().getCanvas();
+            const rect = canvas.getBoundingClientRect();
+            const mouseCanvasX = mouseScreenPos.x - rect.left;
+            const mouseCanvasY = mouseScreenPos.y - rect.top;
+
+            this.sceneViewBounds.onMouseLeave();
+            this.sceneViewBounds.updateMousePosition(mouseCanvasX, mouseCanvasY);
+            this.sceneViewBounds.setSize(contentWidth, contentHeight);
+          }
         }
       }
 

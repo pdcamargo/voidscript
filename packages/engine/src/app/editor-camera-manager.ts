@@ -56,10 +56,23 @@ export class EditorCameraManager {
   private panStartCamX = 0;
   private panStartCamY = 0;
 
+  // External input block (e.g., when TransformControls is dragging)
+  private externalInputBlock = false;
+
+  // Track the last viewport size passed to onResize()
+  // This is used by updateOrthoZoom() to maintain correct aspect ratio
+  // (The viewport may be smaller than the full renderer when using docked panels)
+  private lastViewportWidth = 0;
+  private lastViewportHeight = 0;
+
   constructor(renderer: Renderer) {
     this.renderer = renderer;
     const { width, height } = renderer.getSize();
     const aspect = width / height;
+
+    // Initialize viewport size to renderer size (will be updated by onResize)
+    this.lastViewportWidth = width;
+    this.lastViewportHeight = height;
 
     // Create orthographic camera (for 2D mode)
     const halfWidth = this.orthoSize * aspect;
@@ -148,6 +161,10 @@ export class EditorCameraManager {
    * Handle window resize
    */
   onResize(width: number, height: number): void {
+    // Store viewport size for use by updateOrthoZoom()
+    this.lastViewportWidth = width;
+    this.lastViewportHeight = height;
+
     const aspect = width / height;
 
     // Update orthographic camera
@@ -169,13 +186,29 @@ export class EditorCameraManager {
    * Call this in onUpdate if editor camera is active
    */
   update(deltaTime: number, blockInput: boolean = false): void {
-    if (!this._isEditorCameraActive || blockInput) return;
+    // Combine internal and external blocks
+    const isBlocked = blockInput || this.externalInputBlock;
+    if (!this._isEditorCameraActive || isBlocked) return;
 
     if (this._mode === '2d') {
       this.update2DCamera(deltaTime);
     } else {
       this.update3DCamera(deltaTime);
     }
+  }
+
+  /**
+   * Set external input block (e.g., when TransformControls is active)
+   */
+  setExternalInputBlock(block: boolean): void {
+    this.externalInputBlock = block;
+  }
+
+  /**
+   * Check if input is externally blocked
+   */
+  isInputBlocked(): boolean {
+    return this.externalInputBlock;
   }
 
   /**
@@ -280,7 +313,10 @@ export class EditorCameraManager {
    * Update orthographic camera bounds based on zoom
    */
   private updateOrthoZoom(): void {
-    const { width, height } = this.renderer.getSize();
+    // Use stored viewport size instead of renderer size
+    // This ensures correct aspect ratio when Scene View is in a docked panel
+    const width = this.lastViewportWidth || this.renderer.getSize().width;
+    const height = this.lastViewportHeight || this.renderer.getSize().height;
     const aspect = width / height;
     const halfWidth = (this.orthoSize / this.zoom2D) * aspect;
     const halfHeight = this.orthoSize / this.zoom2D;

@@ -602,6 +602,10 @@ export {
   setupEditor,
   createTauriPlatform,
   createWebPlatform,
+  // Transform controls
+  TransformControlsManager,
+  SceneViewBounds,
+  TRANSFORM_MODE_SHORTCUTS,
 } from './editor/index.js';
 export type {
   EditorMode,
@@ -619,6 +623,9 @@ export type {
   EditorContext,
   TauriPathUtils,
   TauriPlatformOptions,
+  // Transform controls types
+  TransformMode,
+  TransformSpace,
 } from './editor/index.js';
 
 // UI module - three-mesh-ui based serializable UI system

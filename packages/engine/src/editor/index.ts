@@ -52,3 +52,9 @@ export {
   createWebPlatform,
 } from './setup-editor.js';
 export type { SetupEditorOptions, EditorContext, TauriPathUtils, TauriPlatformOptions } from './setup-editor.js';
+
+// Transform controls
+export { TransformControlsManager } from './transform-controls-manager.js';
+export type { TransformMode, TransformSpace } from './transform-controls-manager.js';
+export { SceneViewBounds } from './scene-view-bounds.js';
+export { TRANSFORM_MODE_SHORTCUTS } from './transform-mode-constants.js';

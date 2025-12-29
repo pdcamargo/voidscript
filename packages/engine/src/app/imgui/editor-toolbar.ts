@@ -10,6 +10,7 @@ import { ImGui } from '@mori2003/jsimgui';
 import type { EditorCameraManager } from '../editor-camera-manager.js';
 import type { EditorManager } from '../../editor/editor-manager.js';
 import type { HelperManager } from '../helper-manager.js';
+import type { TransformControlsManager } from '../../editor/transform-controls-manager.js';
 
 /**
  * Editor toolbar state (passed from layer)
@@ -18,6 +19,7 @@ export interface EditorToolbarState {
   editorCameraManager: EditorCameraManager;
   editorManager?: EditorManager;
   helperManager?: HelperManager;
+  transformControlsManager?: TransformControlsManager;
   currentFPS?: number;
 }
 
@@ -62,6 +64,14 @@ export function renderEditorToolbar(state: EditorToolbarState): void {
 
     // === Helpers Section ===
     renderHelpersSection(state);
+
+    // === Transform Mode Section ===
+    if (state.transformControlsManager) {
+      ImGui.SameLine();
+      ImGui.Text('|');
+      ImGui.SameLine();
+      renderTransformModeSection(state.transformControlsManager);
+    }
 
     // === Camera Type Section (2D mode only) ===
     if (state.editorCameraManager.mode === '2d') {
@@ -178,6 +188,53 @@ function renderHelpersSection(state: EditorToolbarState): void {
     if (helpersEnabled) {
       ImGui.PopStyleColor();
     }
+  }
+}
+
+/**
+ * Render transform mode section (Move/Rotate/Scale)
+ */
+function renderTransformModeSection(manager: TransformControlsManager): void {
+  const currentMode = manager.getMode();
+
+  // Move button (W)
+  const isTranslate = currentMode === 'translate';
+  if (isTranslate) {
+    ImGui.PushStyleColorImVec4(ImGui.Col.Button, { x: 0.4, y: 0.6, z: 0.7, w: 1.0 });
+  }
+  if (ImGui.Button('Move (W)')) {
+    manager.setMode('translate');
+  }
+  if (isTranslate) {
+    ImGui.PopStyleColor();
+  }
+
+  ImGui.SameLine();
+
+  // Rotate button (E)
+  const isRotate = currentMode === 'rotate';
+  if (isRotate) {
+    ImGui.PushStyleColorImVec4(ImGui.Col.Button, { x: 0.4, y: 0.6, z: 0.7, w: 1.0 });
+  }
+  if (ImGui.Button('Rotate (E)')) {
+    manager.setMode('rotate');
+  }
+  if (isRotate) {
+    ImGui.PopStyleColor();
+  }
+
+  ImGui.SameLine();
+
+  // Scale button (R)
+  const isScale = currentMode === 'scale';
+  if (isScale) {
+    ImGui.PushStyleColorImVec4(ImGui.Col.Button, { x: 0.4, y: 0.6, z: 0.7, w: 1.0 });
+  }
+  if (ImGui.Button('Scale (R)')) {
+    manager.setMode('scale');
+  }
+  if (isScale) {
+    ImGui.PopStyleColor();
   }
 }
 

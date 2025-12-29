@@ -6,6 +6,10 @@
  * with configurable damping and look-ahead.
  *
  * This system runs in the update phase before camera selection.
+ *
+ * Behavior:
+ * - In Edit Mode: Camera snaps instantly to target (no smooth following)
+ * - In Play Mode: Camera smoothly follows target with damping/interpolation
  */
 
 import { system } from "../system.js";
@@ -23,6 +27,7 @@ import {
   type VirtualCameraFollowData,
 } from "../components/rendering/virtual-camera-follow.js";
 import { Render3DManager } from "./renderer-sync-system.js";
+import { EditorManager } from "../../editor/editor-manager.js";
 
 /**
  * Resolved world-space bounds (min/max) from a VirtualCameraBounds entity
@@ -50,6 +55,10 @@ export const virtualCameraFollowSystem = system(({ commands }) => {
       aspect = size.width / size.height;
     }
   }
+
+  // Check if we're in Play Mode - only smooth follow during gameplay
+  const editorManager = commands.tryGetResource(EditorManager);
+  const isInPlayMode = editorManager?.isPlayMode() ?? true; // Default to true for non-editor apps
 
   // Process all virtual cameras with follow components
   commands
@@ -80,8 +89,9 @@ export const virtualCameraFollowSystem = system(({ commands }) => {
         return;
       }
 
-      // On first frame, snap to target position immediately (no lerping)
-      if (isFirstFrame || !follow._lastTargetPosition) {
+      // In Edit Mode, always snap to target position (no smooth following)
+      // In Play Mode, only snap on first frame
+      if (!isInPlayMode || isFirstFrame || !follow._lastTargetPosition) {
         snapToTarget(transform, targetTransform, follow);
         follow._lastTargetPosition = {
           x: targetTransform.position.x,
@@ -89,7 +99,7 @@ export const virtualCameraFollowSystem = system(({ commands }) => {
           z: targetTransform.position.z,
         };
 
-        // Apply camera bounds after first frame snap
+        // Apply camera bounds after snap
         if (vcam.enableCameraBounds && vcam.boundsEntity != null) {
           const resolvedBounds = resolveBoundsFromEntity(
             vcam.boundsEntity,
