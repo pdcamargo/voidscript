@@ -339,10 +339,6 @@
       }
     ]
   },
-  "fe28a3a2-7584-4b06-a5a0-ef066846ddba": {
-    "type": "prefab",
-    "path": "/prefabs/rain.prefab.yaml"
-  },
   "wave-shader": {
     "type": "shader",
     "path": "/assets/shaders/wave.vsl"
@@ -366,5 +362,9 @@
   "water-2d-shader": {
     "type": "shader",
     "path": "/assets/shaders/water-2d.vsl"
+  },
+  "e28c58cf-fa71-4825-9ecc-16c1f0ecd1ce": {
+    "type": "prefab",
+    "path": "/prefabs/water.prefab.yaml"
   }
 }
