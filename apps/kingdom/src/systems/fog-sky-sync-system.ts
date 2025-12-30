@@ -1,11 +1,11 @@
-import { system, SkyGradient2D, Fog2D } from '@voidscript/engine';
+import { system, SkyGradient2D, Sprite2DMaterial } from '@voidscript/engine';
 import { FogSkySync } from '../components/fog-sky-sync.js';
 
 export const fogSkySyncSystem = system(({ commands }) => {
   commands
     .query()
-    .all(FogSkySync, Fog2D)
-    .each((_entity, fogSkySync, fog) => {
+    .all(FogSkySync, Sprite2DMaterial)
+    .each((_entity, fogSkySync, material) => {
       if (fogSkySync.skyEntity === null) return;
 
       const skyGradient = commands.tryGetComponent(
@@ -23,9 +23,11 @@ export const fogSkySyncSystem = system(({ commands }) => {
         firstStop,
       );
 
-      // Apply to fog (RGB only)
-      fog.fogColor.r = bottomStop.color.r;
-      fog.fogColor.g = bottomStop.color.g;
-      fog.fogColor.b = bottomStop.color.b;
+      // Apply to fog_color uniform (vec3 stored as {x,y,z} in component)
+      material.uniforms['fog_color'] = {
+        x: bottomStop.color.r,
+        y: bottomStop.color.g,
+        z: bottomStop.color.b,
+      };
     });
 });

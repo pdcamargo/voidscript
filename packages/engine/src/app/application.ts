@@ -54,10 +54,6 @@ import {
   skyGradient2DSystem,
 } from "../ecs/systems/sky-gradient-system.js";
 import {
-  Fog2DRenderManager,
-  fog2DSyncSystem,
-} from "../ecs/systems/rendering/fog-2d-system.js";
-import {
   Rain2DRenderManager,
   rain2DSyncSystem,
 } from "../ecs/systems/rain-2d-system.js";
@@ -1272,11 +1268,6 @@ export class Application {
     // - render: Create and update gradient backgrounds
     this.insertResource(new SkyGradientRenderManager(this.renderer));
     this.addRenderSystem(skyGradient2DSystem);
-
-    // Fog 2D rendering system
-    // - render: Create and update pixelated fog layers with gradients
-    this.insertResource(new Fog2DRenderManager(this.renderer));
-    this.addRenderSystem(fog2DSyncSystem);
 
     // Rain 2D rendering system
     // - render: Create and update pixel-art rain droplets with weather effects

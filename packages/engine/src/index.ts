@@ -221,8 +221,6 @@ export type {
 } from "./ecs/components/rendering/sprite-2d.js";
 export { SkyGradient2D } from "./ecs/components/rendering/sky-gradient.js";
 export type { SkyGradient2DData, GradientStop } from "./ecs/components/rendering/sky-gradient.js";
-export { Fog2D, FogType } from "./ecs/components/rendering/fog-2d.js";
-export type { Fog2DData } from "./ecs/components/rendering/fog-2d.js";
 export { Rain2D } from "./ecs/components/rendering/rain-2d.js";
 export type { Rain2DData } from "./ecs/components/rendering/rain-2d.js";
 export { LightningField2D } from "./ecs/components/rendering/lightning-field-2d.js";

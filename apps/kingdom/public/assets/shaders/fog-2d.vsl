@@ -1,0 +1,81 @@
+/**
+ * Fog 2D Effect Shader
+ *
+ * A pixelated fog effect with gradient, noise animation, and ambient light response.
+ * Uses Sprite2D + Sprite2DMaterial for rendering.
+ *
+ * Usage:
+ * 1. Add Sprite2D component with a texture (can be a 1x1 white pixel)
+ * 2. Add Sprite2DMaterial component with this shader
+ * 3. Control fog size via Transform3D scale
+ * 4. Adjust uniforms via the inspector
+ */
+shader_type canvas_item;
+// No render_mode unshaded - enables lights: true for ambient light response
+
+// Fog appearance
+uniform vec3 fog_color : source_color = vec3(0.8, 0.8, 0.8);
+uniform float fog_opacity : hint_range(0.0, 1.0) = 1.0;
+
+// Fog gradient
+uniform int fog_type : hint_range(0, 2) = 0; // 0=smooth, 1=hard, 2=limited (banded)
+uniform float fog_start : hint_range(0.0, 1.0) = 0.3;
+uniform float fog_end : hint_range(0.0, 1.0) = 0.7;
+
+// Noise animation
+uniform float noise_strength : hint_range(0.0, 1.0) = 0.15;
+uniform float noise_speed : hint_range(0.0, 0.1) = 0.02;
+
+// Pixelation (lower = more pixelated)
+uniform vec2 pixel_resolution = vec2(160.0, 90.0);
+
+// Horizontal edge fade
+uniform float edge_fade_left : hint_range(0.0, 0.5) = 0.1;
+uniform float edge_fade_right : hint_range(0.0, 0.5) = 0.1;
+
+// Hash function for animated noise
+float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+}
+
+void fragment() {
+    // Snap UVs to pixel grid for pixelation effect
+    vec2 pixel_uv = floor(UV * pixel_resolution) / pixel_resolution;
+
+    float fog_factor;
+
+    // Apply fog type
+    if (fog_type == 0) {
+        // Smooth gradient
+        fog_factor = smoothstep(fog_start, fog_end, pixel_uv.y);
+    } else if (fog_type == 1) {
+        // Hard edge
+        fog_factor = step(fog_start, pixel_uv.y);
+    } else {
+        // Limited (banded) - 12 discrete bands
+        fog_factor = smoothstep(fog_start, fog_end, pixel_uv.y);
+        float bands = 12.0;
+        fog_factor = floor(fog_factor * bands) / bands;
+    }
+
+    // Invert so fog is dense at bottom, clear at top
+    fog_factor = 1.0 - fog_factor;
+
+    // Animated per-pixel noise
+    float n = hash((pixel_uv + vec2(TIME * noise_speed, 0.0)) * pixel_resolution);
+    fog_factor += (n - 0.5) * noise_strength;
+    fog_factor = clamp(fog_factor, 0.0, 1.0);
+
+    // Horizontal edge fade (fade out on left/right edges)
+    float horizontal_fade = smoothstep(0.0, edge_fade_left, pixel_uv.x)
+                          * smoothstep(1.0, 1.0 - edge_fade_right, pixel_uv.x);
+    fog_factor *= horizontal_fade;
+
+    // Apply opacity
+    fog_factor *= fog_opacity;
+
+    // Apply ambient lighting to fog color
+    vec3 final_color = fog_color * AMBIENT_LIGHT_COLOR;
+
+    COLOR = vec4(final_color, fog_factor);
+}

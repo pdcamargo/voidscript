@@ -21,7 +21,6 @@ import { EditorManager } from '../../editor/editor-manager.js';
 import { Render3DManager } from './renderer-sync-system.js';
 import { SpriteRenderManager } from './sprite-sync-system.js';
 import { SkyGradientRenderManager } from './sky-gradient-system.js';
-import { Fog2DRenderManager } from './rendering/fog-2d-system.js';
 import { Rain2DRenderManager } from './rain-2d-system.js';
 import { LightningField2DRenderManager } from './lightning-field-2d-system.js';
 import { PostProcessingManager } from '../../post-processing/managers/post-processing-manager.js';
@@ -53,12 +52,6 @@ function disposeAllRenderManagers(commands: Command): void {
   const skyManager = commands.tryGetResource(SkyGradientRenderManager);
   if (skyManager) {
     skyManager.dispose();
-  }
-
-  // Fog2DRenderManager - Fog effects
-  const fogManager = commands.tryGetResource(Fog2DRenderManager);
-  if (fogManager) {
-    fogManager.dispose();
   }
 
   // Rain2DRenderManager - Rain effects

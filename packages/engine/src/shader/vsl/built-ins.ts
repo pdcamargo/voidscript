@@ -251,6 +251,17 @@ export const CANVAS_ITEM_BUILTINS: BuiltInVariable[] = [
     isUniform: true,
     uniformName: 'vsl_screenSize',
   },
+  {
+    name: 'AMBIENT_LIGHT_COLOR',
+    type: 'vec3',
+    stages: ['fragment'],
+    writable: false,
+    glslMapping: 'ambientLightColor',
+    description:
+      'Ambient light color from scene lighting (requires lights enabled, i.e. no render_mode unshaded)',
+    isUniform: true,
+    uniformName: 'ambientLightColor',
+  },
 ];
 
 // ============================================================================

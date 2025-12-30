@@ -363,6 +363,10 @@
     "type": "shader",
     "path": "/assets/shaders/water-2d.vsl"
   },
+  "fog-2d-shader": {
+    "type": "shader",
+    "path": "/assets/shaders/fog-2d.vsl"
+  },
   "e28c58cf-fa71-4825-9ecc-16c1f0ecd1ce": {
     "type": "prefab",
     "path": "/prefabs/water.prefab.yaml"

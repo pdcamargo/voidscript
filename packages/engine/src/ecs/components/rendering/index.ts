@@ -23,7 +23,6 @@ export * from "./render-object.js";
 export * from "./sprite-2d.js";
 export * from "./sprite-2d-material.js";
 export * from "./sky-gradient.js";
-export * from "./fog-2d.js";
 export * from "./rain-2d.js";
 export * from "./lightning-field-2d.js";
 

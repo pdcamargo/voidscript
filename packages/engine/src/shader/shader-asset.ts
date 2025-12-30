@@ -137,7 +137,16 @@ export class ShaderAsset {
   createMaterial(
     customUniforms?: Record<string, unknown>,
   ): THREE.ShaderMaterial {
-    const uniforms = this.createDefaultUniforms();
+    let uniforms = this.createDefaultUniforms();
+
+    // Merge with THREE.js lighting uniforms when lights are enabled
+    // This provides ambientLightColor and other lighting uniforms automatically
+    if (this.materialOptions.lights) {
+      uniforms = THREE.UniformsUtils.merge([
+        THREE.UniformsLib.lights,
+        uniforms,
+      ]) as Record<string, THREE.IUniform<unknown>>;
+    }
 
     // Apply custom uniform values
     if (customUniforms) {

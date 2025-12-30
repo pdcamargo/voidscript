@@ -27,45 +27,43 @@ componentRegistry:
   - id: 12
     name: SpriteAreaGenerator
   - id: 13
-    name: RenderObject
+    name: PrefabInstance
   - id: 14
-    name: Sprite2D
+    name: RenderObject
   - id: 15
-    name: CampFire
+    name: Sprite2D
   - id: 16
     name: Sprite2DMaterial
   - id: 17
-    name: RigidBody2D
+    name: CampFire
   - id: 18
-    name: Collider2D
+    name: RigidBody2D
   - id: 19
-    name: CharacterController2D
+    name: Collider2D
   - id: 20
-    name: Ccd
+    name: CharacterController2D
   - id: 21
-    name: AnimationController
+    name: Ccd
   - id: 22
-    name: DesiredMovement2D
+    name: AnimationController
   - id: 23
-    name: ActiveCollisionEvents2D
+    name: DesiredMovement2D
   - id: 24
-    name: Player2D
+    name: ActiveCollisionEvents2D
   - id: 25
-    name: Light3D
+    name: Player2D
   - id: 26
-    name: SunLight
+    name: Light3D
   - id: 27
-    name: SkyGradient2D
+    name: SunLight
   - id: 28
-    name: Fog2D
+    name: SkyGradient2D
   - id: 29
-    name: FogSkySync
+    name: Rain2D
   - id: 30
     name: LightningField2D
   - id: 31
-    name: PrefabInstance
-  - id: 32
-    name: Rain2D
+    name: FogSkySync
 entities:
   - id: 0
     generation: 0
@@ -74,7 +72,7 @@ entities:
         typeName: Children
         data:
           ids:
-            - 11
+            - 12
       - typeId: 1
         typeName: Name
         data:
@@ -87,8 +85,8 @@ entities:
         data:
           ids:
             - 4
-            - 17
-            - 18
+            - 19
+            - 20
       - typeId: 1
         typeName: Name
         data:
@@ -119,8 +117,8 @@ entities:
         typeName: Transform3D
         data:
           position:
-            x: -10.484401816396781
-            y: 1.0000000223517418
+            x: -99.58040390186204
+            y: 0.9771685967238097
             z: 10
           rotation:
             x: 0
@@ -147,7 +145,7 @@ entities:
       - typeId: 4
         typeName: VirtualCameraFollow
         data:
-          target: 12
+          target: 13
           mode: transposer
           offset:
             x: 0
@@ -183,8 +181,8 @@ entities:
         typeName: Transform3D
         data:
           position:
-            x: -10.484401816396781
-            y: 1.0000000223517418
+            x: -99.58040390186204
+            y: 0.9771685967238097
             z: 10
           rotation:
             x: 0
@@ -694,6 +692,32 @@ entities:
             y: 0
           additionalComponents: []
   - id: 11
+    generation: 1
+    components:
+      - typeId: 13
+        typeName: PrefabInstance
+        data:
+          prefabAssetGuid: e28c58cf-fa71-4825-9ecc-16c1f0ecd1ce
+      - typeId: 1
+        typeName: Name
+        data:
+          name: Water
+      - typeId: 2
+        typeName: Transform3D
+        data:
+          position:
+            x: 0
+            y: -4.199999809265137
+            z: 0
+          rotation:
+            x: 0
+            y: 0
+            z: 0
+          scale:
+            x: 1400
+            y: 8
+            z: 1
+  - id: 12
     generation: 0
     components:
       - typeId: 9
@@ -719,7 +743,7 @@ entities:
             x: 5
             y: 5
             z: 1
-      - typeId: 14
+      - typeId: 15
         typeName: Sprite2D
         data:
           texture:
@@ -747,10 +771,10 @@ entities:
             y: 0
             width: 38
             height: 38
-      - typeId: 15
+      - typeId: 17
         typeName: CampFire
         data: {}
-  - id: 12
+  - id: 13
     generation: 0
     components:
       - typeId: 1
@@ -761,8 +785,8 @@ entities:
         typeName: Transform3D
         data:
           position:
-            x: -10.484401816396781
-            y: 1.100000023841858
+            x: -99.58040390186204
+            y: 1.0771685982139259
             z: 0
           rotation:
             x: 0
@@ -772,7 +796,7 @@ entities:
             x: 0.5
             y: 1
             z: 1
-      - typeId: 14
+      - typeId: 15
         typeName: Sprite2D
         data:
           texture:
@@ -814,12 +838,12 @@ entities:
             pulse_speed: 1
           uniqueInstance: true
           enabled: true
-      - typeId: 17
+      - typeId: 18
         typeName: RigidBody2D
         data:
           bodyType: kinematic
           canSleep: false
-      - typeId: 18
+      - typeId: 19
         typeName: Collider2D
         data:
           shape:
@@ -834,7 +858,7 @@ entities:
           friction: 0
           restitution: 0
           density: 0
-      - typeId: 19
+      - typeId: 20
         typeName: CharacterController2D
         data:
           offset: 0.01
@@ -853,11 +877,11 @@ entities:
           normalNudgeFactor: 0
           applyImpulsesToDynamicBodies: false
           characterMass: null
-      - typeId: 20
+      - typeId: 21
         typeName: Ccd
         data:
           enabled: false
-      - typeId: 21
+      - typeId: 22
         typeName: AnimationController
         data:
           animations: []
@@ -866,21 +890,21 @@ entities:
           currentTime: 0
           speed: 1
           loopCount: 0
-      - typeId: 22
+      - typeId: 23
         typeName: DesiredMovement2D
         data:
           translation:
             x: 0
             y: 0
-      - typeId: 23
+      - typeId: 24
         typeName: ActiveCollisionEvents2D
         data:
           events: 1
-      - typeId: 24
+      - typeId: 25
         typeName: Player2D
         data:
           movementSpeed: 20
-  - id: 13
+  - id: 14
     generation: 0
     components:
       - typeId: 1
@@ -902,7 +926,7 @@ entities:
             x: 1
             y: 1
             z: 1
-      - typeId: 25
+      - typeId: 26
         typeName: Light3D
         data:
           type: directional
@@ -919,11 +943,11 @@ entities:
             bias: -0.0001
             normalBias: 0.02
           shadowCameraSize: 10
-      - typeId: 26
+      - typeId: 27
         typeName: SunLight
         data:
           isAmbient: false
-  - id: 14
+  - id: 15
     generation: 0
     components:
       - typeId: 1
@@ -945,7 +969,7 @@ entities:
             x: 1
             y: 1
             z: 1
-      - typeId: 25
+      - typeId: 26
         typeName: Light3D
         data:
           type: ambient
@@ -962,11 +986,11 @@ entities:
             bias: -0.0001
             normalBias: 0.02
           shadowCameraSize: 10
-      - typeId: 26
+      - typeId: 27
         typeName: SunLight
         data:
           isAmbient: true
-  - id: 15
+  - id: 16
     generation: 0
     components:
       - typeId: 1
@@ -988,7 +1012,7 @@ entities:
             x: 1400
             y: 33.79999923706055
             z: 1
-      - typeId: 27
+      - typeId: 28
         typeName: SkyGradient2D
         data:
           stops:
@@ -1018,72 +1042,20 @@ entities:
           starSeed: 30
           flickerSpeed: 2
           flickerIntensity: 0.3
-  - id: 16
-    generation: 0
-    components:
-      - typeId: 1
-        typeName: Name
-        data:
-          name: Sky Fog
-      - typeId: 2
-        typeName: Transform3D
-        data:
-          position:
-            x: 0
-            y: 6
-            z: -40
-          rotation:
-            x: 0
-            y: 0
-            z: 0
-          scale:
-            x: 1
-            y: 1
-            z: 1
-      - typeId: 28
-        typeName: Fog2D
-        data:
-          baseSize:
-            x: 3000
-            y: 32.29999923706055
-          fogColor:
-            r: 0.658823549747467
-            g: 0.7686274647712708
-            b: 0.929411768913269
-          fogOpacity: 1
-          fogType: smooth
-          fogStart: 0
-          fogEnd: 1
-          noiseStrength: 0.004999999888241291
-          pixelResolution:
-            x: 500
-            y: 500
-          sortingLayer: 0
-          sortingOrder: 0
-          visible: true
-          isLit: true
-      - typeId: 29
-        typeName: FogSkySync
-        data:
-          skyEntity: 15
   - id: 17
     generation: 0
     components:
-      - typeId: 9
-        typeName: Parent
-        data:
-          id: 1
       - typeId: 1
         typeName: Name
         data:
-          name: Forest Right Far Fog
+          name: Rain
       - typeId: 2
         typeName: Transform3D
         data:
           position:
             x: 0
-            y: 3.5999999046325684
-            z: -2.990000009536743
+            y: 0
+            z: 0
           rotation:
             x: 0
             y: 0
@@ -1092,115 +1064,58 @@ entities:
             x: 1
             y: 1
             z: 1
-      - typeId: 10
-        typeName: LocalTransform3D
-        data:
-          position:
-            x: 0
-            y: 3.5999999046325684
-            z: -2.990000009536743
-          rotation:
-            x: 0
-            y: 0
-            z: 0
-          scale:
-            x: 1
-            y: 1
-            z: 1
-      - typeId: 28
-        typeName: Fog2D
+      - typeId: 29
+        typeName: Rain2D
         data:
           baseSize:
-            x: 170
-            y: 16.200000762939453
-          fogColor:
-            r: 0.658823549747467
-            g: 0.7686274647712708
-            b: 0.929411768913269
-          fogOpacity: 1
-          fogType: smooth
-          fogStart: 0
-          fogEnd: 1
-          noiseStrength: 0
-          pixelResolution:
             x: 3000
             y: 3000
-          sortingLayer: 0
-          sortingOrder: 0
-          visible: true
-          isLit: false
-      - typeId: 29
-        typeName: FogSkySync
-        data:
-          skyEntity: 15
+          tileSize: 3
+          visible: false
+          sortingLayer: 500000000
+          sortingOrder: 1783793664
+          density: 300
+          fallSpeed: 448.8909912109375
+          speedVariation: 0.6079999804496765
+          angle: 0.15000000596046448
+          windStrength: 0.30000001192092896
+          windSpeed: 1.5
+          dropletMinLength: 12.420999526977539
+          dropletMaxLength: 26.94499969482422
+          dropletWidth: 1.5019999742507935
+          seed: 20
+          dropletColor:
+            r: 1
+            g: 1
+            b: 1
+          dropletOpacity: 1
+          enableLayers: true
+          nearLayerSpeed: 3
+          nearLayerOpacity: 0.8500000238418579
+          nearLayerScale: 1.2999999523162842
+          midLayerSpeed: 3
+          midLayerOpacity: 0.6000000238418579
+          midLayerScale: 1
+          farLayerSpeed: 2
+          farLayerOpacity: 0.3499999940395355
+          farLayerScale: 1.2640000581741333
+          enableWetnessTint: true
+          wetnessTintColor:
+            r: 0.4
+            g: 0.5
+            b: 0.6
+          wetnessTintIntensity: 0.15000000596046448
+          enableLightning: false
+          lightningColor:
+            r: 1
+            g: 1
+            b: 1
+          lightningMinInterval: 3.2980000972747803
+          lightningMaxInterval: 9.140000343322754
+          lightningDuration: 0.15000000596046448
+          lightningIntensity: 0.9959999918937683
+          stormIntensity: 0.8500000238418579
   - id: 18
-    generation: 0
-    components:
-      - typeId: 9
-        typeName: Parent
-        data:
-          id: 1
-      - typeId: 1
-        typeName: Name
-        data:
-          name: Forest Right Mid Fog
-      - typeId: 2
-        typeName: Transform3D
-        data:
-          position:
-            x: 0
-            y: 3.5999999046325684
-            z: -1.9900000095367432
-          rotation:
-            x: 0
-            y: 0
-            z: 0
-          scale:
-            x: 1
-            y: 1
-            z: 1
-      - typeId: 10
-        typeName: LocalTransform3D
-        data:
-          position:
-            x: 0
-            y: 3.5999999046325684
-            z: -1.9900000095367432
-          rotation:
-            x: 0
-            y: 0
-            z: 0
-          scale:
-            x: 1
-            y: 1
-            z: 1
-      - typeId: 28
-        typeName: Fog2D
-        data:
-          baseSize:
-            x: 170
-            y: 16.200000762939453
-          fogColor:
-            r: 0.658823549747467
-            g: 0.7686274647712708
-            b: 0.929411768913269
-          fogOpacity: 0.30000001192092896
-          fogType: smooth
-          fogStart: 0
-          fogEnd: 1
-          noiseStrength: 0
-          pixelResolution:
-            x: 3000
-            y: 3000
-          sortingLayer: 0
-          sortingOrder: 0
-          visible: true
-          isLit: false
-      - typeId: 29
-        typeName: FogSkySync
-        data:
-          skyEntity: 15
-  - id: 19
     generation: 0
     components:
       - typeId: 1
@@ -1262,107 +1177,262 @@ entities:
           flashIntensity: 0.671999990940094
           enableGroundGlow: false
           groundGlowRadius: 20
-  - id: 20
-    generation: 1
+  - id: 19
+    generation: 0
     components:
+      - typeId: 9
+        typeName: Parent
+        data:
+          id: 1
+      - typeId: 1
+        typeName: Name
+        data:
+          name: Forest Right Far Fog
+      - typeId: 2
+        typeName: Transform3D
+        data:
+          position:
+            x: 0
+            y: 5.489979583280804
+            z: -2.990000009536743
+          rotation:
+            x: 0
+            y: 0
+            z: 0
+          scale:
+            x: 140
+            y: 13.773037740665096
+            z: 1
+      - typeId: 10
+        typeName: LocalTransform3D
+        data:
+          position:
+            x: 0
+            y: 5.489979583280804
+            z: -2.990000009536743
+          rotation:
+            x: 0
+            y: 0
+            z: 0
+          scale:
+            x: 140
+            y: 13.773037740665096
+            z: 1
+      - typeId: 15
+        typeName: Sprite2D
+        data:
+          texture: null
+          color:
+            r: 1
+            g: 1
+            b: 1
+            a: 1
+          tileIndex: null
+          tileSize: null
+          tilesetSize: null
+          pixelsPerUnit: 100
+          flipX: false
+          flipY: false
+          sortingLayer: 0
+          sortingOrder: 0
+          anchor:
+            x: 0.5
+            y: 0.5
+          visible: true
+          isLit: false
+          spriteRect: null
+      - typeId: 16
+        typeName: Sprite2DMaterial
+        data:
+          shader:
+            guid: fog-2d-shader
+          uniforms:
+            fog_color:
+              x: 0.658823549747467
+              y: 0.7686274647712708
+              z: 0.929411768913269
+            fog_opacity: 0.7609999775886536
+            fog_type: 0
+            fog_start: 0
+            fog_end: 0.5230000019073486
+            noise_strength: 0
+            noise_speed: 0
+            pixel_resolution:
+              x: 3000
+              y: 3000
+            edge_fade_left: 0.36800000071525574
+            edge_fade_right: 0.34599998593330383
+          uniqueInstance: true
+          enabled: true
       - typeId: 31
-        typeName: PrefabInstance
+        typeName: FogSkySync
         data:
-          prefabAssetGuid: e28c58cf-fa71-4825-9ecc-16c1f0ecd1ce
+          skyEntity: 16
+  - id: 20
+    generation: 0
+    components:
+      - typeId: 9
+        typeName: Parent
+        data:
+          id: 1
       - typeId: 1
         typeName: Name
         data:
-          name: Water
+          name: Forest Right Mid Fog
       - typeId: 2
         typeName: Transform3D
         data:
           position:
             x: 0
-            y: -4.199999809265137
-            z: 0
+            y: 1.8633863011593403
+            z: -1.9900000095367432
           rotation:
             x: 0
             y: 0
             z: 0
           scale:
-            x: 1400
-            y: 8
+            x: 160
+            y: 6.658999919891357
             z: 1
+      - typeId: 10
+        typeName: LocalTransform3D
+        data:
+          position:
+            x: 0
+            y: 1.8633863011593403
+            z: -1.9900000095367432
+          rotation:
+            x: 0
+            y: 0
+            z: 0
+          scale:
+            x: 160
+            y: 6.658999919891357
+            z: 1
+      - typeId: 15
+        typeName: Sprite2D
+        data:
+          texture: null
+          color:
+            r: 1
+            g: 1
+            b: 1
+            a: 1
+          tileIndex: null
+          tileSize: null
+          tilesetSize: null
+          pixelsPerUnit: 100
+          flipX: false
+          flipY: false
+          sortingLayer: 0
+          sortingOrder: 0
+          anchor:
+            x: 0.5
+            y: 0.5
+          visible: true
+          isLit: false
+          spriteRect: null
+      - typeId: 16
+        typeName: Sprite2DMaterial
+        data:
+          shader:
+            guid: fog-2d-shader
+          uniforms:
+            fog_color:
+              x: 0.658823549747467
+              y: 0.7686274647712708
+              z: 0.929411768913269
+            fog_opacity: 0.40400001406669617
+            fog_type: 0
+            fog_start: 0
+            fog_end: 1
+            noise_strength: 0
+            noise_speed: 0.02
+            pixel_resolution:
+              x: 3000
+              y: 3000
+            edge_fade_left: 0.1979999989271164
+            edge_fade_right: 0.22300000488758087
+          uniqueInstance: true
+          enabled: true
+      - typeId: 31
+        typeName: FogSkySync
+        data:
+          skyEntity: 16
   - id: 21
-    generation: 1
+    generation: 0
     components:
       - typeId: 1
         typeName: Name
         data:
-          name: Rain
+          name: Sky Fog
       - typeId: 2
         typeName: Transform3D
         data:
           position:
             x: 0
-            y: 0
-            z: 0
+            y: 4.699999809265137
+            z: -40
           rotation:
             x: 0
             y: 0
             z: 0
           scale:
-            x: 1
-            y: 1
+            x: 1000
+            y: 20
             z: 1
-      - typeId: 32
-        typeName: Rain2D
+      - typeId: 15
+        typeName: Sprite2D
         data:
-          baseSize:
-            x: 3000
-            y: 3000
-          tileSize: 3
-          visible: false
-          sortingLayer: 500000000
-          sortingOrder: 1783793664
-          density: 300
-          fallSpeed: 448.8909912109375
-          speedVariation: 0.6079999804496765
-          angle: 0.15000000596046448
-          windStrength: 0.30000001192092896
-          windSpeed: 1.5
-          dropletMinLength: 12.420999526977539
-          dropletMaxLength: 26.94499969482422
-          dropletWidth: 1.5019999742507935
-          seed: 20
-          dropletColor:
+          texture: null
+          color:
             r: 1
             g: 1
             b: 1
-          dropletOpacity: 1
-          enableLayers: true
-          nearLayerSpeed: 3
-          nearLayerOpacity: 0.8500000238418579
-          nearLayerScale: 1.2999999523162842
-          midLayerSpeed: 3
-          midLayerOpacity: 0.6000000238418579
-          midLayerScale: 1
-          farLayerSpeed: 2
-          farLayerOpacity: 0.3499999940395355
-          farLayerScale: 1.2640000581741333
-          enableWetnessTint: true
-          wetnessTintColor:
-            r: 0.4
-            g: 0.5
-            b: 0.6
-          wetnessTintIntensity: 0.15000000596046448
-          enableLightning: false
-          lightningColor:
-            r: 1
-            g: 1
-            b: 1
-          lightningMinInterval: 3.2980000972747803
-          lightningMaxInterval: 9.140000343322754
-          lightningDuration: 0.15000000596046448
-          lightningIntensity: 0.9959999918937683
-          stormIntensity: 0.8500000238418579
+            a: 1
+          tileIndex: null
+          tileSize: null
+          tilesetSize: null
+          pixelsPerUnit: 100
+          flipX: false
+          flipY: false
+          sortingLayer: 0
+          sortingOrder: 0
+          anchor:
+            x: 0.5
+            y: 0.5
+          visible: true
+          isLit: false
+          spriteRect: null
+      - typeId: 16
+        typeName: Sprite2DMaterial
+        data:
+          shader:
+            guid: fog-2d-shader
+          uniforms:
+            fog_color:
+              x: 0.658823549747467
+              y: 0.7686274647712708
+              z: 0.929411768913269
+            fog_opacity: 1
+            fog_type: 0
+            fog_start: 0
+            fog_end: 1
+            noise_strength: 0
+            noise_speed: 0.02
+            pixel_resolution:
+              x: 3000
+              y: 3000
+            edge_fade_left: 0.5
+            edge_fade_right: 0.5
+          uniqueInstance: true
+          enabled: true
+      - typeId: 31
+        typeName: FogSkySync
+        data:
+          skyEntity: 16
 metadata:
-  createdAt: 2025-12-30T05:48:47.139Z
-  modifiedAt: 2025-12-30T05:48:47.139Z
+  createdAt: 2025-12-30T06:20:35.586Z
+  modifiedAt: 2025-12-30T06:20:35.586Z
   entityCount: 22
-  archetypeCount: 63
+  archetypeCount: 61
