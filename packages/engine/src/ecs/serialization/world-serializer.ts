@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * WorldSerializer - Core serialization/deserialization for ECS World
  *
@@ -9,28 +10,26 @@
  * - Component registry tracking
  */
 
-import type { World } from "../world.js";
-import type { Command } from "../command.js";
-import type { ComponentType } from "../component.js";
-import { globalComponentRegistry } from "../component.js";
-import { globalResourceRegistry } from "../resource.js";
-import type { ResourceSerializerConfig, ResourceType } from "../resource.js";
-import { Parent } from "../components/parent.js";
-import { Children } from "../components/children.js";
-import { PrefabInstance } from "../components/prefab-instance.js";
-import type { Entity } from "../entity.js";
-import { PrefabManager } from "../prefab-manager.js";
+import type { World } from '../world.js';
+import type { Command } from '../command.js';
+import type { ComponentType } from '../component.js';
+import { globalComponentRegistry } from '../component.js';
+import { globalResourceRegistry } from '../resource.js';
+import type { ResourceSerializerConfig, ResourceType } from '../resource.js';
+import { Parent } from '../components/parent.js';
+import { PrefabInstance } from '../components/prefab-instance.js';
+import type { Entity } from '../entity.js';
+import { PrefabManager } from '../prefab-manager.js';
 import type {
   ComponentSerializer,
   SerializationContext,
   DeserializationContext,
-  DeserializeMode,
   DeserializeOptions,
   DeserializeResult,
   SerializationStats,
   PropertySerializerConfig,
   ComponentSerializerConfig,
-} from "./types.js";
+} from './types.js';
 import type {
   WorldData,
   SerializedEntity,
@@ -38,24 +37,23 @@ import type {
   ComponentRegistryEntry,
   ResourceRegistryEntry,
   SerializedResource,
-} from "./schemas.js";
-import { WorldSchema } from "./schemas.js";
-import {
-  DefaultSerializer,
-  SetSerializer,
-} from "./custom-serializers.js";
-import { AssetRefSerializer } from "./asset-ref-serializer.js";
-import { jsonToYaml, yamlToJson } from "./yaml-utils.js";
-import { isAssetRef } from "../asset-ref.js";
-import { isRuntimeAsset } from "../runtime-asset.js";
-import { RuntimeAssetManager } from "../runtime-asset-manager.js";
-import type { Application } from "../../app/application.js";
+} from './schemas.js';
+import { WorldSchema } from './schemas.js';
+import { DefaultSerializer } from './custom-serializers.js';
+import { jsonToYaml, yamlToJson } from './yaml-utils.js';
+import { isAssetRef } from '../asset-ref.js';
+import { isRuntimeAsset } from '../runtime-asset.js';
+import { RuntimeAssetManager } from '../runtime-asset-manager.js';
+import type { Application } from '../../app/application.js';
 
 /**
  * WorldSerializer - Orchestrates serialization/deserialization of ECS World
  */
 export class WorldSerializer {
-  private customSerializers = new Map<ComponentType<any>, ComponentSerializer>();
+  private customSerializers = new Map<
+    ComponentType<any>,
+    ComponentSerializer
+  >();
   private skipChildrenComponentTypes: Set<ComponentType<any>> | null = null;
 
   constructor() {
@@ -70,8 +68,9 @@ export class WorldSerializer {
   private getSkipChildrenComponentTypes(): Set<ComponentType<any>> {
     if (this.skipChildrenComponentTypes === null) {
       this.skipChildrenComponentTypes = new Set(
-        globalComponentRegistry.getAll()
-          .filter(type => type.metadata?.skipChildrenSerialization === true)
+        globalComponentRegistry
+          .getAll()
+          .filter((type) => type.metadata?.skipChildrenSerialization === true),
       );
     }
     return this.skipChildrenComponentTypes;
@@ -120,7 +119,9 @@ export class WorldSerializer {
   /**
    * Get serializer for component type (custom or default)
    */
-  private getSerializer(componentType: ComponentType<any>): ComponentSerializer {
+  private getSerializer(
+    componentType: ComponentType<any>,
+  ): ComponentSerializer {
     // Check for custom serializer
     const custom = this.customSerializers.get(componentType);
     if (custom) {
@@ -138,14 +139,16 @@ export class WorldSerializer {
     value: any,
     config: PropertySerializerConfig,
     context: SerializationContext,
-    skipEntities?: Set<Entity>
+    skipEntities?: Set<Entity>,
   ): any {
     // Handle nullish values
     if (value === null || value === undefined) {
-      if (config.whenNullish === "throw") {
-        throw new Error(`Property value is nullish but whenNullish is set to 'throw'`);
+      if (config.whenNullish === 'throw') {
+        throw new Error(
+          `Property value is nullish but whenNullish is set to 'throw'`,
+        );
       }
-      if (config.whenNullish === "skip") {
+      if (config.whenNullish === 'skip') {
         return undefined; // Signal to skip this property
       }
       // 'keep' mode: serialize as-is
@@ -158,12 +161,12 @@ export class WorldSerializer {
     }
 
     // Handle collection types FIRST (before preset types)
-    if (config.collectionType === "array") {
+    if (config.collectionType === 'array') {
       if (Array.isArray(value)) {
         return value
           .filter((item) => {
             // Filter out entity references that should be skipped or don't exist
-            if (config.type === "entity" && typeof item === "number") {
+            if (config.type === 'entity' && typeof item === 'number') {
               // Filter out skipped entities
               if (skipEntities && skipEntities.has(item)) {
                 return false;
@@ -177,16 +180,16 @@ export class WorldSerializer {
           })
           .map((item) => {
             // If collection has entity ID items, remap them
-            if (config.type === "entity" && typeof item === "number") {
+            if (config.type === 'entity' && typeof item === 'number') {
               // Safe to use ! here because we filtered out unmapped entities above
               return context.entityMapping.get(item)!;
             }
             // If collection has RuntimeAsset items, serialize them
-            if (config.type === "runtimeAsset" && isRuntimeAsset(item)) {
+            if (config.type === 'runtimeAsset' && isRuntimeAsset(item)) {
               return { guid: item.guid };
             }
             // If collection has AssetRef items, serialize them
-            if (config.type === "assetRef" && isAssetRef(item)) {
+            if (config.type === 'assetRef' && isAssetRef(item)) {
               return { guid: item.guid };
             }
             return item;
@@ -195,14 +198,13 @@ export class WorldSerializer {
       return value;
     }
 
-    if (config.collectionType === "set") {
+    if (config.collectionType === 'set') {
       if (value instanceof Set) {
         // If collection has entity ID items, remap them
-        if (config.type === "entity") {
-          const originalSize = value.size;
+        if (config.type === 'entity') {
           const filtered = Array.from(value)
             .filter((item) => {
-              if (typeof item === "number") {
+              if (typeof item === 'number') {
                 // Filter out skipped entities (e.g. children of generators)
                 if (skipEntities && skipEntities.has(item)) {
                   return false;
@@ -215,19 +217,17 @@ export class WorldSerializer {
               return true;
             })
             .map((item) => {
-              if (typeof item === "number") {
+              if (typeof item === 'number') {
                 // Safe to use ! here because we filtered out unmapped entities above
                 return context.entityMapping.get(item)!;
               }
               return item;
             });
-          if (filtered.length !== originalSize) {
-            console.warn(`[Serialization] Set reduced from ${originalSize} to ${filtered.length} items`);
-          }
+
           return filtered;
         }
         // If collection has RuntimeAsset items, serialize them
-        if (config.type === "runtimeAsset") {
+        if (config.type === 'runtimeAsset') {
           return Array.from(value).map((item) => {
             if (isRuntimeAsset(item)) {
               return { guid: item.guid };
@@ -236,7 +236,7 @@ export class WorldSerializer {
           });
         }
         // If collection has AssetRef items, serialize them
-        if (config.type === "assetRef") {
+        if (config.type === 'assetRef') {
           return Array.from(value).map((item) => {
             if (isAssetRef(item)) {
               return { guid: item.guid };
@@ -250,9 +250,9 @@ export class WorldSerializer {
     }
 
     // Handle preset types (for non-collection values)
-    if (config.type === "entity") {
+    if (config.type === 'entity') {
       // Entity ID reference - remap to serialized ID
-      if (typeof value === "number") {
+      if (typeof value === 'number') {
         // If this entity was skipped, return undefined to skip serialization
         if (skipEntities && skipEntities.has(value)) {
           return undefined; // Will be handled by whenNullish logic if configured
@@ -267,21 +267,21 @@ export class WorldSerializer {
       return value;
     }
 
-    if (config.type === "runtimeAsset") {
+    if (config.type === 'runtimeAsset') {
       if (isRuntimeAsset(value)) {
         return { guid: value.guid };
       }
       return value;
     }
 
-    if (config.type === "assetRef") {
+    if (config.type === 'assetRef') {
       if (isAssetRef(value)) {
         return { guid: value.guid };
       }
       return value;
     }
 
-    if (config.type === "set") {
+    if (config.type === 'set') {
       if (value instanceof Set) {
         return Array.from(value);
       }
@@ -303,7 +303,7 @@ export class WorldSerializer {
   private deserializePropertyValue(
     value: any,
     config: PropertySerializerConfig,
-    context: DeserializationContext
+    context: DeserializationContext,
   ): any {
     // Handle nullish values
     if (value === null || value === undefined) {
@@ -316,10 +316,10 @@ export class WorldSerializer {
     }
 
     // Handle preset types (check collections FIRST to avoid early return)
-    if (config.type === "entity" && !config.collectionType) {
+    if (config.type === 'entity' && !config.collectionType) {
       // Entity ID reference - remap from serialized ID to new entity ID
       // NOTE: Skip if collectionType is set (handled in collection block below)
-      if (typeof value === "number") {
+      if (typeof value === 'number') {
         const mappedEntity = context.entityMapping.get(value);
         if (mappedEntity === undefined) {
           // Return null for unmapped entity references instead of throwing
@@ -332,8 +332,8 @@ export class WorldSerializer {
     }
 
     // Handle single RuntimeAsset (NOT arrays - those are handled in collectionType block below)
-    if (config.type === "runtimeAsset" && !config.collectionType) {
-      if (typeof value === "object" && value !== null && "guid" in value) {
+    if (config.type === 'runtimeAsset' && !config.collectionType) {
+      if (typeof value === 'object' && value !== null && 'guid' in value) {
         const guid = value.guid as string;
 
         // Try to get metadata from resolver
@@ -344,7 +344,7 @@ export class WorldSerializer {
           metadata = {
             guid,
             path: `unknown/${guid}`,
-            type: "unknown",
+            type: 'unknown',
             importedAt: new Date().toISOString(),
             modifiedAt: new Date().toISOString(),
           };
@@ -359,14 +359,14 @@ export class WorldSerializer {
       return value;
     }
 
-    if (config.type === "assetRef") {
-      if (typeof value === "object" && value !== null && "guid" in value) {
+    if (config.type === 'assetRef') {
+      if (typeof value === 'object' && value !== null && 'guid' in value) {
         return { guid: value.guid };
       }
       return value;
     }
 
-    if (config.type === "set") {
+    if (config.type === 'set') {
       if (Array.isArray(value)) {
         return new Set(value);
       }
@@ -374,20 +374,20 @@ export class WorldSerializer {
     }
 
     // Handle collection types
-    if (config.collectionType === "array") {
+    if (config.collectionType === 'array') {
       if (Array.isArray(value)) {
         // If collection has entity ID items, filter and remap them
-        if (config.type === "entity") {
+        if (config.type === 'entity') {
           return value
             .filter((item) => {
               // Filter out entity IDs that don't exist in the mapping
-              if (typeof item === "number") {
+              if (typeof item === 'number') {
                 return context.entityMapping.has(item);
               }
               return true;
             })
             .map((item) => {
-              if (typeof item === "number") {
+              if (typeof item === 'number') {
                 // Safe to use ! here because we filtered out unmapped entities above
                 return context.entityMapping.get(item)!;
               }
@@ -396,14 +396,19 @@ export class WorldSerializer {
         }
         return value.map((item) => {
           // If collection has RuntimeAsset items, deserialize them
-          if (config.type === "runtimeAsset" && typeof item === "object" && item !== null && "guid" in item) {
+          if (
+            config.type === 'runtimeAsset' &&
+            typeof item === 'object' &&
+            item !== null &&
+            'guid' in item
+          ) {
             const guid = item.guid as string;
             let metadata = context.assetMetadataResolver?.(guid);
             if (!metadata) {
               metadata = {
                 guid,
                 path: `unknown/${guid}`,
-                type: "unknown",
+                type: 'unknown',
                 importedAt: new Date().toISOString(),
                 modifiedAt: new Date().toISOString(),
               };
@@ -414,7 +419,12 @@ export class WorldSerializer {
             return RuntimeAssetManager.get().getOrCreate(guid, metadata);
           }
           // If collection has AssetRef items, deserialize them
-          if (config.type === "assetRef" && typeof item === "object" && item !== null && "guid" in item) {
+          if (
+            config.type === 'assetRef' &&
+            typeof item === 'object' &&
+            item !== null &&
+            'guid' in item
+          ) {
             return { guid: item.guid };
           }
           return item;
@@ -423,20 +433,20 @@ export class WorldSerializer {
       return value;
     }
 
-    if (config.collectionType === "set") {
+    if (config.collectionType === 'set') {
       if (Array.isArray(value)) {
         // If collection has entity ID items, filter and remap them
-        if (config.type === "entity") {
+        if (config.type === 'entity') {
           const items = value
             .filter((item) => {
               // Filter out entity IDs that don't exist in the mapping
-              if (typeof item === "number") {
+              if (typeof item === 'number') {
                 return context.entityMapping.has(item);
               }
               return true;
             })
             .map((item) => {
-              if (typeof item === "number") {
+              if (typeof item === 'number') {
                 return context.entityMapping.get(item)!;
               }
               return item;
@@ -445,14 +455,19 @@ export class WorldSerializer {
         }
         const items = value.map((item) => {
           // If collection has RuntimeAsset items, deserialize them
-          if (config.type === "runtimeAsset" && typeof item === "object" && item !== null && "guid" in item) {
+          if (
+            config.type === 'runtimeAsset' &&
+            typeof item === 'object' &&
+            item !== null &&
+            'guid' in item
+          ) {
             const guid = item.guid as string;
             let metadata = context.assetMetadataResolver?.(guid);
             if (!metadata) {
               metadata = {
                 guid,
                 path: `unknown/${guid}`,
-                type: "unknown",
+                type: 'unknown',
                 importedAt: new Date().toISOString(),
                 modifiedAt: new Date().toISOString(),
               };
@@ -463,7 +478,12 @@ export class WorldSerializer {
             return RuntimeAssetManager.get().getOrCreate(guid, metadata);
           }
           // If collection has AssetRef items, deserialize them
-          if (config.type === "assetRef" && typeof item === "object" && item !== null && "guid" in item) {
+          if (
+            config.type === 'assetRef' &&
+            typeof item === 'object' &&
+            item !== null &&
+            'guid' in item
+          ) {
             return { guid: item.guid };
           }
           return item;
@@ -489,7 +509,7 @@ export class WorldSerializer {
     data: any,
     config: ComponentSerializerConfig<any>,
     context: SerializationContext,
-    skipEntities?: Set<Entity>
+    skipEntities?: Set<Entity>,
   ): any {
     const result: any = {};
 
@@ -499,10 +519,18 @@ export class WorldSerializer {
       }
 
       const value = data[propertyKey];
-      const serializedValue = this.serializePropertyValue(value, propertyConfig, context, skipEntities);
+      const serializedValue = this.serializePropertyValue(
+        value,
+        propertyConfig,
+        context,
+        skipEntities,
+      );
 
       // Skip if whenNullish is 'skip' and value is undefined
-      if (serializedValue === undefined && propertyConfig.whenNullish === "skip") {
+      if (
+        serializedValue === undefined &&
+        propertyConfig.whenNullish === 'skip'
+      ) {
         continue;
       }
 
@@ -520,7 +548,7 @@ export class WorldSerializer {
   private deserializeWithPropertyConfig(
     data: any,
     config: ComponentSerializerConfig<any>,
-    context: DeserializationContext
+    context: DeserializationContext,
   ): any {
     const result: any = {};
 
@@ -533,7 +561,11 @@ export class WorldSerializer {
       const inputKey = propertyConfig.serializeAs || propertyKey;
       const value = data[inputKey];
 
-      const deserializedValue = this.deserializePropertyValue(value, propertyConfig, context);
+      const deserializedValue = this.deserializePropertyValue(
+        value,
+        propertyConfig,
+        context,
+      );
 
       // Store under original property key
       result[propertyKey] = deserializedValue;
@@ -548,7 +580,7 @@ export class WorldSerializer {
   private serializeResourceWithConfig(
     data: any,
     config: ResourceSerializerConfig<any>,
-    context: SerializationContext
+    context: SerializationContext,
   ): any {
     const result: any = {};
 
@@ -558,10 +590,17 @@ export class WorldSerializer {
       }
 
       const value = data[propertyKey];
-      const serializedValue = this.serializePropertyValue(value, propertyConfig, context);
+      const serializedValue = this.serializePropertyValue(
+        value,
+        propertyConfig,
+        context,
+      );
 
       // Skip if whenNullish is 'skip' and value is undefined
-      if (serializedValue === undefined && propertyConfig.whenNullish === "skip") {
+      if (
+        serializedValue === undefined &&
+        propertyConfig.whenNullish === 'skip'
+      ) {
         continue;
       }
 
@@ -579,7 +618,7 @@ export class WorldSerializer {
   private deserializeResourceWithConfig(
     data: any,
     config: ResourceSerializerConfig<any>,
-    context: DeserializationContext
+    context: DeserializationContext,
   ): any {
     const result: any = {};
 
@@ -592,7 +631,11 @@ export class WorldSerializer {
       const inputKey = propertyConfig.serializeAs || propertyKey;
       const value = data[inputKey];
 
-      const deserializedValue = this.deserializePropertyValue(value, propertyConfig, context);
+      const deserializedValue = this.deserializePropertyValue(
+        value,
+        propertyConfig,
+        context,
+      );
 
       // Store under original property key
       result[propertyKey] = deserializedValue;
@@ -606,7 +649,7 @@ export class WorldSerializer {
    */
   serializeResources(
     app: Application,
-    context: SerializationContext
+    context: SerializationContext,
   ): { registry: ResourceRegistryEntry[]; resources: SerializedResource[] } {
     const registry: ResourceRegistryEntry[] = [];
     const resources: SerializedResource[] = [];
@@ -617,7 +660,9 @@ export class WorldSerializer {
 
     for (const [ctor, instance] of allResources) {
       // Check if this resource type is registered
-      const resourceType = globalResourceRegistry.getByCtor(ctor as new (...args: any[]) => any);
+      const resourceType = globalResourceRegistry.getByCtor(
+        ctor as new (...args: any[]) => any,
+      );
       if (!resourceType) {
         continue; // Not registered - skip serialization
       }
@@ -639,7 +684,7 @@ export class WorldSerializer {
       const serializedData = this.serializeResourceWithConfig(
         instance,
         resourceType.serializerConfig,
-        context
+        context,
       );
 
       resources.push({
@@ -661,7 +706,7 @@ export class WorldSerializer {
     resourceRegistry: ResourceRegistryEntry[],
     resources: SerializedResource[],
     context: DeserializationContext,
-    options: DeserializeOptions
+    options: DeserializeOptions,
   ): void {
     // Build resource type lookup by name
     const resourceTypeByName = new Map<string, ResourceType<any>>();
@@ -671,7 +716,9 @@ export class WorldSerializer {
       if (resourceType) {
         resourceTypeByName.set(entry.name, resourceType);
       } else if (!options.skipMissingComponents) {
-        console.warn(`[WorldSerializer] Resource type "${entry.name}" not found in registry`);
+        console.warn(
+          `[WorldSerializer] Resource type "${entry.name}" not found in registry`,
+        );
       }
     }
 
@@ -701,7 +748,7 @@ export class WorldSerializer {
             console.warn(
               `[WorldSerializer] Failed to create resource "${resourceType.name}": ${
                 error instanceof Error ? error.message : String(error)
-              }`
+              }`,
             );
             continue;
           }
@@ -713,7 +760,7 @@ export class WorldSerializer {
       const deserializedData = this.deserializeResourceWithConfig(
         serializedResource.data,
         resourceType.serializerConfig,
-        context
+        context,
       );
 
       // Apply deserialized values to instance
@@ -727,7 +774,7 @@ export class WorldSerializer {
   private collectDescendants(
     entity: Entity,
     childrenMap: Map<Entity, Set<Entity>>,
-    skipSet: Set<Entity>
+    skipSet: Set<Entity>,
   ): void {
     const children = childrenMap.get(entity);
     if (!children) return;
@@ -748,39 +795,45 @@ export class WorldSerializer {
    */
   private buildSkipSet(
     commands: Command,
-    entityFilter?: Set<number>
+    entityFilter?: Set<number>,
   ): Set<Entity> {
     const skipSet = new Set<Entity>();
 
     // Step 1: Build parent → children mapping for efficient lookup
     const childrenMap = new Map<Entity, Set<Entity>>();
-    commands.query().all(Parent).each((entity, parent) => {
-      // Skip entities not in filter
-      if (entityFilter && !entityFilter.has(entity)) {
-        return;
-      }
+    commands
+      .query()
+      .all(Parent)
+      .each((entity, parent) => {
+        // Skip entities not in filter
+        if (entityFilter && !entityFilter.has(entity)) {
+          return;
+        }
 
-      const parentId = parent.id;
-      if (!childrenMap.has(parentId)) {
-        childrenMap.set(parentId, new Set());
-      }
-      childrenMap.get(parentId)!.add(entity);
-    });
+        const parentId = parent.id;
+        if (!childrenMap.has(parentId)) {
+          childrenMap.set(parentId, new Set());
+        }
+        childrenMap.get(parentId)!.add(entity);
+      });
 
     // Step 2: Get component types with skipChildrenSerialization enabled
     const componentsToCheck = this.getSkipChildrenComponentTypes();
 
     // Step 3: For each entity with skip-enabled components, recursively collect children
     for (const componentType of componentsToCheck) {
-      commands.query().all(componentType).each((entity) => {
-        // Skip if not in filter
-        if (entityFilter && !entityFilter.has(entity)) {
-          return;
-        }
+      commands
+        .query()
+        .all(componentType)
+        .each((entity) => {
+          // Skip if not in filter
+          if (entityFilter && !entityFilter.has(entity)) {
+            return;
+          }
 
-        // Recursively add all descendants to skip set
-        this.collectDescendants(entity, childrenMap, skipSet);
-      });
+          // Recursively add all descendants to skip set
+          this.collectDescendants(entity, childrenMap, skipSet);
+        });
     }
 
     return skipSet;
@@ -797,10 +850,8 @@ export class WorldSerializer {
     world: World,
     commands: Command,
     entityFilter?: Set<number>,
-    app?: Application
+    app?: Application,
   ): WorldData {
-    const startTime = performance.now();
-
     // Build skip set for entities with skipChildrenSerialization components
     const skipEntities = this.buildSkipSet(commands, entityFilter);
 
@@ -810,24 +861,27 @@ export class WorldSerializer {
 
     // Collect all component types from filtered entities
     const allComponentTypes = new Set<ComponentType<any>>();
-    commands.query().all().each((entity) => {
-      // Skip entities not in filter
-      if (entityFilter && !entityFilter.has(entity)) {
-        return;
-      }
-
-      // Skip entities excluded by skipChildrenSerialization
-      if (skipEntities.has(entity)) {
-        return;
-      }
-
-      const components = commands.getAllComponents(entity);
-      if (components) {
-        for (const [componentType] of components) {
-          allComponentTypes.add(componentType);
+    commands
+      .query()
+      .all()
+      .each((entity) => {
+        // Skip entities not in filter
+        if (entityFilter && !entityFilter.has(entity)) {
+          return;
         }
-      }
-    });
+
+        // Skip entities excluded by skipChildrenSerialization
+        if (skipEntities.has(entity)) {
+          return;
+        }
+
+        const components = commands.getAllComponents(entity);
+        if (components) {
+          for (const [componentType] of components) {
+            allComponentTypes.add(componentType);
+          }
+        }
+      });
 
     // Build registry with sequential IDs
     let typeId = 0;
@@ -844,20 +898,23 @@ export class WorldSerializer {
     const entityMapping = new Map<number, number>();
     let serializedId = 0;
 
-    commands.query().all().each((entity) => {
-      // Skip entities not in filter
-      if (entityFilter && !entityFilter.has(entity)) {
-        return;
-      }
+    commands
+      .query()
+      .all()
+      .each((entity) => {
+        // Skip entities not in filter
+        if (entityFilter && !entityFilter.has(entity)) {
+          return;
+        }
 
-      // Skip entities excluded by skipChildrenSerialization
-      if (skipEntities.has(entity)) {
-        return;
-      }
+        // Skip entities excluded by skipChildrenSerialization
+        if (skipEntities.has(entity)) {
+          return;
+        }
 
-      entityMapping.set(entity, serializedId);
-      serializedId++;
-    });
+        entityMapping.set(entity, serializedId);
+        serializedId++;
+      });
 
     // Serialize entities
     const context: SerializationContext = { entityMapping };
@@ -870,117 +927,123 @@ export class WorldSerializer {
     // DEBUG: Track component data objects to detect shared references
     const componentDataObjects = new Map<any, number[]>();
 
-    commands.query().all().each((entity) => {
-      // DEBUG: Check for duplicate entity handles in the same iteration
-      if (seenEntities.has(entity)) {
-        console.error(
-          `[WorldSerializer] DUPLICATE ENTITY HANDLE! Entity ${entity} appeared twice in query iteration`
-        );
-      }
-      seenEntities.add(entity);
-      // Skip entities not in filter
-      if (entityFilter && !entityFilter.has(entity)) {
-        return;
-      }
-
-      // Skip entities excluded by skipChildrenSerialization
-      if (skipEntities.has(entity)) {
-        return;
-      }
-
-      const components = commands.getAllComponents(entity);
-      if (!components) {
-        return;
-      }
-
-      const serializedComponents: SerializedComponent[] = [];
-      let entityName: string | undefined;
-
-      // Check if this entity is a prefab instance root
-      const isPrefabInstance = commands.hasComponent(entity, PrefabInstance);
-
-      for (const [componentType, data] of components) {
-        const typeId = componentTypeMap.get(componentType);
-        if (typeId === undefined) {
-          continue; // Should never happen
+    commands
+      .query()
+      .all()
+      .each((entity) => {
+        // DEBUG: Check for duplicate entity handles in the same iteration
+        if (seenEntities.has(entity)) {
+          console.error(
+            `[WorldSerializer] DUPLICATE ENTITY HANDLE! Entity ${entity} appeared twice in query iteration`,
+          );
+        }
+        seenEntities.add(entity);
+        // Skip entities not in filter
+        if (entityFilter && !entityFilter.has(entity)) {
+          return;
         }
 
-        // Skip non-serializable components (marked with false)
-        if (componentType.serializerConfig === false) {
-          continue;
+        // Skip entities excluded by skipChildrenSerialization
+        if (skipEntities.has(entity)) {
+          return;
         }
 
-        // For prefab instances, only serialize instance-specific components
-        // (Transform3D, LocalTransform3D, Parent, Name, PrefabInstance)
-        // All other components come from the prefab asset
-        if (isPrefabInstance && !this.shouldSerializeComponentForPrefab(componentType.name)) {
-          continue;
+        const components = commands.getAllComponents(entity);
+        if (!components) {
+          return;
         }
 
-        // DEBUG: Check if this component data object is shared with another entity
-        if (data !== null && typeof data === 'object') {
-          const existingEntities = componentDataObjects.get(data);
-          if (existingEntities) {
-            existingEntities.push(entity);
-            console.error(
-              `[WorldSerializer] SHARED COMPONENT DATA! Component ${componentType.name} data object is shared between entities: ${existingEntities.join(', ')}`
+        const serializedComponents: SerializedComponent[] = [];
+        let entityName: string | undefined;
+
+        // Check if this entity is a prefab instance root
+        const isPrefabInstance = commands.hasComponent(entity, PrefabInstance);
+
+        for (const [componentType, data] of components) {
+          const typeId = componentTypeMap.get(componentType);
+          if (typeId === undefined) {
+            continue; // Should never happen
+          }
+
+          // Skip non-serializable components (marked with false)
+          if (componentType.serializerConfig === false) {
+            continue;
+          }
+
+          // For prefab instances, only serialize instance-specific components
+          // (Transform3D, LocalTransform3D, Parent, Name, PrefabInstance)
+          // All other components come from the prefab asset
+          if (
+            isPrefabInstance &&
+            !this.shouldSerializeComponentForPrefab(componentType.name)
+          ) {
+            continue;
+          }
+
+          // DEBUG: Check if this component data object is shared with another entity
+          if (data !== null && typeof data === 'object') {
+            const existingEntities = componentDataObjects.get(data);
+            if (existingEntities) {
+              existingEntities.push(entity);
+              console.error(
+                `[WorldSerializer] SHARED COMPONENT DATA! Component ${componentType.name} data object is shared between entities: ${existingEntities.join(', ')}`,
+              );
+            } else {
+              componentDataObjects.set(data, [entity]);
+            }
+          }
+
+          // DEBUG: Track Name component
+          if (componentType.name === 'Name' && data?.name) {
+            entityName = data.name;
+          }
+
+          let serializedData: any;
+
+          // Check if component has property-level serialization config
+          if (componentType.serializerConfig) {
+            // Use property-level config
+            serializedData = this.serializeWithPropertyConfig(
+              data,
+              componentType.serializerConfig,
+              context,
+              skipEntities,
             );
           } else {
-            componentDataObjects.set(data, [entity]);
+            // Fall back to custom serializer or default
+            const serializer = this.getSerializer(componentType);
+            serializedData = serializer.serialize(data, context);
           }
+
+          serializedComponents.push({
+            typeId,
+            typeName: componentType.name,
+            data: serializedData,
+          });
         }
 
-        // DEBUG: Track Name component
-        if (componentType.name === 'Name' && data?.name) {
-          entityName = data.name;
+        // DEBUG: Track entity names
+        if (entityName) {
+          const existing = nameToEntities.get(entityName) || [];
+          existing.push(entity);
+          nameToEntities.set(entityName, existing);
         }
 
-        let serializedData: any;
+        // Get generation for entity validation
+        const generation = world.getGeneration(entity);
 
-        // Check if component has property-level serialization config
-        if (componentType.serializerConfig) {
-          // Use property-level config
-          serializedData = this.serializeWithPropertyConfig(
-            data,
-            componentType.serializerConfig,
-            context,
-            skipEntities
-          );
-        } else {
-          // Fall back to custom serializer or default
-          const serializer = this.getSerializer(componentType);
-          serializedData = serializer.serialize(data, context);
-        }
-
-        serializedComponents.push({
-          typeId,
-          typeName: componentType.name,
-          data: serializedData,
+        entities.push({
+          id: entityMapping.get(entity)!,
+          generation,
+          components: serializedComponents,
         });
-      }
-
-      // DEBUG: Track entity names
-      if (entityName) {
-        const existing = nameToEntities.get(entityName) || [];
-        existing.push(entity);
-        nameToEntities.set(entityName, existing);
-      }
-
-      // Get generation for entity validation
-      const generation = world.getGeneration(entity);
-
-      entities.push({
-        id: entityMapping.get(entity)!,
-        generation,
-        components: serializedComponents,
       });
-    });
 
     // DEBUG: Check for duplicate names (potential corruption indicator)
     for (const [name, entityIds] of nameToEntities) {
       if (entityIds.length > 1 && name.includes('Forest')) {
         console.warn(
-          `[WorldSerializer] POTENTIAL CORRUPTION: Multiple entities (${entityIds.join(', ')}) have the same name "${name}"`
+          `[WorldSerializer] POTENTIAL CORRUPTION: Multiple entities (${entityIds.join(', ')}) have the same name "${name}"`,
         );
       }
     }
@@ -996,7 +1059,7 @@ export class WorldSerializer {
     }
 
     return {
-      version: "1.0.0",
+      version: '1.0.0',
       componentRegistry,
       entities,
       metadata: {
@@ -1005,7 +1068,8 @@ export class WorldSerializer {
         entityCount: entities.length,
         archetypeCount: world.getArchetypeCount(),
       },
-      resourceRegistry: resourceRegistry.length > 0 ? resourceRegistry : undefined,
+      resourceRegistry:
+        resourceRegistry.length > 0 ? resourceRegistry : undefined,
       resources: resourcesData.length > 0 ? resourcesData : undefined,
     };
   }
@@ -1022,11 +1086,10 @@ export class WorldSerializer {
     commands: Command,
     data: unknown,
     options: DeserializeOptions = {},
-    app?: Application
+    app?: Application,
   ): DeserializeResult {
-    const startTime = performance.now();
     const {
-      mode = "replace",
+      mode = 'replace',
       skipMissingComponents = false,
       continueOnError = false,
     } = options;
@@ -1050,7 +1113,7 @@ export class WorldSerializer {
     let entitiesSkipped = 0;
 
     // Clear world if replace mode
-    if (mode === "replace") {
+    if (mode === 'replace') {
       world.clear();
     }
 
@@ -1074,7 +1137,7 @@ export class WorldSerializer {
       if (!componentType) {
         if (skipMissingComponents) {
           warnings.push(
-            `Component type "${entry.name}" (ID: ${entry.id}) not found, skipping`
+            `Component type "${entry.name}" (ID: ${entry.id}) not found, skipping`,
           );
           continue;
         } else {
@@ -1097,7 +1160,10 @@ export class WorldSerializer {
     // For prefab instances, we create the root entity now but will instantiate
     // the prefab's children in Pass 1.5
     const entityMapping = new Map<number, number>();
-    const entitiesToPopulate: Array<{ serializedEntity: SerializedEntity; entity: number }> = [];
+    const entitiesToPopulate: Array<{
+      serializedEntity: SerializedEntity;
+      entity: number;
+    }> = [];
     const prefabInstancesToLoad: Array<{
       serializedEntity: SerializedEntity;
       entity: number;
@@ -1112,7 +1178,7 @@ export class WorldSerializer {
       try {
         // Check if this entity has a PrefabInstance component
         const prefabInstanceComponent = serializedEntity.components.find(
-          (c) => c.typeName === 'PrefabInstance'
+          (c) => c.typeName === 'PrefabInstance',
         );
 
         if (prefabInstanceComponent) {
@@ -1124,18 +1190,28 @@ export class WorldSerializer {
           entityMapping.set(serializedEntity.id, newEntityId);
 
           // Extract instance-specific component data
-          const transformComp = serializedEntity.components.find((c) => c.typeName === 'Transform3D');
-          const localTransformComp = serializedEntity.components.find((c) => c.typeName === 'LocalTransform3D');
-          const parentComp = serializedEntity.components.find((c) => c.typeName === 'Parent');
-          const nameComp = serializedEntity.components.find((c) => c.typeName === 'Name');
+          const transformComp = serializedEntity.components.find(
+            (c) => c.typeName === 'Transform3D',
+          );
+          const localTransformComp = serializedEntity.components.find(
+            (c) => c.typeName === 'LocalTransform3D',
+          );
+          const parentComp = serializedEntity.components.find(
+            (c) => c.typeName === 'Parent',
+          );
+          const nameComp = serializedEntity.components.find(
+            (c) => c.typeName === 'Name',
+          );
 
           // Extract prefabAssetGuid from the serialized data
-          const prefabData = prefabInstanceComponent.data as { prefabAssetGuid?: string } | undefined;
+          const prefabData = prefabInstanceComponent.data as
+            | { prefabAssetGuid?: string }
+            | undefined;
           const prefabGuid = prefabData?.prefabAssetGuid;
 
           if (!prefabGuid) {
             warnings.push(
-              `PrefabInstance component missing prefabAssetGuid for entity ${serializedEntity.id}`
+              `PrefabInstance component missing prefabAssetGuid for entity ${serializedEntity.id}`,
             );
             // Fall back to regular entity creation
             entitiesToPopulate.push({ serializedEntity, entity: newEntityId });
@@ -1163,7 +1239,7 @@ export class WorldSerializer {
       } catch (error) {
         if (continueOnError) {
           warnings.push(
-            `Failed to create entity ${serializedEntity.id}: ${error instanceof Error ? error.message : String(error)}`
+            `Failed to create entity ${serializedEntity.id}: ${error instanceof Error ? error.message : String(error)}`,
           );
           entitiesSkipped++;
           continue;
@@ -1186,7 +1262,7 @@ export class WorldSerializer {
       try {
         if (!PrefabManager.has()) {
           warnings.push(
-            `PrefabManager not initialized, skipping prefab instance for entity ${prefabInfo.serializedEntity.id}`
+            `PrefabManager not initialized, skipping prefab instance for entity ${prefabInfo.serializedEntity.id}`,
           );
           continue;
         }
@@ -1197,7 +1273,7 @@ export class WorldSerializer {
         if (!prefabManager.isLoaded(prefabInfo.prefabGuid)) {
           warnings.push(
             `Prefab "${prefabInfo.prefabGuid}" not loaded for entity ${prefabInfo.serializedEntity.id}. ` +
-            `Prefabs must be preloaded before world deserialization.`
+              `Prefabs must be preloaded before world deserialization.`,
           );
           continue;
         }
@@ -1213,7 +1289,7 @@ export class WorldSerializer {
           commands,
           {
             assetMetadataResolver: options.assetMetadataResolver,
-          }
+          },
         );
 
         // Update entity mapping with the actual prefab root
@@ -1226,31 +1302,52 @@ export class WorldSerializer {
             const transformData = this.deserializeWithPropertyConfig(
               prefabInfo.transformData,
               transformType.serializerConfig,
-              { entityMapping, assetMetadataResolver: options.assetMetadataResolver }
+              {
+                entityMapping,
+                assetMetadataResolver: options.assetMetadataResolver,
+              },
             );
-            const existingTransform = commands.tryGetComponent(result.rootEntity, transformType);
+            const existingTransform = commands.tryGetComponent(
+              result.rootEntity,
+              transformType,
+            );
             if (existingTransform) {
               Object.assign(existingTransform, transformData);
             } else {
-              world.addComponent(result.rootEntity, transformType, transformData);
+              world.addComponent(
+                result.rootEntity,
+                transformType,
+                transformData,
+              );
             }
           }
         }
 
         // Apply instance-specific local transform data
         if (prefabInfo.localTransformData) {
-          const localTransformType = componentTypeByName.get('LocalTransform3D');
+          const localTransformType =
+            componentTypeByName.get('LocalTransform3D');
           if (localTransformType && localTransformType.serializerConfig) {
             const localTransformData = this.deserializeWithPropertyConfig(
               prefabInfo.localTransformData,
               localTransformType.serializerConfig,
-              { entityMapping, assetMetadataResolver: options.assetMetadataResolver }
+              {
+                entityMapping,
+                assetMetadataResolver: options.assetMetadataResolver,
+              },
             );
-            const existingLocalTransform = commands.tryGetComponent(result.rootEntity, localTransformType);
+            const existingLocalTransform = commands.tryGetComponent(
+              result.rootEntity,
+              localTransformType,
+            );
             if (existingLocalTransform) {
               Object.assign(existingLocalTransform, localTransformData);
             } else {
-              world.addComponent(result.rootEntity, localTransformType, localTransformData);
+              world.addComponent(
+                result.rootEntity,
+                localTransformType,
+                localTransformData,
+              );
             }
           }
         }
@@ -1259,29 +1356,38 @@ export class WorldSerializer {
         if (prefabInfo.nameData) {
           const nameType = componentTypeByName.get('Name');
           if (nameType) {
-            const existingName = commands.tryGetComponent(result.rootEntity, nameType);
+            const existingName = commands.tryGetComponent(
+              result.rootEntity,
+              nameType,
+            );
             if (existingName) {
               Object.assign(existingName, prefabInfo.nameData);
             } else {
-              world.addComponent(result.rootEntity, nameType, prefabInfo.nameData);
+              world.addComponent(
+                result.rootEntity,
+                nameType,
+                prefabInfo.nameData,
+              );
             }
           }
         }
 
         // Apply parent relationship if specified
         // Note: We need to remap the serialized parent ID to the runtime entity ID
-        if (prefabInfo.parentData && typeof prefabInfo.parentData.id === 'number') {
+        if (
+          prefabInfo.parentData &&
+          typeof prefabInfo.parentData.id === 'number'
+        ) {
           const parentRuntimeId = entityMapping.get(prefabInfo.parentData.id);
           if (parentRuntimeId !== undefined) {
             // Use addChild to properly set up the parent-child relationship
             commands.entity(parentRuntimeId).addChild(result.rootEntity);
           }
         }
-
       } catch (error) {
         if (continueOnError) {
           warnings.push(
-            `Failed to instantiate prefab for entity ${prefabInfo.serializedEntity.id}: ${error instanceof Error ? error.message : String(error)}`
+            `Failed to instantiate prefab for entity ${prefabInfo.serializedEntity.id}: ${error instanceof Error ? error.message : String(error)}`,
           );
           continue;
         } else {
@@ -1306,27 +1412,29 @@ export class WorldSerializer {
           if (serializedComponent.typeId === undefined) {
             if (skipMissingComponents) {
               warnings.push(
-                `Component "${serializedComponent.typeName}" missing typeId for entity ${serializedEntity.id}, skipping component`
+                `Component "${serializedComponent.typeName}" missing typeId for entity ${serializedEntity.id}, skipping component`,
               );
               continue;
             } else {
               throw new Error(
-                `Component "${serializedComponent.typeName}" missing typeId`
+                `Component "${serializedComponent.typeName}" missing typeId`,
               );
             }
           }
 
-          const componentType = componentTypeById.get(serializedComponent.typeId);
+          const componentType = componentTypeById.get(
+            serializedComponent.typeId,
+          );
 
           if (!componentType) {
             if (skipMissingComponents) {
               warnings.push(
-                `Component type "${serializedComponent.typeName}" (ID: ${serializedComponent.typeId}) not found for entity ${serializedEntity.id}, skipping component`
+                `Component type "${serializedComponent.typeName}" (ID: ${serializedComponent.typeId}) not found for entity ${serializedEntity.id}, skipping component`,
               );
               continue;
             } else {
               throw new Error(
-                `Component type "${serializedComponent.typeName}" (ID: ${serializedComponent.typeId}) not found`
+                `Component type "${serializedComponent.typeName}" (ID: ${serializedComponent.typeId}) not found`,
               );
             }
           }
@@ -1343,7 +1451,7 @@ export class WorldSerializer {
               {
                 entityMapping,
                 assetMetadataResolver: options.assetMetadataResolver,
-              }
+              },
             );
           } else {
             // For components without property config, add raw data
@@ -1355,7 +1463,7 @@ export class WorldSerializer {
         } catch (error) {
           if (continueOnError) {
             warnings.push(
-              `Failed to add component "${serializedComponent.typeName}" to entity ${serializedEntity.id}: ${error instanceof Error ? error.message : String(error)}`
+              `Failed to add component "${serializedComponent.typeName}" to entity ${serializedEntity.id}: ${error instanceof Error ? error.message : String(error)}`,
             );
             continue; // Continue to next component, not next entity
           } else {
@@ -1406,16 +1514,16 @@ export class WorldSerializer {
           // Re-deserialize with entity mapping
           const deserializedData = serializer.deserialize(
             serializedComponent.data,
-            deserializationContext
+            deserializationContext,
           );
 
           // Update component with fixed references
-          commands.entity(newEntityId).addComponent(componentType, deserializedData);
+          commands
+            .entity(newEntityId)
+            .addComponent(componentType, deserializedData);
         }
       }
     }
-
-    const deserializeTime = performance.now() - startTime;
 
     // Deserialize resources if app is provided and data has resources
     if (app && worldData.resourceRegistry && worldData.resources) {
@@ -1424,7 +1532,7 @@ export class WorldSerializer {
         worldData.resourceRegistry,
         worldData.resources,
         deserializationContext,
-        options
+        options,
       );
     }
 
@@ -1452,7 +1560,7 @@ export class WorldSerializer {
     world: World,
     commands: Command,
     json: string,
-    options?: DeserializeOptions
+    options?: DeserializeOptions,
   ): DeserializeResult {
     try {
       const data = JSON.parse(json);
@@ -1484,7 +1592,7 @@ export class WorldSerializer {
     world: World,
     commands: Command,
     yaml: string,
-    options?: DeserializeOptions
+    options?: DeserializeOptions,
   ): DeserializeResult {
     try {
       const json = yamlToJson(yaml);
@@ -1504,7 +1612,10 @@ export class WorldSerializer {
   /**
    * Clone a world by serializing and deserializing
    */
-  clone(sourceWorld: World, sourceCommands: Command): {
+  clone(
+    sourceWorld: World,
+    sourceCommands: Command,
+  ): {
     world: World;
     commands: Command;
     result: DeserializeResult;
@@ -1516,7 +1627,7 @@ export class WorldSerializer {
 
     const data = this.serialize(sourceWorld, sourceCommands);
     const result = this.deserialize(targetWorld, targetCommands, data, {
-      mode: "replace",
+      mode: 'replace',
     });
 
     return {

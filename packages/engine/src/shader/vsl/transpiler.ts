@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * VoidShader Language (VSL) - Transpiler
  *
@@ -10,8 +11,6 @@ import type {
   Expression,
   Statement,
   FunctionDeclaration,
-  UniformDeclaration,
-  VaryingDeclaration,
   GLSLType,
   RenderMode,
   ShaderType,
@@ -34,7 +33,6 @@ import type {
   NoiseTextureParams,
 } from './ast.js';
 import {
-  getBuiltInsForStage,
   getVaryingBuiltIns,
   getUniformBuiltIns,
   findBuiltIn,
@@ -135,15 +133,6 @@ export class Transpiler {
 
     // Generate fragment shader
     const fragmentShader = this.generateFragmentShader();
-
-    // Debug: Log transpiled shaders
-    console.log('[VSL Transpiler] ========== VERTEX SHADER ==========');
-    console.log(vertexShader);
-    console.log('[VSL Transpiler] ========== FRAGMENT SHADER ==========');
-    console.log(fragmentShader);
-    console.log('[VSL Transpiler] ========== UNIFORMS ==========');
-    console.log(JSON.stringify(uniforms, null, 2));
-    console.log('[VSL Transpiler] ==================================');
 
     return {
       vertexShader,
@@ -259,7 +248,9 @@ export class Transpiler {
     const builtInUniforms = getUniformBuiltIns(this.ast.shaderType);
     for (const builtin of builtInUniforms) {
       if (builtin.stages.includes('vertex')) {
-        lines.push(`uniform ${builtin.type} ${builtin.uniformName || builtin.glslMapping};`);
+        lines.push(
+          `uniform ${builtin.type} ${builtin.uniformName || builtin.glslMapping};`,
+        );
       }
     }
     lines.push('');
@@ -287,7 +278,7 @@ export class Transpiler {
 
     // Helper functions (user-defined, non-vertex/fragment)
     const helperFunctions = this.ast.functions.filter(
-      (f) => f.name !== 'vertex' && f.name !== 'fragment' && f.name !== 'light'
+      (f) => f.name !== 'vertex' && f.name !== 'fragment' && f.name !== 'light',
     );
     for (const fn of helperFunctions) {
       lines.push(this.transpileFunction(fn));
@@ -376,25 +367,48 @@ export class Transpiler {
     if (this.ast.shaderType === 'canvas_item') {
       // 2D: Use VERTEX.xy for position, keep z from original
       lines.push(
-        this.indent() + 'vec4 mvPosition = modelViewMatrix * vec4(VERTEX, position.z, 1.0);'
+        this.indent() +
+          'vec4 mvPosition = modelViewMatrix * vec4(VERTEX, position.z, 1.0);',
       );
     } else {
       // 3D: Use full VERTEX
-      lines.push(this.indent() + 'vec4 mvPosition = modelViewMatrix * vec4(VERTEX, 1.0);');
+      lines.push(
+        this.indent() +
+          'vec4 mvPosition = modelViewMatrix * vec4(VERTEX, 1.0);',
+      );
     }
     lines.push(this.indent() + 'gl_Position = projectionMatrix * mvPosition;');
     lines.push('');
-    lines.push(this.indent() + '// Pass clip-space position for mesh-relative screen UV');
+    lines.push(
+      this.indent() + '// Pass clip-space position for mesh-relative screen UV',
+    );
     lines.push(this.indent() + 'vsl_clipPosition = gl_Position;');
     lines.push('');
-    lines.push(this.indent() + '// Extract model world position from model matrix (translation column)');
+    lines.push(
+      this.indent() +
+        '// Extract model world position from model matrix (translation column)',
+    );
     lines.push(this.indent() + 'vsl_modelPosition = vec3(modelMatrix[3].xyz);');
     lines.push('');
-    lines.push(this.indent() + '// Calculate model center screen Y position for reflection effects');
-    lines.push(this.indent() + '// Transform model center (world position) to clip space');
-    lines.push(this.indent() + 'vec4 modelCenterClip = projectionMatrix * viewMatrix * vec4(vsl_modelPosition, 1.0);');
-    lines.push(this.indent() + '// Convert to normalized screen coordinates (0 to 1)');
-    lines.push(this.indent() + 'vsl_modelCenterScreenY = (modelCenterClip.y / modelCenterClip.w) * 0.5 + 0.5;');
+    lines.push(
+      this.indent() +
+        '// Calculate model center screen Y position for reflection effects',
+    );
+    lines.push(
+      this.indent() +
+        '// Transform model center (world position) to clip space',
+    );
+    lines.push(
+      this.indent() +
+        'vec4 modelCenterClip = projectionMatrix * viewMatrix * vec4(vsl_modelPosition, 1.0);',
+    );
+    lines.push(
+      this.indent() + '// Convert to normalized screen coordinates (0 to 1)',
+    );
+    lines.push(
+      this.indent() +
+        'vsl_modelCenterScreenY = (modelCenterClip.y / modelCenterClip.w) * 0.5 + 0.5;',
+    );
 
     this.indentLevel--;
     lines.push('}');
@@ -425,7 +439,9 @@ export class Transpiler {
     const builtInUniforms = getUniformBuiltIns(this.ast.shaderType);
     for (const builtin of builtInUniforms) {
       if (builtin.stages.includes('fragment')) {
-        lines.push(`uniform ${builtin.type} ${builtin.uniformName || builtin.glslMapping};`);
+        lines.push(
+          `uniform ${builtin.type} ${builtin.uniformName || builtin.glslMapping};`,
+        );
       }
     }
     lines.push('');
@@ -453,7 +469,7 @@ export class Transpiler {
 
     // Helper functions
     const helperFunctions = this.ast.functions.filter(
-      (f) => f.name !== 'vertex' && f.name !== 'fragment' && f.name !== 'light'
+      (f) => f.name !== 'vertex' && f.name !== 'fragment' && f.name !== 'light',
     );
     for (const fn of helperFunctions) {
       lines.push(this.transpileFunction(fn));
@@ -498,11 +514,15 @@ export class Transpiler {
     lines.push(this.indent() + 'vec2 SCREEN_SIZE = vsl_screenSize;');
     if (this.ast.shaderType === 'canvas_item') {
       lines.push(this.indent() + 'vec2 TEXTURE_SIZE = vsl_textureSize;');
-      lines.push(this.indent() + 'vec2 SCREEN_UV = gl_FragCoord.xy / vsl_screenSize;');
+      lines.push(
+        this.indent() + 'vec2 SCREEN_UV = gl_FragCoord.xy / vsl_screenSize;',
+      );
       lines.push(this.indent() + 'vec4 FRAGCOORD = gl_FragCoord;');
       lines.push(this.indent() + 'vec4 CLIP_POSITION = vsl_clipPosition;');
       lines.push(this.indent() + 'vec3 MODEL_POSITION = vsl_modelPosition;');
-      lines.push(this.indent() + 'float MODEL_CENTER_SCREEN_Y = vsl_modelCenterScreenY;');
+      lines.push(
+        this.indent() + 'float MODEL_CENTER_SCREEN_Y = vsl_modelCenterScreenY;',
+      );
     }
     lines.push('');
 
@@ -523,7 +543,9 @@ export class Transpiler {
     } else if (this.ast.shaderType === 'spatial') {
       // For spatial shaders, we output to gl_FragColor with ALBEDO and ALPHA
       // In a full implementation, this would integrate with THREE.js lighting
-      lines.push(this.indent() + 'gl_FragColor = vec4(ALBEDO + EMISSION, ALPHA);');
+      lines.push(
+        this.indent() + 'gl_FragColor = vec4(ALBEDO + EMISSION, ALPHA);',
+      );
     }
 
     this.indentLevel--;
@@ -598,7 +620,9 @@ export class Transpiler {
         return this.indent() + 'discard;';
 
       default:
-        this.errors.push({ message: `Unknown statement type: ${(stmt as any).type}` });
+        this.errors.push({
+          message: `Unknown statement type: ${(stmt as any).type}`,
+        });
         return this.indent() + `// Unknown statement: ${(stmt as any).type}`;
     }
   }
@@ -641,7 +665,11 @@ export class Transpiler {
 
     if (stmt.alternate) {
       if (stmt.alternate.type === 'IfStatement') {
-        lines.push(this.indent() + '} else ' + this.transpileIfStatement(stmt.alternate as IfStatement).trim());
+        lines.push(
+          this.indent() +
+            '} else ' +
+            this.transpileIfStatement(stmt.alternate as IfStatement).trim(),
+        );
       } else {
         lines.push(this.indent() + '} else {');
         this.indentLevel++;
@@ -703,7 +731,9 @@ export class Transpiler {
 
   private transpileWhileStatement(stmt: WhileStatement): string {
     const lines: string[] = [];
-    lines.push(this.indent() + `while (${this.transpileExpression(stmt.test)}) {`);
+    lines.push(
+      this.indent() + `while (${this.transpileExpression(stmt.test)}) {`,
+    );
     this.indentLevel++;
 
     if (stmt.body.type === 'BlockStatement') {
@@ -734,14 +764,18 @@ export class Transpiler {
     }
 
     this.indentLevel--;
-    lines.push(this.indent() + `} while (${this.transpileExpression(stmt.test)});`);
+    lines.push(
+      this.indent() + `} while (${this.transpileExpression(stmt.test)});`,
+    );
 
     return lines.join('\n');
   }
 
   private transpileReturnStatement(stmt: ReturnStatement): string {
     if (stmt.argument) {
-      return this.indent() + `return ${this.transpileExpression(stmt.argument)};`;
+      return (
+        this.indent() + `return ${this.transpileExpression(stmt.argument)};`
+      );
     }
     return this.indent() + 'return;';
   }
@@ -758,10 +792,11 @@ export class Transpiler {
       case 'IntLiteral':
         return String(expr.value);
 
-      case 'FloatLiteral':
-        // Ensure float literal has decimal point
+      case 'FloatLiteral': // Ensure float literal has decimal point
+      {
         const floatStr = String(expr.value);
         return floatStr.includes('.') ? floatStr : floatStr + '.0';
+      }
 
       case 'VectorLiteral':
         return this.transpileVectorLiteral(expr);
@@ -791,13 +826,17 @@ export class Transpiler {
         return this.transpileConditionalExpression(expr);
 
       default:
-        this.errors.push({ message: `Unknown expression type: ${(expr as any).type}` });
+        this.errors.push({
+          message: `Unknown expression type: ${(expr as any).type}`,
+        });
         return `/* unknown: ${(expr as any).type} */`;
     }
   }
 
   private transpileVectorLiteral(expr: VectorLiteral): string {
-    const components = expr.components.map((c) => this.transpileExpression(c)).join(', ');
+    const components = expr.components
+      .map((c) => this.transpileExpression(c))
+      .join(', ');
     return `${expr.vectorType}(${components})`;
   }
 
@@ -829,7 +868,9 @@ export class Transpiler {
 
   private transpileCallExpression(expr: CallExpression): string {
     let callee = this.transpileExpression(expr.callee);
-    const args = expr.arguments.map((a) => this.transpileExpression(a)).join(', ');
+    const args = expr.arguments
+      .map((a) => this.transpileExpression(a))
+      .join(', ');
 
     // Map GLSL ES 3.0 functions to WebGL1 (GLSL ES 1.0) equivalents
     // THREE.js uses WebGL1 by default, which requires texture2D instead of texture

@@ -30,9 +30,19 @@ import { WorldSerializer } from '../ecs/serialization/world-serializer.js';
 import { isYamlFile } from '../ecs/serialization/yaml-utils.js';
 import { AssetDatabase } from '../ecs/asset-database.js';
 import { renderImGuiHierarchy } from '../app/imgui/hierarchy-viewer.js';
-import { renderImGuiInspector, setSelectedEntity, getSelectedEntity } from '../app/imgui/inspector.js';
-import { renderMainMenuBar, type MenuBarCallbacks } from '../app/imgui/menu-bar.js';
-import { renderEditorToolbar, getEditorToolbarHeight } from '../app/imgui/editor-toolbar.js';
+import {
+  renderImGuiInspector,
+  setSelectedEntity,
+  getSelectedEntity,
+} from '../app/imgui/inspector.js';
+import {
+  renderMainMenuBar,
+  type MenuBarCallbacks,
+} from '../app/imgui/menu-bar.js';
+import {
+  renderEditorToolbar,
+  getEditorToolbarHeight,
+} from '../app/imgui/editor-toolbar.js';
 import { renderDebugPanel } from '../app/imgui/debug-panel.js';
 import { MainCamera } from '../ecs/components/rendering/main-camera.js';
 import { Camera } from '../ecs/components/rendering/camera.js';
@@ -53,7 +63,10 @@ import { UIManager } from '../ui/ui-manager.js';
 import { UIViewportBounds } from '../ui/ui-viewport-bounds.js';
 import { UIInteractionManager } from '../ui/ui-interaction.js';
 import { PostProcessingManager } from '../post-processing/managers/post-processing-manager.js';
-import { PostProcessing, type PostProcessingData } from '../ecs/components/rendering/post-processing.js';
+import {
+  PostProcessing,
+  type PostProcessingData,
+} from '../ecs/components/rendering/post-processing.js';
 import {
   renderAnimationEditorWindow,
   isAnimationEditorOpen,
@@ -208,8 +221,6 @@ export class EditorLayer extends Layer {
   }
 
   override async onAttach(): Promise<void> {
-    console.log('[EditorLayer] Editor attached');
-
     // Initialize viewport render targets with default size
     // They will be resized to match panel size on first render
     const defaultSize = 512;
@@ -302,7 +313,7 @@ export class EditorLayer extends Layer {
             {
               mode: 'replace',
               assetMetadataResolver: (guid) => AssetDatabase.getMetadata(guid),
-            }
+            },
           )
         : this.worldSerializer.deserializeFromString(
             app.world,
@@ -311,7 +322,7 @@ export class EditorLayer extends Layer {
             {
               mode: 'replace',
               assetMetadataResolver: (guid) => AssetDatabase.getMetadata(guid),
-            }
+            },
           );
 
       if (loadResult.success) {
@@ -320,7 +331,9 @@ export class EditorLayer extends Layer {
         this.cacheScenePath(filePath);
 
         console.log(`[EditorLayer] World loaded from: ${filePath}`);
-        console.log(`[EditorLayer] Created ${loadResult.entitiesCreated} entities`);
+        console.log(
+          `[EditorLayer] Created ${loadResult.entitiesCreated} entities`,
+        );
         if (loadResult.warnings.length > 0) {
           console.warn('[EditorLayer] Warnings:', loadResult.warnings);
         }
@@ -330,7 +343,10 @@ export class EditorLayer extends Layer {
         return false;
       }
     } catch (err) {
-      console.error(`[EditorLayer] Failed to load scene from ${filePath}:`, err);
+      console.error(
+        `[EditorLayer] Failed to load scene from ${filePath}:`,
+        err,
+      );
       // Clear cached path if file doesn't exist anymore
       this.clearCachedScenePath();
       return false;
@@ -382,7 +398,10 @@ export class EditorLayer extends Layer {
     }
   }
 
-  private createViewportState(width: number, height: number): ViewportRenderState {
+  private createViewportState(
+    width: number,
+    height: number,
+  ): ViewportRenderState {
     const renderTarget = new THREE.WebGLRenderTarget(width, height, {
       minFilter: THREE.LinearFilter,
       magFilter: THREE.LinearFilter,
@@ -398,7 +417,11 @@ export class EditorLayer extends Layer {
     };
   }
 
-  private resizeViewport(viewport: ViewportRenderState, width: number, height: number): void {
+  private resizeViewport(
+    viewport: ViewportRenderState,
+    width: number,
+    height: number,
+  ): void {
     if (width <= 0 || height <= 0) return;
 
     viewport.renderTarget.setSize(width, height);
@@ -423,12 +446,16 @@ export class EditorLayer extends Layer {
     if (editorCameraManager) {
       // Allow camera input when Scene View is hovered, even though ImGui wants mouse
       // Block input only if ImGui wants it AND we're not hovering Scene View
-      const blockInput = (io.WantCaptureKeyboard || io.WantCaptureMouse) && !this.isSceneViewHovered;
+      const blockInput =
+        (io.WantCaptureKeyboard || io.WantCaptureMouse) &&
+        !this.isSceneViewHovered;
       editorCameraManager.update(deltaTime, blockInput);
 
       // Update TransformControls camera when editor camera mode changes
       if (this.transformControlsManager) {
-        this.transformControlsManager.setCamera(editorCameraManager.getEditorCamera());
+        this.transformControlsManager.setCamera(
+          editorCameraManager.getEditorCamera(),
+        );
       }
 
       // Keyboard shortcuts when Scene View is hovered and not typing
@@ -437,7 +464,9 @@ export class EditorLayer extends Layer {
         if (Input.isKeyJustPressed(KeyCode.KeyF)) {
           const selectedEntity = getSelectedEntity();
           if (selectedEntity !== undefined) {
-            const transform = app.getCommands().tryGetComponent(selectedEntity, Transform3D);
+            const transform = app
+              .getCommands()
+              .tryGetComponent(selectedEntity, Transform3D);
             if (transform) {
               editorCameraManager.focusOnPosition(transform.position);
             }
@@ -487,17 +516,29 @@ export class EditorLayer extends Layer {
       }
 
       // Check for LocalTransform3D first (takes priority if entity has Parent)
-      const localTransform = commands.tryGetComponent(selectedEntity, LocalTransform3D);
-      const hasParent = commands.tryGetComponent(selectedEntity, Parent) !== undefined;
+      const localTransform = commands.tryGetComponent(
+        selectedEntity,
+        LocalTransform3D,
+      );
+      const hasParent =
+        commands.tryGetComponent(selectedEntity, Parent) !== undefined;
 
       if (localTransform && hasParent) {
         // Entity has LocalTransform3D and a parent - edit local transform
-        this.transformControlsManager.setSelectedEntity(selectedEntity, localTransform, true);
+        this.transformControlsManager.setSelectedEntity(
+          selectedEntity,
+          localTransform,
+          true,
+        );
       } else {
         // Entity has Transform3D only - edit world transform
         const transform = commands.tryGetComponent(selectedEntity, Transform3D);
         if (transform) {
-          this.transformControlsManager.setSelectedEntity(selectedEntity, transform, false);
+          this.transformControlsManager.setSelectedEntity(
+            selectedEntity,
+            transform,
+            false,
+          );
         } else {
           // No transform at all - hide controls
           this.transformControlsManager.setSelectedEntity(null, null, false);
@@ -507,13 +548,18 @@ export class EditorLayer extends Layer {
 
     // Handle transform sync bidirectionally
     if (selectedEntity !== undefined) {
-      const localTransform = commands.tryGetComponent(selectedEntity, LocalTransform3D);
-      const hasParent = commands.tryGetComponent(selectedEntity, Parent) !== undefined;
+      const localTransform = commands.tryGetComponent(
+        selectedEntity,
+        LocalTransform3D,
+      );
+      const hasParent =
+        commands.tryGetComponent(selectedEntity, Parent) !== undefined;
       const isUsingLocal = localTransform && hasParent;
 
       if (this.transformControlsManager.getIsDragging()) {
         // When dragging: sync ghost transform → ECS component
-        const transformChanges = this.transformControlsManager.getTransformChanges();
+        const transformChanges =
+          this.transformControlsManager.getTransformChanges();
 
         if (transformChanges) {
           if (isUsingLocal) {
@@ -529,7 +575,10 @@ export class EditorLayer extends Layer {
             localTransform.scale.z = transformChanges.scale.z;
           } else {
             // Update Transform3D
-            const transform = commands.tryGetComponent(selectedEntity, Transform3D);
+            const transform = commands.tryGetComponent(
+              selectedEntity,
+              Transform3D,
+            );
             if (transform) {
               transform.position.x = transformChanges.position.x;
               transform.position.y = transformChanges.position.y;
@@ -547,9 +596,14 @@ export class EditorLayer extends Layer {
         // When NOT dragging: sync ECS component → ghost transform
         // This ensures the ghost always follows the entity (e.g., when edited via Inspector)
         if (isUsingLocal) {
-          this.transformControlsManager.updateGhostFromTransform(localTransform);
+          this.transformControlsManager.updateGhostFromTransform(
+            localTransform,
+          );
         } else {
-          const transform = commands.tryGetComponent(selectedEntity, Transform3D);
+          const transform = commands.tryGetComponent(
+            selectedEntity,
+            Transform3D,
+          );
           if (transform) {
             this.transformControlsManager.updateGhostFromTransform(transform);
           }
@@ -588,576 +642,640 @@ export class EditorLayer extends Layer {
     const seenEntities = new Set<Entity>();
 
     // Sync Collider2D helpers
-    commands.query().all(Collider2D, Transform3D).each((entity, collider, transform) => {
-      seenEntities.add(entity);
-      const shouldShow = showAll || entity === selectedEntity;
+    commands
+      .query()
+      .all(Collider2D, Transform3D)
+      .each((entity, collider, transform) => {
+        seenEntities.add(entity);
+        const shouldShow = showAll || entity === selectedEntity;
 
-      if (shouldShow) {
-        // Create helper if doesn't exist
-        if (!this.helperManager!.hasHelper(entity)) {
-          this.helperManager!.createCollider2DHelper(entity, collider.shape, resolution);
-          this.helperEntities.add(entity);
-        }
-
-        // Update helper transform and shape
-        const entry = this.helperManager!.getHelperEntry(entity);
-        if (entry && entry.type === 'collider2d') {
-          // Check if shape type changed
-          if (entry.shapeType !== collider.shape.type) {
-            entry.helper.setShape(collider.shape);
+        if (shouldShow) {
+          // Create helper if doesn't exist
+          if (!this.helperManager!.hasHelper(entity)) {
+            this.helperManager!.createCollider2DHelper(
+              entity,
+              collider.shape,
+              resolution,
+            );
+            this.helperEntities.add(entity);
           }
-          entry.helper.update(collider, transform);
+
+          // Update helper transform and shape
+          const entry = this.helperManager!.getHelperEntry(entity);
+          if (entry && entry.type === 'collider2d') {
+            // Check if shape type changed
+            if (entry.shapeType !== collider.shape.type) {
+              entry.helper.setShape(collider.shape);
+            }
+            entry.helper.update(collider, transform);
+          }
+        } else {
+          // Remove helper if shouldn't show
+          if (this.helperManager!.hasHelper(entity)) {
+            this.helperManager!.removeHelper(entity);
+            this.helperEntities.delete(entity);
+          }
         }
-      } else {
-        // Remove helper if shouldn't show
-        if (this.helperManager!.hasHelper(entity)) {
-          this.helperManager!.removeHelper(entity);
-          this.helperEntities.delete(entity);
-        }
-      }
-    });
+      });
 
     // Sync Collider3D helpers
-    commands.query().all(Collider3D, Transform3D).each((entity, collider, transform) => {
-      seenEntities.add(entity);
-      const shouldShow = showAll || entity === selectedEntity;
+    commands
+      .query()
+      .all(Collider3D, Transform3D)
+      .each((entity, collider, transform) => {
+        seenEntities.add(entity);
+        const shouldShow = showAll || entity === selectedEntity;
 
-      if (shouldShow) {
-        // Create helper if doesn't exist
-        if (!this.helperManager!.hasHelper(entity)) {
-          this.helperManager!.createCollider3DHelper(entity, collider.shape, resolution);
-          this.helperEntities.add(entity);
-        }
-
-        // Update helper transform and shape
-        const entry = this.helperManager!.getHelperEntry(entity);
-        if (entry && entry.type === 'collider3d') {
-          // Check if shape type changed
-          if (entry.shapeType !== collider.shape.type) {
-            entry.helper.setShape(collider.shape);
+        if (shouldShow) {
+          // Create helper if doesn't exist
+          if (!this.helperManager!.hasHelper(entity)) {
+            this.helperManager!.createCollider3DHelper(
+              entity,
+              collider.shape,
+              resolution,
+            );
+            this.helperEntities.add(entity);
           }
-          entry.helper.update(collider, transform);
+
+          // Update helper transform and shape
+          const entry = this.helperManager!.getHelperEntry(entity);
+          if (entry && entry.type === 'collider3d') {
+            // Check if shape type changed
+            if (entry.shapeType !== collider.shape.type) {
+              entry.helper.setShape(collider.shape);
+            }
+            entry.helper.update(collider, transform);
+          }
+        } else {
+          // Remove helper if shouldn't show
+          if (this.helperManager!.hasHelper(entity)) {
+            this.helperManager!.removeHelper(entity);
+            this.helperEntities.delete(entity);
+          }
         }
-      } else {
-        // Remove helper if shouldn't show
-        if (this.helperManager!.hasHelper(entity)) {
-          this.helperManager!.removeHelper(entity);
-          this.helperEntities.delete(entity);
-        }
-      }
-    });
+      });
 
     // Sync SpriteAreaGenerator helpers
-    commands.query().all(SpriteAreaGenerator, Transform3D).each((entity, spriteGen, transform) => {
-      seenEntities.add(entity);
-      const shouldShow = showAll || entity === selectedEntity;
+    commands
+      .query()
+      .all(SpriteAreaGenerator, Transform3D)
+      .each((entity, spriteGen, transform) => {
+        seenEntities.add(entity);
+        const shouldShow = showAll || entity === selectedEntity;
 
-      if (shouldShow) {
-        // Create helper if doesn't exist
-        if (!this.helperManager!.hasHelper(entity)) {
-          const box3 = new THREE.Box3(
-            new THREE.Vector3(
-              Math.min(spriteGen.boundsMin.x, spriteGen.boundsMax.x),
-              Math.min(spriteGen.boundsMin.y, spriteGen.boundsMax.y),
-              Math.min(spriteGen.boundsMin.z, spriteGen.boundsMax.z)
-            ),
-            new THREE.Vector3(
-              Math.max(spriteGen.boundsMin.x, spriteGen.boundsMax.x),
-              Math.max(spriteGen.boundsMin.y, spriteGen.boundsMax.y),
-              Math.max(spriteGen.boundsMin.z, spriteGen.boundsMax.z)
-            )
-          );
-          this.helperManager!.createBox3Helper(entity, box3, resolution);
-          this.helperEntities.add(entity);
-        }
+        if (shouldShow) {
+          // Create helper if doesn't exist
+          if (!this.helperManager!.hasHelper(entity)) {
+            const box3 = new THREE.Box3(
+              new THREE.Vector3(
+                Math.min(spriteGen.boundsMin.x, spriteGen.boundsMax.x),
+                Math.min(spriteGen.boundsMin.y, spriteGen.boundsMax.y),
+                Math.min(spriteGen.boundsMin.z, spriteGen.boundsMax.z),
+              ),
+              new THREE.Vector3(
+                Math.max(spriteGen.boundsMin.x, spriteGen.boundsMax.x),
+                Math.max(spriteGen.boundsMin.y, spriteGen.boundsMax.y),
+                Math.max(spriteGen.boundsMin.z, spriteGen.boundsMax.z),
+              ),
+            );
+            this.helperManager!.createBox3Helper(entity, box3, resolution);
+            this.helperEntities.add(entity);
+          }
 
-        // Update helper (recreate box if bounds changed)
-        const entry = this.helperManager!.getHelperEntry(entity);
-        if (entry && entry.type === 'box3') {
-          const box3 = new THREE.Box3(
-            new THREE.Vector3(
-              Math.min(spriteGen.boundsMin.x, spriteGen.boundsMax.x),
-              Math.min(spriteGen.boundsMin.y, spriteGen.boundsMax.y),
-              Math.min(spriteGen.boundsMin.z, spriteGen.boundsMax.z)
-            ),
-            new THREE.Vector3(
-              Math.max(spriteGen.boundsMin.x, spriteGen.boundsMax.x),
-              Math.max(spriteGen.boundsMin.y, spriteGen.boundsMax.y),
-              Math.max(spriteGen.boundsMin.z, spriteGen.boundsMax.z)
-            )
-          );
-          entry.helper.setBox3(box3);
-          entry.helper.update(spriteGen, transform);
-        }
-      } else {
-        // Remove helper if shouldn't show
-        if (this.helperManager!.hasHelper(entity)) {
-          this.helperManager!.removeHelper(entity);
-          this.helperEntities.delete(entity);
-        }
-      }
-    });
-
-    // Sync Rain2D helpers (shows the rain area boundary)
-    commands.query().all(Rain2D, Transform3D).each((entity, rain, transform) => {
-      seenEntities.add(entity);
-      const shouldShow = showAll || entity === selectedEntity;
-
-      if (shouldShow) {
-        // Create helper if doesn't exist
-        if (!this.helperManager!.hasHelper(entity)) {
-          // Create box based on baseSize (centered at origin, will be positioned by transform)
-          const halfWidth = rain.baseSize.x / 2;
-          const halfHeight = rain.baseSize.y / 2;
-          const box3 = new THREE.Box3(
-            new THREE.Vector3(-halfWidth, -halfHeight, -0.1),
-            new THREE.Vector3(halfWidth, halfHeight, 0.1)
-          );
-          this.helperManager!.createBox3Helper(entity, box3, resolution);
-          this.helperEntities.add(entity);
-
-          // Set cyan color to distinguish rain bounds from other helpers
+          // Update helper (recreate box if bounds changed)
           const entry = this.helperManager!.getHelperEntry(entity);
           if (entry && entry.type === 'box3') {
-            entry.helper.setColor(0x00bfff); // Deep sky blue
+            const box3 = new THREE.Box3(
+              new THREE.Vector3(
+                Math.min(spriteGen.boundsMin.x, spriteGen.boundsMax.x),
+                Math.min(spriteGen.boundsMin.y, spriteGen.boundsMax.y),
+                Math.min(spriteGen.boundsMin.z, spriteGen.boundsMax.z),
+              ),
+              new THREE.Vector3(
+                Math.max(spriteGen.boundsMin.x, spriteGen.boundsMax.x),
+                Math.max(spriteGen.boundsMin.y, spriteGen.boundsMax.y),
+                Math.max(spriteGen.boundsMin.z, spriteGen.boundsMax.z),
+              ),
+            );
+            entry.helper.setBox3(box3);
+            entry.helper.update(spriteGen, transform);
+          }
+        } else {
+          // Remove helper if shouldn't show
+          if (this.helperManager!.hasHelper(entity)) {
+            this.helperManager!.removeHelper(entity);
+            this.helperEntities.delete(entity);
           }
         }
+      });
 
-        // Update helper (recreate box if baseSize changed, update transform)
-        const entry = this.helperManager!.getHelperEntry(entity);
-        if (entry && entry.type === 'box3') {
-          // Update box size based on baseSize
-          const halfWidth = rain.baseSize.x / 2;
-          const halfHeight = rain.baseSize.y / 2;
-          const box3 = new THREE.Box3(
-            new THREE.Vector3(-halfWidth, -halfHeight, -0.1),
-            new THREE.Vector3(halfWidth, halfHeight, 0.1)
-          );
-          entry.helper.setBox3(box3);
+    // Sync Rain2D helpers (shows the rain area boundary)
+    commands
+      .query()
+      .all(Rain2D, Transform3D)
+      .each((entity, rain, transform) => {
+        seenEntities.add(entity);
+        const shouldShow = showAll || entity === selectedEntity;
 
-          // Update helper transform (position, rotation, scale)
-          entry.helper.position.set(
-            transform.position.x,
-            transform.position.y,
-            transform.position.z
-          );
-          entry.helper.rotation.set(
-            transform.rotation.x,
-            transform.rotation.y,
-            transform.rotation.z
-          );
-          entry.helper.scale.set(
-            transform.scale.x,
-            transform.scale.y,
-            1
-          );
+        if (shouldShow) {
+          // Create helper if doesn't exist
+          if (!this.helperManager!.hasHelper(entity)) {
+            // Create box based on baseSize (centered at origin, will be positioned by transform)
+            const halfWidth = rain.baseSize.x / 2;
+            const halfHeight = rain.baseSize.y / 2;
+            const box3 = new THREE.Box3(
+              new THREE.Vector3(-halfWidth, -halfHeight, -0.1),
+              new THREE.Vector3(halfWidth, halfHeight, 0.1),
+            );
+            this.helperManager!.createBox3Helper(entity, box3, resolution);
+            this.helperEntities.add(entity);
+
+            // Set cyan color to distinguish rain bounds from other helpers
+            const entry = this.helperManager!.getHelperEntry(entity);
+            if (entry && entry.type === 'box3') {
+              entry.helper.setColor(0x00bfff); // Deep sky blue
+            }
+          }
+
+          // Update helper (recreate box if baseSize changed, update transform)
+          const entry = this.helperManager!.getHelperEntry(entity);
+          if (entry && entry.type === 'box3') {
+            // Update box size based on baseSize
+            const halfWidth = rain.baseSize.x / 2;
+            const halfHeight = rain.baseSize.y / 2;
+            const box3 = new THREE.Box3(
+              new THREE.Vector3(-halfWidth, -halfHeight, -0.1),
+              new THREE.Vector3(halfWidth, halfHeight, 0.1),
+            );
+            entry.helper.setBox3(box3);
+
+            // Update helper transform (position, rotation, scale)
+            entry.helper.position.set(
+              transform.position.x,
+              transform.position.y,
+              transform.position.z,
+            );
+            entry.helper.rotation.set(
+              transform.rotation.x,
+              transform.rotation.y,
+              transform.rotation.z,
+            );
+            entry.helper.scale.set(transform.scale.x, transform.scale.y, 1);
+          }
+        } else {
+          // Remove helper if shouldn't show
+          if (this.helperManager!.hasHelper(entity)) {
+            this.helperManager!.removeHelper(entity);
+            this.helperEntities.delete(entity);
+          }
         }
-      } else {
-        // Remove helper if shouldn't show
-        if (this.helperManager!.hasHelper(entity)) {
-          this.helperManager!.removeHelper(entity);
-          this.helperEntities.delete(entity);
-        }
-      }
-    });
+      });
 
     // Sync LightningField2D helpers
-    commands.query().all(LightningField2D, Transform3D).each((entity, lightning, transform) => {
-      seenEntities.add(entity);
-      const shouldShow = showAll || entity === selectedEntity;
+    commands
+      .query()
+      .all(LightningField2D, Transform3D)
+      .each((entity, lightning, transform) => {
+        seenEntities.add(entity);
+        const shouldShow = showAll || entity === selectedEntity;
 
-      if (shouldShow) {
-        // Create helper if doesn't exist
-        if (!this.helperManager!.hasHelper(entity)) {
-          this.helperManager!.createLightningField2DHelper(
+        if (shouldShow) {
+          // Create helper if doesn't exist
+          if (!this.helperManager!.hasHelper(entity)) {
+            this.helperManager!.createLightningField2DHelper(
+              entity,
+              lightning.baseSize,
+              resolution,
+            );
+            this.helperEntities.add(entity);
+          }
+
+          // Update helper transform and size
+          this.helperManager!.updateLightningField2DHelper(
             entity,
             lightning.baseSize,
-            resolution
+            transform,
           );
-          this.helperEntities.add(entity);
+        } else {
+          // Remove helper if shouldn't show
+          if (this.helperManager!.hasHelper(entity)) {
+            this.helperManager!.removeHelper(entity);
+            this.helperEntities.delete(entity);
+          }
         }
-
-        // Update helper transform and size
-        this.helperManager!.updateLightningField2DHelper(
-          entity,
-          lightning.baseSize,
-          transform
-        );
-      } else {
-        // Remove helper if shouldn't show
-        if (this.helperManager!.hasHelper(entity)) {
-          this.helperManager!.removeHelper(entity);
-          this.helperEntities.delete(entity);
-        }
-      }
-    });
+      });
 
     // Sync Camera helpers
     // In 2D mode, hide the cone/target lines since they look confusing from top-down view
     const editorCameraManager = app.getResource(EditorCameraManager);
     const isEditor2DMode = editorCameraManager?.mode === '2d';
 
-    commands.query().all(Transform3D, Camera).each((entity, transform, cameraComp) => {
-      seenEntities.add(entity);
-      const shouldShow = showAll || entity === selectedEntity;
+    commands
+      .query()
+      .all(Transform3D, Camera)
+      .each((entity, transform, cameraComp) => {
+        seenEntities.add(entity);
+        const shouldShow = showAll || entity === selectedEntity;
 
-      if (shouldShow) {
-        // Get aspect ratio from renderer size (same source as camera-sync-system)
-        // This ensures the helper matches what the actual camera will render
-        const renderManager = app.getResource(Render3DManager);
-        if (!renderManager) return;
-        const renderer = renderManager.getRenderer();
-        const { width, height } = renderer.getSize();
-        const aspect = width / height;
+        if (shouldShow) {
+          // Get aspect ratio from renderer size (same source as camera-sync-system)
+          // This ensures the helper matches what the actual camera will render
+          const renderManager = app.getResource(Render3DManager);
+          if (!renderManager) return;
+          const renderer = renderManager.getRenderer();
+          const { width, height } = renderer.getSize();
+          const aspect = width / height;
 
-        const cameraType = cameraComp.type || 'perspective';
+          const cameraType = cameraComp.type || 'perspective';
 
-        // Create helper if doesn't exist
-        if (!this.helperManager!.hasHelper(entity)) {
-          // Create a temporary THREE camera for the helper
-          let camera: THREE.Camera;
-          if (cameraType === 'perspective') {
-            // Cap the helper's far plane to a reasonable visual distance
-            // This makes the frustum helper more manageable in the editor
-            // while the actual camera still uses the full far plane
-            const helperFar = Math.min(cameraComp.far, 50);
-            camera = new THREE.PerspectiveCamera(
-              cameraComp.fov,
-              aspect,
-              cameraComp.near,
-              helperFar
-            );
-          } else {
-            const effectiveSize = cameraComp.size / cameraComp.zoom;
-            camera = new THREE.OrthographicCamera(
-              -effectiveSize * aspect,
-              effectiveSize * aspect,
-              effectiveSize,
-              -effectiveSize,
-              cameraComp.near,
-              cameraComp.far
-            );
-          }
-          this.helperManager!.createCameraHelper(entity, camera);
-          this.helperEntities.add(entity);
-        } else {
-          // Check if camera type has changed - if so, recreate the helper
-          const entry = this.helperManager!.getHelperEntry(entity);
-          if (entry && entry.type === 'camera') {
-            const helperIsPersp = entry.camera instanceof THREE.PerspectiveCamera;
-            const helperIsOrtho = entry.camera instanceof THREE.OrthographicCamera;
-            const needsRecreate =
-              (cameraType === 'perspective' && !helperIsPersp) ||
-              (cameraType === 'orthographic' && !helperIsOrtho);
-
-            if (needsRecreate) {
-              // Camera type changed - recreate the helper
-              this.helperManager!.removeHelper(entity);
-
-              // Create new helper with correct camera type
-              let camera: THREE.Camera;
-              if (cameraType === 'perspective') {
-                // Cap the helper's far plane to a reasonable visual distance
-                const helperFar = Math.min(cameraComp.far, 50);
-                camera = new THREE.PerspectiveCamera(
-                  cameraComp.fov,
-                  aspect,
-                  cameraComp.near,
-                  helperFar
-                );
-              } else {
-                const effectiveSize = cameraComp.size / cameraComp.zoom;
-                camera = new THREE.OrthographicCamera(
-                  -effectiveSize * aspect,
-                  effectiveSize * aspect,
-                  effectiveSize,
-                  -effectiveSize,
-                  cameraComp.near,
-                  cameraComp.far
-                );
-              }
-              this.helperManager!.createCameraHelper(entity, camera);
+          // Create helper if doesn't exist
+          if (!this.helperManager!.hasHelper(entity)) {
+            // Create a temporary THREE camera for the helper
+            let camera: THREE.Camera;
+            if (cameraType === 'perspective') {
+              // Cap the helper's far plane to a reasonable visual distance
+              // This makes the frustum helper more manageable in the editor
+              // while the actual camera still uses the full far plane
+              const helperFar = Math.min(cameraComp.far, 50);
+              camera = new THREE.PerspectiveCamera(
+                cameraComp.fov,
+                aspect,
+                cameraComp.near,
+                helperFar,
+              );
             } else {
-              // Same type - just update properties
-              if (cameraType === 'perspective' && entry.camera instanceof THREE.PerspectiveCamera) {
-                // Cap the helper's far plane to a reasonable visual distance
-                const helperFar = Math.min(cameraComp.far, 50);
-                entry.camera.fov = cameraComp.fov;
-                entry.camera.aspect = aspect;
-                entry.camera.near = cameraComp.near;
-                entry.camera.far = helperFar;
-                entry.camera.updateProjectionMatrix();
-                // Update the helper after changing projection
-                entry.helper.update();
-              } else if (cameraType === 'orthographic' && entry.camera instanceof THREE.OrthographicCamera) {
-                const effectiveSize = cameraComp.size / cameraComp.zoom;
-                entry.camera.left = -effectiveSize * aspect;
-                entry.camera.right = effectiveSize * aspect;
-                entry.camera.top = effectiveSize;
-                entry.camera.bottom = -effectiveSize;
-                entry.camera.near = cameraComp.near;
-                entry.camera.far = cameraComp.far;
-                entry.camera.updateProjectionMatrix();
-                // Update the helper after changing projection
-                entry.helper.update();
+              const effectiveSize = cameraComp.size / cameraComp.zoom;
+              camera = new THREE.OrthographicCamera(
+                -effectiveSize * aspect,
+                effectiveSize * aspect,
+                effectiveSize,
+                -effectiveSize,
+                cameraComp.near,
+                cameraComp.far,
+              );
+            }
+            this.helperManager!.createCameraHelper(entity, camera);
+            this.helperEntities.add(entity);
+          } else {
+            // Check if camera type has changed - if so, recreate the helper
+            const entry = this.helperManager!.getHelperEntry(entity);
+            if (entry && entry.type === 'camera') {
+              const helperIsPersp =
+                entry.camera instanceof THREE.PerspectiveCamera;
+              const helperIsOrtho =
+                entry.camera instanceof THREE.OrthographicCamera;
+              const needsRecreate =
+                (cameraType === 'perspective' && !helperIsPersp) ||
+                (cameraType === 'orthographic' && !helperIsOrtho);
+
+              if (needsRecreate) {
+                // Camera type changed - recreate the helper
+                this.helperManager!.removeHelper(entity);
+
+                // Create new helper with correct camera type
+                let camera: THREE.Camera;
+                if (cameraType === 'perspective') {
+                  // Cap the helper's far plane to a reasonable visual distance
+                  const helperFar = Math.min(cameraComp.far, 50);
+                  camera = new THREE.PerspectiveCamera(
+                    cameraComp.fov,
+                    aspect,
+                    cameraComp.near,
+                    helperFar,
+                  );
+                } else {
+                  const effectiveSize = cameraComp.size / cameraComp.zoom;
+                  camera = new THREE.OrthographicCamera(
+                    -effectiveSize * aspect,
+                    effectiveSize * aspect,
+                    effectiveSize,
+                    -effectiveSize,
+                    cameraComp.near,
+                    cameraComp.far,
+                  );
+                }
+                this.helperManager!.createCameraHelper(entity, camera);
+              } else {
+                // Same type - just update properties
+                if (
+                  cameraType === 'perspective' &&
+                  entry.camera instanceof THREE.PerspectiveCamera
+                ) {
+                  // Cap the helper's far plane to a reasonable visual distance
+                  const helperFar = Math.min(cameraComp.far, 50);
+                  entry.camera.fov = cameraComp.fov;
+                  entry.camera.aspect = aspect;
+                  entry.camera.near = cameraComp.near;
+                  entry.camera.far = helperFar;
+                  entry.camera.updateProjectionMatrix();
+                  // Update the helper after changing projection
+                  entry.helper.update();
+                } else if (
+                  cameraType === 'orthographic' &&
+                  entry.camera instanceof THREE.OrthographicCamera
+                ) {
+                  const effectiveSize = cameraComp.size / cameraComp.zoom;
+                  entry.camera.left = -effectiveSize * aspect;
+                  entry.camera.right = effectiveSize * aspect;
+                  entry.camera.top = effectiveSize;
+                  entry.camera.bottom = -effectiveSize;
+                  entry.camera.near = cameraComp.near;
+                  entry.camera.far = cameraComp.far;
+                  entry.camera.updateProjectionMatrix();
+                  // Update the helper after changing projection
+                  entry.helper.update();
+                }
               }
             }
           }
-        }
 
-        // Update helper transform
-        this.helperManager!.updateCameraHelper(entity, {
-          position: new THREE.Vector3(
-            transform.position.x,
-            transform.position.y,
-            transform.position.z
-          ),
-          rotation: new THREE.Euler(
-            transform.rotation.x,
-            transform.rotation.y,
-            transform.rotation.z
-          ),
-        });
-      } else {
-        // Remove helper if shouldn't show
-        if (this.helperManager!.hasHelper(entity)) {
-          this.helperManager!.removeHelper(entity);
-          this.helperEntities.delete(entity);
-        }
-      }
-    });
-
-    // Sync VirtualCameraBounds helpers (entity-based bounds system)
-    commands.query().all(VirtualCameraBounds, Transform3D).each((entity, bounds, boundsTransform) => {
-      seenEntities.add(entity);
-
-      // Show bounds helper if showAll or if selected, or if any VirtualCamera references this entity
-      let isReferenced = false;
-      commands.query().all(VirtualCamera).each((vcamEntity, vcam) => {
-        if (vcam.enableCameraBounds && vcam.boundsEntity === entity) {
-          isReferenced = true;
+          // Update helper transform
+          this.helperManager!.updateCameraHelper(entity, {
+            position: new THREE.Vector3(
+              transform.position.x,
+              transform.position.y,
+              transform.position.z,
+            ),
+            rotation: new THREE.Euler(
+              transform.rotation.x,
+              transform.rotation.y,
+              transform.rotation.z,
+            ),
+          });
+        } else {
+          // Remove helper if shouldn't show
+          if (this.helperManager!.hasHelper(entity)) {
+            this.helperManager!.removeHelper(entity);
+            this.helperEntities.delete(entity);
+          }
         }
       });
 
-      const shouldShow = showAll || entity === selectedEntity || isReferenced;
+    // Sync VirtualCameraBounds helpers (entity-based bounds system)
+    commands
+      .query()
+      .all(VirtualCameraBounds, Transform3D)
+      .each((entity, bounds, boundsTransform) => {
+        seenEntities.add(entity);
 
-      if (shouldShow) {
-        // Calculate world-space bounds from entity position and size
-        const halfWidth = bounds.size.x / 2;
-        const halfHeight = bounds.size.y / 2;
-        const minX = boundsTransform.position.x - halfWidth;
-        const minY = boundsTransform.position.y - halfHeight;
-        const maxX = boundsTransform.position.x + halfWidth;
-        const maxY = boundsTransform.position.y + halfHeight;
+        // Show bounds helper if showAll or if selected, or if any VirtualCamera references this entity
+        let isReferenced = false;
+        commands
+          .query()
+          .all(VirtualCamera)
+          .each((vcamEntity, vcam) => {
+            if (vcam.enableCameraBounds && vcam.boundsEntity === entity) {
+              isReferenced = true;
+            }
+          });
 
-        // Create helper if doesn't exist
-        if (!this.helperManager!.hasHelper(entity)) {
-          const box3 = new THREE.Box3(
-            new THREE.Vector3(minX, minY, -100),
-            new THREE.Vector3(maxX, maxY, 100)
-          );
-          this.helperManager!.createBox3Helper(entity, box3, resolution);
-          this.helperEntities.add(entity);
+        const shouldShow = showAll || entity === selectedEntity || isReferenced;
 
-          // Set orange color to distinguish from other helpers
+        if (shouldShow) {
+          // Calculate world-space bounds from entity position and size
+          const halfWidth = bounds.size.x / 2;
+          const halfHeight = bounds.size.y / 2;
+          const minX = boundsTransform.position.x - halfWidth;
+          const minY = boundsTransform.position.y - halfHeight;
+          const maxX = boundsTransform.position.x + halfWidth;
+          const maxY = boundsTransform.position.y + halfHeight;
+
+          // Create helper if doesn't exist
+          if (!this.helperManager!.hasHelper(entity)) {
+            const box3 = new THREE.Box3(
+              new THREE.Vector3(minX, minY, -100),
+              new THREE.Vector3(maxX, maxY, 100),
+            );
+            this.helperManager!.createBox3Helper(entity, box3, resolution);
+            this.helperEntities.add(entity);
+
+            // Set orange color to distinguish from other helpers
+            const entry = this.helperManager!.getHelperEntry(entity);
+            if (entry && entry.type === 'box3') {
+              entry.helper.setColor(0xffaa00);
+            }
+          }
+
+          // Update helper bounds (in case they changed)
           const entry = this.helperManager!.getHelperEntry(entity);
           if (entry && entry.type === 'box3') {
-            entry.helper.setColor(0xffaa00);
+            const box3 = new THREE.Box3(
+              new THREE.Vector3(minX, minY, -100),
+              new THREE.Vector3(maxX, maxY, 100),
+            );
+            entry.helper.setBox3(box3);
+            // Position the helper at the center of the box (geometry is centered at origin)
+            const center = box3.getCenter(new THREE.Vector3());
+            entry.helper.position.copy(center);
+            entry.helper.rotation.set(0, 0, 0);
+            entry.helper.scale.set(1, 1, 1);
+          }
+        } else {
+          // Remove helper if shouldn't show
+          if (this.helperManager!.hasHelper(entity)) {
+            this.helperManager!.removeHelper(entity);
+            this.helperEntities.delete(entity);
           }
         }
-
-        // Update helper bounds (in case they changed)
-        const entry = this.helperManager!.getHelperEntry(entity);
-        if (entry && entry.type === 'box3') {
-          const box3 = new THREE.Box3(
-            new THREE.Vector3(minX, minY, -100),
-            new THREE.Vector3(maxX, maxY, 100)
-          );
-          entry.helper.setBox3(box3);
-          // Position the helper at the center of the box (geometry is centered at origin)
-          const center = box3.getCenter(new THREE.Vector3());
-          entry.helper.position.copy(center);
-          entry.helper.rotation.set(0, 0, 0);
-          entry.helper.scale.set(1, 1, 1);
-        }
-      } else {
-        // Remove helper if shouldn't show
-        if (this.helperManager!.hasHelper(entity)) {
-          this.helperManager!.removeHelper(entity);
-          this.helperEntities.delete(entity);
-        }
-      }
-    });
+      });
 
     // Sync VirtualCameraFollow dead zone helpers
-    commands.query().all(VirtualCameraFollow, VirtualCamera, Transform3D).each((entity, follow, vcam, transform) => {
-      seenEntities.add(entity);
+    commands
+      .query()
+      .all(VirtualCameraFollow, VirtualCamera, Transform3D)
+      .each((entity, follow, vcam, transform) => {
+        seenEntities.add(entity);
 
-      // Create pseudo-entities for dead zone and soft zone helpers
-      // We use negative entity IDs to avoid conflicts with real entities
-      const deadZoneHelperEntity = -(entity * 2 + 1) as Entity; // Odd negative
-      const softZoneHelperEntity = -(entity * 2 + 2) as Entity; // Even negative
+        // Create pseudo-entities for dead zone and soft zone helpers
+        // We use negative entity IDs to avoid conflicts with real entities
+        const deadZoneHelperEntity = -(entity * 2 + 1) as Entity; // Odd negative
+        const softZoneHelperEntity = -(entity * 2 + 2) as Entity; // Even negative
 
-      seenEntities.add(deadZoneHelperEntity);
-      seenEntities.add(softZoneHelperEntity);
+        seenEntities.add(deadZoneHelperEntity);
+        seenEntities.add(softZoneHelperEntity);
 
-      // Only show dead zone helper when:
-      // 1. Mode is transposer
-      // 2. Dead zone is enabled
-      // 3. Entity is selected or showAll is true
-      const shouldShow =
-        follow.mode === 'transposer' &&
-        follow.enableDeadZone &&
-        (showAll || entity === selectedEntity);
+        // Only show dead zone helper when:
+        // 1. Mode is transposer
+        // 2. Dead zone is enabled
+        // 3. Entity is selected or showAll is true
+        const shouldShow =
+          follow.mode === 'transposer' &&
+          follow.enableDeadZone &&
+          (showAll || entity === selectedEntity);
 
-      if (shouldShow) {
-        // Get the render manager for viewport calculations
-        const renderManager = app.getResource(Render3DManager);
-        if (!renderManager) return;
+        if (shouldShow) {
+          // Get the render manager for viewport calculations
+          const renderManager = app.getResource(Render3DManager);
+          if (!renderManager) return;
 
-        const threeCamera = renderManager.getRenderer().getCamera();
-        if (!threeCamera) return;
+          const threeCamera = renderManager.getRenderer().getCamera();
+          if (!threeCamera) return;
 
-        // Get viewport dimensions from render manager
-        const viewportSize = renderManager.getRenderer().getSize();
+          // Get viewport dimensions from render manager
+          const viewportSize = renderManager.getRenderer().getSize();
 
-        // Initialize missing properties for backward compatibility
-        if (!follow.deadZone || follow.deadZone.width === undefined || follow.deadZone.height === undefined) {
-          follow.deadZone = { width: 0.1, height: 0.1 };
-        }
-        if (!follow.softZone || follow.softZone.width === undefined || follow.softZone.height === undefined) {
-          follow.softZone = { width: 0.3, height: 0.3 };
-        }
+          // Initialize missing properties for backward compatibility
+          if (
+            !follow.deadZone ||
+            follow.deadZone.width === undefined ||
+            follow.deadZone.height === undefined
+          ) {
+            follow.deadZone = { width: 0.1, height: 0.1 };
+          }
+          if (
+            !follow.softZone ||
+            follow.softZone.width === undefined ||
+            follow.softZone.height === undefined
+          ) {
+            follow.softZone = { width: 0.3, height: 0.3 };
+          }
 
-        // Calculate world-space dimensions for both camera types
-        let cameraWorldDimensions: { width: number; height: number };
+          // Calculate world-space dimensions for both camera types
+          let cameraWorldDimensions: { width: number; height: number };
 
-        if (vcam.type === 'orthographic') {
-          const orthoSize = vcam.size / vcam.zoom;
-          const aspect = viewportSize.width / viewportSize.height;
-          cameraWorldDimensions = {
-            width: orthoSize * aspect,
-            height: orthoSize
-          };
-        } else if (vcam.type === 'perspective') {
-          const approximateDistance = Math.abs(transform.position.z);
-          const fovRadians = (vcam.fov * Math.PI) / 180;
-          const visibleHeight = 2 * Math.tan(fovRadians / 2) * approximateDistance;
-          const aspect = viewportSize.width / viewportSize.height;
-          cameraWorldDimensions = {
-            width: visibleHeight * aspect,
-            height: visibleHeight
-          };
-        } else {
-          return; // Unknown camera type
-        }
+          if (vcam.type === 'orthographic') {
+            const orthoSize = vcam.size / vcam.zoom;
+            const aspect = viewportSize.width / viewportSize.height;
+            cameraWorldDimensions = {
+              width: orthoSize * aspect,
+              height: orthoSize,
+            };
+          } else if (vcam.type === 'perspective') {
+            const approximateDistance = Math.abs(transform.position.z);
+            const fovRadians = (vcam.fov * Math.PI) / 180;
+            const visibleHeight =
+              2 * Math.tan(fovRadians / 2) * approximateDistance;
+            const aspect = viewportSize.width / viewportSize.height;
+            cameraWorldDimensions = {
+              width: visibleHeight * aspect,
+              height: visibleHeight,
+            };
+          } else {
+            return; // Unknown camera type
+          }
 
-        // Convert viewport percentages to world units
-        const deadZoneWorldWidth = follow.deadZone.width * cameraWorldDimensions.width;
-        const deadZoneWorldHeight = follow.deadZone.height * cameraWorldDimensions.height;
-        const softZoneWorldWidth = follow.softZone.width * cameraWorldDimensions.width;
-        const softZoneWorldHeight = follow.softZone.height * cameraWorldDimensions.height;
+          // Convert viewport percentages to world units
+          const deadZoneWorldWidth =
+            follow.deadZone.width * cameraWorldDimensions.width;
+          const deadZoneWorldHeight =
+            follow.deadZone.height * cameraWorldDimensions.height;
+          const softZoneWorldWidth =
+            follow.softZone.width * cameraWorldDimensions.width;
+          const softZoneWorldHeight =
+            follow.softZone.height * cameraWorldDimensions.height;
 
-        // Camera is centered at transform.position + offset
-        const centerX = transform.position.x + follow.offset.x;
-        const centerY = transform.position.y + follow.offset.y;
+          // Camera is centered at transform.position + offset
+          const centerX = transform.position.x + follow.offset.x;
+          const centerY = transform.position.y + follow.offset.y;
 
-        // Create dead zone box (centered at origin, will be positioned via helper.position)
-        const deadZoneBox = new THREE.Box3(
-          new THREE.Vector3(
-            -deadZoneWorldWidth / 2,
-            -deadZoneWorldHeight / 2,
-            -100
-          ),
-          new THREE.Vector3(
-            deadZoneWorldWidth / 2,
-            deadZoneWorldHeight / 2,
-            100
-          )
-        );
+          // Create dead zone box (centered at origin, will be positioned via helper.position)
+          const deadZoneBox = new THREE.Box3(
+            new THREE.Vector3(
+              -deadZoneWorldWidth / 2,
+              -deadZoneWorldHeight / 2,
+              -100,
+            ),
+            new THREE.Vector3(
+              deadZoneWorldWidth / 2,
+              deadZoneWorldHeight / 2,
+              100,
+            ),
+          );
 
-        // Create soft zone box (centered at origin, will be positioned via helper.position)
-        const softZoneBox = new THREE.Box3(
-          new THREE.Vector3(
-            -softZoneWorldWidth / 2,
-            -softZoneWorldHeight / 2,
-            -100
-          ),
-          new THREE.Vector3(
-            softZoneWorldWidth / 2,
-            softZoneWorldHeight / 2,
-            100
-          )
-        );
+          // Create soft zone box (centered at origin, will be positioned via helper.position)
+          const softZoneBox = new THREE.Box3(
+            new THREE.Vector3(
+              -softZoneWorldWidth / 2,
+              -softZoneWorldHeight / 2,
+              -100,
+            ),
+            new THREE.Vector3(
+              softZoneWorldWidth / 2,
+              softZoneWorldHeight / 2,
+              100,
+            ),
+          );
 
-        // Create/update soft zone helper first (semi-transparent yellow, renders behind)
-        if (!this.helperManager!.hasHelper(softZoneHelperEntity)) {
-          this.helperManager!.createBox3Helper(softZoneHelperEntity, softZoneBox, resolution);
-          this.helperEntities.add(softZoneHelperEntity);
+          // Create/update soft zone helper first (semi-transparent yellow, renders behind)
+          if (!this.helperManager!.hasHelper(softZoneHelperEntity)) {
+            this.helperManager!.createBox3Helper(
+              softZoneHelperEntity,
+              softZoneBox,
+              resolution,
+            );
+            this.helperEntities.add(softZoneHelperEntity);
 
-          const entry = this.helperManager!.getHelperEntry(softZoneHelperEntity);
-          if (entry && entry.type === 'box3') {
-            entry.helper.setColor(0xffff00); // Yellow
-            entry.helper.setOpacity(0.3); // Lower opacity
-            entry.helper.renderOrder = 999999998; // Render behind dead zone
+            const entry =
+              this.helperManager!.getHelperEntry(softZoneHelperEntity);
+            if (entry && entry.type === 'box3') {
+              entry.helper.setColor(0xffff00); // Yellow
+              entry.helper.setOpacity(0.3); // Lower opacity
+              entry.helper.renderOrder = 999999998; // Render behind dead zone
+            }
+          } else {
+            const entry =
+              this.helperManager!.getHelperEntry(softZoneHelperEntity);
+            if (entry && entry.type === 'box3') {
+              entry.helper.setBox3(softZoneBox);
+              entry.helper.setColor(0xffff00); // Yellow
+              entry.helper.setOpacity(0.3); // Lower opacity
+              entry.helper.renderOrder = 999999998; // Render behind dead zone
+              // Position at camera center (box is already centered at origin)
+              entry.helper.position.set(centerX, centerY, 0);
+              entry.helper.rotation.set(0, 0, 0);
+              entry.helper.scale.set(1, 1, 1);
+            }
+          }
+
+          // Create/update dead zone helper second (cyan, renders on top)
+          if (!this.helperManager!.hasHelper(deadZoneHelperEntity)) {
+            this.helperManager!.createBox3Helper(
+              deadZoneHelperEntity,
+              deadZoneBox,
+              resolution,
+            );
+            this.helperEntities.add(deadZoneHelperEntity);
+
+            const entry =
+              this.helperManager!.getHelperEntry(deadZoneHelperEntity);
+            if (entry && entry.type === 'box3') {
+              entry.helper.setColor(0x00ffff); // Cyan (to distinguish from soft zone)
+              entry.helper.setOpacity(1.0); // Full opacity
+              entry.helper.renderOrder = 999999999; // Render on top of soft zone
+              // Position at camera center (box is already centered at origin)
+              entry.helper.position.set(centerX, centerY, 0);
+              entry.helper.rotation.set(0, 0, 0);
+              entry.helper.scale.set(1, 1, 1);
+            }
+          } else {
+            const entry =
+              this.helperManager!.getHelperEntry(deadZoneHelperEntity);
+            if (entry && entry.type === 'box3') {
+              entry.helper.setBox3(deadZoneBox);
+              entry.helper.setColor(0x00ffff); // Cyan (to distinguish from soft zone)
+              entry.helper.setOpacity(1.0); // Full opacity
+              entry.helper.renderOrder = 999999999; // Render on top of soft zone
+              // Position at camera center (box is already centered at origin)
+              entry.helper.position.set(centerX, centerY, 0);
+              entry.helper.rotation.set(0, 0, 0);
+              entry.helper.scale.set(1, 1, 1);
+            }
           }
         } else {
-          const entry = this.helperManager!.getHelperEntry(softZoneHelperEntity);
-          if (entry && entry.type === 'box3') {
-            entry.helper.setBox3(softZoneBox);
-            entry.helper.setColor(0xffff00); // Yellow
-            entry.helper.setOpacity(0.3); // Lower opacity
-            entry.helper.renderOrder = 999999998; // Render behind dead zone
-            // Position at camera center (box is already centered at origin)
-            entry.helper.position.set(centerX, centerY, 0);
-            entry.helper.rotation.set(0, 0, 0);
-            entry.helper.scale.set(1, 1, 1);
+          // Remove both dead zone and soft zone helpers if shouldn't show
+          const deadZoneHelperEntity = -(entity * 2 + 1) as Entity;
+          const softZoneHelperEntity = -(entity * 2 + 2) as Entity;
+
+          if (this.helperManager!.hasHelper(deadZoneHelperEntity)) {
+            this.helperManager!.removeHelper(deadZoneHelperEntity);
+            this.helperEntities.delete(deadZoneHelperEntity);
+          }
+          if (this.helperManager!.hasHelper(softZoneHelperEntity)) {
+            this.helperManager!.removeHelper(softZoneHelperEntity);
+            this.helperEntities.delete(softZoneHelperEntity);
           }
         }
-
-        // Create/update dead zone helper second (cyan, renders on top)
-        if (!this.helperManager!.hasHelper(deadZoneHelperEntity)) {
-          this.helperManager!.createBox3Helper(deadZoneHelperEntity, deadZoneBox, resolution);
-          this.helperEntities.add(deadZoneHelperEntity);
-
-          const entry = this.helperManager!.getHelperEntry(deadZoneHelperEntity);
-          if (entry && entry.type === 'box3') {
-            entry.helper.setColor(0x00ffff); // Cyan (to distinguish from soft zone)
-            entry.helper.setOpacity(1.0); // Full opacity
-            entry.helper.renderOrder = 999999999; // Render on top of soft zone
-            // Position at camera center (box is already centered at origin)
-            entry.helper.position.set(centerX, centerY, 0);
-            entry.helper.rotation.set(0, 0, 0);
-            entry.helper.scale.set(1, 1, 1);
-          }
-        } else {
-          const entry = this.helperManager!.getHelperEntry(deadZoneHelperEntity);
-          if (entry && entry.type === 'box3') {
-            entry.helper.setBox3(deadZoneBox);
-            entry.helper.setColor(0x00ffff); // Cyan (to distinguish from soft zone)
-            entry.helper.setOpacity(1.0); // Full opacity
-            entry.helper.renderOrder = 999999999; // Render on top of soft zone
-            // Position at camera center (box is already centered at origin)
-            entry.helper.position.set(centerX, centerY, 0);
-            entry.helper.rotation.set(0, 0, 0);
-            entry.helper.scale.set(1, 1, 1);
-          }
-        }
-      } else {
-        // Remove both dead zone and soft zone helpers if shouldn't show
-        const deadZoneHelperEntity = -(entity * 2 + 1) as Entity;
-        const softZoneHelperEntity = -(entity * 2 + 2) as Entity;
-
-        if (this.helperManager!.hasHelper(deadZoneHelperEntity)) {
-          this.helperManager!.removeHelper(deadZoneHelperEntity);
-          this.helperEntities.delete(deadZoneHelperEntity);
-        }
-        if (this.helperManager!.hasHelper(softZoneHelperEntity)) {
-          this.helperManager!.removeHelper(softZoneHelperEntity);
-          this.helperEntities.delete(softZoneHelperEntity);
-        }
-      }
-    });
+      });
 
     // Remove helpers for entities that no longer exist
     for (const entity of this.helperEntities) {
@@ -1217,7 +1335,9 @@ export class EditorLayer extends Layer {
         onClick: () => togglePanelVisibility('debugPanel'),
       },
       {
-        label: isAnimationEditorOpen() ? '✓ Animation Editor' : '   Animation Editor',
+        label: isAnimationEditorOpen()
+          ? '✓ Animation Editor'
+          : '   Animation Editor',
         onClick: () => {
           if (isAnimationEditorOpen()) {
             closeAnimationEditor();
@@ -1228,7 +1348,9 @@ export class EditorLayer extends Layer {
         separatorBefore: true,
       },
       {
-        label: isPanelVisible('spriteEditor') ? '✓ Sprite Editor' : '   Sprite Editor',
+        label: isPanelVisible('spriteEditor')
+          ? '✓ Sprite Editor'
+          : '   Sprite Editor',
         onClick: () => togglePanelVisibility('spriteEditor'),
       },
       {
@@ -1236,17 +1358,32 @@ export class EditorLayer extends Layer {
         onClick: () => togglePanelVisibility('resources'),
       },
     ];
-    const userWindowMenuItems = this.config.menuCallbacks?.windowMenuItems ?? [];
-    const combinedWindowMenuItems = [...builtInWindowMenuItems, ...userWindowMenuItems];
+    const userWindowMenuItems =
+      this.config.menuCallbacks?.windowMenuItems ?? [];
+    const combinedWindowMenuItems = [
+      ...builtInWindowMenuItems,
+      ...userWindowMenuItems,
+    ];
 
     const menuCallbacks: MenuBarCallbacks = {
-      onNewWorld: this.config.menuCallbacks?.onNewWorld ?? (() => this.handleNewWorld()),
-      onSaveWorld: this.config.menuCallbacks?.onSaveWorld ?? (() => this.handleSaveWorld()),
-      onSaveWorldAs: this.config.menuCallbacks?.onSaveWorldAs ?? (() => this.handleSaveWorldAs()),
-      onLoadWorld: this.config.menuCallbacks?.onLoadWorld ?? (() => this.handleLoadWorld()),
-      onReload: this.config.menuCallbacks?.onReload ?? (() => window.location.reload()),
-      hasCurrentPath: this.config.menuCallbacks?.hasCurrentPath ?? (this.currentScenePath !== null),
-      isPlaying: this.config.menuCallbacks?.isPlaying ?? (editorManager?.mode === 'play'),
+      onNewWorld:
+        this.config.menuCallbacks?.onNewWorld ?? (() => this.handleNewWorld()),
+      onSaveWorld:
+        this.config.menuCallbacks?.onSaveWorld ??
+        (() => this.handleSaveWorld()),
+      onSaveWorldAs:
+        this.config.menuCallbacks?.onSaveWorldAs ??
+        (() => this.handleSaveWorldAs()),
+      onLoadWorld:
+        this.config.menuCallbacks?.onLoadWorld ??
+        (() => this.handleLoadWorld()),
+      onReload:
+        this.config.menuCallbacks?.onReload ?? (() => window.location.reload()),
+      hasCurrentPath:
+        this.config.menuCallbacks?.hasCurrentPath ??
+        this.currentScenePath !== null,
+      isPlaying:
+        this.config.menuCallbacks?.isPlaying ?? editorManager?.mode === 'play',
       fileMenuItems: this.config.menuCallbacks?.fileMenuItems,
       windowMenuItems: combinedWindowMenuItems,
       customMenus: this.config.menuCallbacks?.customMenus,
@@ -1276,7 +1413,11 @@ export class EditorLayer extends Layer {
    * Get or create the game camera from ECS MainCamera entity.
    * This is separate from the editor camera and represents what the player would see.
    */
-  private getGameCamera(app: Application, viewportWidth: number, viewportHeight: number): THREE.Camera {
+  private getGameCamera(
+    app: Application,
+    viewportWidth: number,
+    viewportHeight: number,
+  ): THREE.Camera {
     const commands = app.getCommands();
     const aspect = viewportWidth / viewportHeight;
 
@@ -1284,21 +1425,27 @@ export class EditorLayer extends Layer {
     let mainCameraEntity: Entity | null = null;
     let cameraType: 'perspective' | 'orthographic' | null = null;
 
-    commands.query().all(MainCamera, Camera).each((entity, _, cameraComp) => {
-      if (!mainCameraEntity) {
-        mainCameraEntity = entity;
-        cameraType = cameraComp.type || 'perspective';
-      }
-    });
-
-    // Fallback: look for any camera entity
-    if (!mainCameraEntity) {
-      commands.query().all(Camera).each((entity, cameraComp) => {
+    commands
+      .query()
+      .all(MainCamera, Camera)
+      .each((entity, _, cameraComp) => {
         if (!mainCameraEntity) {
           mainCameraEntity = entity;
           cameraType = cameraComp.type || 'perspective';
         }
       });
+
+    // Fallback: look for any camera entity
+    if (!mainCameraEntity) {
+      commands
+        .query()
+        .all(Camera)
+        .each((entity, cameraComp) => {
+          if (!mainCameraEntity) {
+            mainCameraEntity = entity;
+            cameraType = cameraComp.type || 'perspective';
+          }
+        });
     }
 
     // If no camera entity found, return renderer's default camera
@@ -1312,8 +1459,10 @@ export class EditorLayer extends Layer {
     const needsNewCamera =
       !this.gameCamera ||
       this.gameCameraEntity !== mainCameraEntity ||
-      (cameraType === 'perspective' && !(this.gameCamera instanceof THREE.PerspectiveCamera)) ||
-      (cameraType === 'orthographic' && !(this.gameCamera instanceof THREE.OrthographicCamera));
+      (cameraType === 'perspective' &&
+        !(this.gameCamera instanceof THREE.PerspectiveCamera)) ||
+      (cameraType === 'orthographic' &&
+        !(this.gameCamera instanceof THREE.OrthographicCamera));
 
     if (needsNewCamera) {
       if (cameraType === 'perspective') {
@@ -1321,7 +1470,7 @@ export class EditorLayer extends Layer {
           cameraData.fov,
           aspect,
           cameraData.near,
-          cameraData.far
+          cameraData.far,
         );
       } else {
         const effectiveSize = cameraData.size / cameraData.zoom;
@@ -1332,7 +1481,7 @@ export class EditorLayer extends Layer {
           effectiveSize,
           -effectiveSize,
           cameraData.near,
-          cameraData.far
+          cameraData.far,
         );
       }
       this.gameCameraEntity = mainCameraEntity;
@@ -1344,24 +1493,30 @@ export class EditorLayer extends Layer {
       this.gameCamera!.position.set(
         transform.position.x,
         transform.position.y,
-        transform.position.z
+        transform.position.z,
       );
       this.gameCamera!.rotation.set(
         transform.rotation.x,
         transform.rotation.y,
         transform.rotation.z,
-        'YXZ'
+        'YXZ',
       );
     }
 
     // Update camera-specific properties
-    if (cameraType === 'perspective' && this.gameCamera instanceof THREE.PerspectiveCamera) {
+    if (
+      cameraType === 'perspective' &&
+      this.gameCamera instanceof THREE.PerspectiveCamera
+    ) {
       this.gameCamera.fov = cameraData.fov;
       this.gameCamera.near = cameraData.near;
       this.gameCamera.far = cameraData.far;
       this.gameCamera.aspect = aspect;
       this.gameCamera.updateProjectionMatrix();
-    } else if (cameraType === 'orthographic' && this.gameCamera instanceof THREE.OrthographicCamera) {
+    } else if (
+      cameraType === 'orthographic' &&
+      this.gameCamera instanceof THREE.OrthographicCamera
+    ) {
       const effectiveSize = cameraData.size / cameraData.zoom;
       const halfWidth = effectiveSize * aspect;
       this.gameCamera.left = -halfWidth;
@@ -1387,7 +1542,9 @@ export class EditorLayer extends Layer {
   /**
    * Get post-processing data from the first entity with PostProcessing component
    */
-  private getPostProcessingData(commands: import('../ecs/command.js').Command): {
+  private getPostProcessingData(
+    commands: import('../ecs/command.js').Command,
+  ): {
     entity: Entity | null;
     data: PostProcessingData | null;
   } {
@@ -1410,7 +1567,9 @@ export class EditorLayer extends Layer {
   /**
    * Check if post-processing should be applied
    */
-  private shouldApplyPostProcessing(ppData: PostProcessingData | null): boolean {
+  private shouldApplyPostProcessing(
+    ppData: PostProcessingData | null,
+  ): boolean {
     if (!ppData || !ppData.globalEnabled) {
       return false;
     }
@@ -1431,7 +1590,7 @@ export class EditorLayer extends Layer {
   private renderViewportToTarget(
     app: Application,
     viewport: ViewportRenderState,
-    useEditorCamera: boolean
+    useEditorCamera: boolean,
   ): void {
     const renderer = app.getRenderer();
     const threeRenderer = renderer.getThreeRenderer();
@@ -1441,8 +1600,12 @@ export class EditorLayer extends Layer {
 
     // Check if we should apply post-processing (Game View only)
     const postProcessingManager = app.getResource(PostProcessingManager);
-    const { entity: ppEntity, data: ppData } = this.getPostProcessingData(commands);
-    const shouldPostProcess = !useEditorCamera && postProcessingManager && this.shouldApplyPostProcessing(ppData);
+    const { entity: ppEntity, data: ppData } =
+      this.getPostProcessingData(commands);
+    const shouldPostProcess =
+      !useEditorCamera &&
+      postProcessingManager &&
+      this.shouldApplyPostProcessing(ppData);
 
     // Determine which camera to use
     let camera: THREE.Camera;
@@ -1470,7 +1633,10 @@ export class EditorLayer extends Layer {
       clearAlpha = 1;
 
       if (this.gameCameraEntity) {
-        const cameraClearColor = commands.tryGetComponent(this.gameCameraEntity, CameraClearColor);
+        const cameraClearColor = commands.tryGetComponent(
+          this.gameCameraEntity,
+          CameraClearColor,
+        );
         if (cameraClearColor) {
           clearColor = cameraClearColor.color;
           clearAlpha = cameraClearColor.alpha;
@@ -1508,7 +1674,7 @@ export class EditorLayer extends Layer {
         camera,
         viewport.width,
         viewport.height,
-        commands
+        commands,
       );
 
       // Clear dirty flag
@@ -1556,7 +1722,9 @@ export class EditorLayer extends Layer {
     threeRenderer.initTexture(viewport.renderTarget.texture);
 
     // Get the WebGL texture from Three.js render target
-    const textureProps = threeRenderer.properties.get(viewport.renderTarget.texture) as { __webglTexture?: WebGLTexture };
+    const textureProps = threeRenderer.properties.get(
+      viewport.renderTarget.texture,
+    ) as { __webglTexture?: WebGLTexture };
     const webglTexture = textureProps.__webglTexture;
 
     if (!webglTexture) {
@@ -1615,7 +1783,11 @@ export class EditorLayer extends Layer {
 
       // Create the dockspace
       const dockspaceId = ImGui.GetID('EditorDockspace');
-      ImGui.DockSpace(dockspaceId, { x: 0, y: 0 }, ImGui.DockNodeFlags.PassthruCentralNode);
+      ImGui.DockSpace(
+        dockspaceId,
+        { x: 0, y: 0 },
+        ImGui.DockNodeFlags.PassthruCentralNode,
+      );
 
       // Render individual panels based on visibility state
       if (isPanelVisible('hierarchy')) {
@@ -1692,12 +1864,16 @@ export class EditorLayer extends Layer {
 
       // Calculate content area (window size minus title bar)
       const contentWidth = Math.max(1, Math.floor(windowWidth));
-      const contentHeight = Math.max(1, Math.floor(windowHeight - titleBarHeight));
+      const contentHeight = Math.max(
+        1,
+        Math.floor(windowHeight - titleBarHeight),
+      );
 
       // Check if we need to resize the viewport
       if (
         this.sceneViewport &&
-        (contentWidth !== this.lastSceneViewSize.x || contentHeight !== this.lastSceneViewSize.y)
+        (contentWidth !== this.lastSceneViewSize.x ||
+          contentHeight !== this.lastSceneViewSize.y)
       ) {
         this.lastSceneViewSize = { x: contentWidth, y: contentHeight };
         this.resizeViewport(this.sceneViewport, contentWidth, contentHeight);
@@ -1722,7 +1898,7 @@ export class EditorLayer extends Layer {
             new ImTextureRef(textureId),
             { x: contentWidth, y: contentHeight },
             { x: 0, y: 1 }, // UV min (flipped)
-            { x: 1, y: 0 }  // UV max (flipped)
+            { x: 1, y: 0 }, // UV max (flipped)
           );
 
           // Update Scene View bounds when image is hovered.
@@ -1757,7 +1933,7 @@ export class EditorLayer extends Layer {
             // Compute minimum possible Y for Scene View image:
             // = toolbar height + Scene View title bar height (imgPosInWindow_Y)
             const toolbarHeight = getEditorToolbarHeight();
-            const sceneViewTitleBarHeight = imagePosInWindow_Y;  // This is ~22 for the title bar
+            const sceneViewTitleBarHeight = imagePosInWindow_Y; // This is ~22 for the title bar
             const minPossibleY = toolbarHeight + sceneViewTitleBarHeight;
 
             this.sceneViewBounds.updateFromHover(
@@ -1779,12 +1955,14 @@ export class EditorLayer extends Layer {
             const mouseCanvasY = mouseScreenPos.y - rect.top;
 
             this.sceneViewBounds.onMouseLeave();
-            this.sceneViewBounds.updateMousePosition(mouseCanvasX, mouseCanvasY);
+            this.sceneViewBounds.updateMousePosition(
+              mouseCanvasX,
+              mouseCanvasY,
+            );
             this.sceneViewBounds.setSize(contentWidth, contentHeight);
           }
         }
       }
-
     } else {
       // Window is collapsed - not hovered
       this.isSceneViewHovered = false;
@@ -1808,12 +1986,16 @@ export class EditorLayer extends Layer {
 
       // Calculate content area (window size minus title bar)
       const contentWidth = Math.max(1, Math.floor(windowWidth));
-      const contentHeight = Math.max(1, Math.floor(windowHeight - titleBarHeight));
+      const contentHeight = Math.max(
+        1,
+        Math.floor(windowHeight - titleBarHeight),
+      );
 
       // Check if we need to resize the viewport
       if (
         this.gameViewport &&
-        (contentWidth !== this.lastGameViewSize.x || contentHeight !== this.lastGameViewSize.y)
+        (contentWidth !== this.lastGameViewSize.x ||
+          contentHeight !== this.lastGameViewSize.y)
       ) {
         this.lastGameViewSize = { x: contentWidth, y: contentHeight };
         this.resizeViewport(this.gameViewport, contentWidth, contentHeight);
@@ -1833,7 +2015,7 @@ export class EditorLayer extends Layer {
             new ImTextureRef(textureId),
             { x: contentWidth, y: contentHeight },
             { x: 0, y: 1 }, // UV min (flipped)
-            { x: 1, y: 0 }  // UV max (flipped)
+            { x: 1, y: 0 }, // UV max (flipped)
           );
 
           // Update UIViewportBounds for UI interaction coordinate transformation
@@ -1890,7 +2072,6 @@ export class EditorLayer extends Layer {
           }
         }
       }
-
     }
 
     ImGui.End();
@@ -1976,7 +2157,9 @@ export class EditorLayer extends Layer {
     // Prevent creating new world while the game is playing
     const editorManager = this.getApplication().getResource(EditorManager);
     if (editorManager?.mode === 'play') {
-      console.warn('[EditorLayer] Cannot create new world while game is playing');
+      console.warn(
+        '[EditorLayer] Cannot create new world while game is playing',
+      );
       return;
     }
 
@@ -2006,7 +2189,11 @@ export class EditorLayer extends Layer {
     // Serialize based on file extension
     const content = isYamlFile(filePath)
       ? this.worldSerializer.serializeToYaml(app.world, app.getCommands())
-      : this.worldSerializer.serializeToString(app.world, app.getCommands(), true);
+      : this.worldSerializer.serializeToString(
+          app.world,
+          app.getCommands(),
+          true,
+        );
 
     await platform.writeTextFile(filePath, content);
 
@@ -2053,9 +2240,7 @@ export class EditorLayer extends Layer {
 
     const result = await platform.showOpenDialog({
       title: 'Load World',
-      filters: [
-        { name: 'World Files', extensions: ['yaml', 'yml', 'json'] },
-      ],
+      filters: [{ name: 'World Files', extensions: ['yaml', 'yml', 'json'] }],
     });
 
     if (!result) {
@@ -2115,7 +2300,7 @@ export class EditorLayer extends Layer {
     const json = this.worldSerializer.serializeToString(
       app.world,
       app.getCommands(),
-      true
+      true,
     );
     await platform.writeTextFile(filePath, json);
 
@@ -2134,7 +2319,9 @@ export class EditorLayer extends Layer {
    * Get list of entities with AnimationController component.
    * Only these entities can be used for animation editing.
    */
-  private getEntitiesForAnimationPreview(app: Application): Array<{ entity: Entity; name: string }> {
+  private getEntitiesForAnimationPreview(
+    app: Application,
+  ): Array<{ entity: Entity; name: string }> {
     const entities: Array<{ entity: Entity; name: string }> = [];
     const world = app.world;
 

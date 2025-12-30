@@ -59,12 +59,6 @@ export const spriteAreaGeneratorSystem = system(({ commands }) => {
   for (const { entity, data } of entitiesToGenerate) {
     generateSpritesForEntity(entity, data, commands);
   }
-
-  if (entitiesToGenerate.length > 0) {
-    console.log(
-      `[SpriteAreaGeneratorSystem] Regenerated sprites for ${entitiesToGenerate.length} entities`
-    );
-  }
 });
 
 /**
@@ -74,7 +68,7 @@ export const spriteAreaGeneratorSystem = system(({ commands }) => {
 function generateSpritesForEntity(
   parentEntity: number,
   data: SpriteAreaGeneratorData,
-  commands: Command
+  commands: Command,
 ): void {
   // 1. Clear existing children (shouldn't have any, but just in case)
   const existingChildren = commands.tryGetComponent(parentEntity, Children);
@@ -87,19 +81,25 @@ function generateSpritesForEntity(
   // 2. Validate texture
   if (!data.spriteTexture) {
     // No texture - add marker anyway to prevent repeated attempts
-    commands.entity(parentEntity).addComponent(SpriteAreaGeneratorGenerated, {});
+    commands
+      .entity(parentEntity)
+      .addComponent(SpriteAreaGeneratorGenerated, {});
     return;
   }
 
   const metadata = AssetDatabase.getMetadata(data.spriteTexture.guid);
   if (!metadata || !isTextureMetadata(metadata)) {
-    commands.entity(parentEntity).addComponent(SpriteAreaGeneratorGenerated, {});
+    commands
+      .entity(parentEntity)
+      .addComponent(SpriteAreaGeneratorGenerated, {});
     return;
   }
 
   const sprites = metadata.sprites || [];
   if (sprites.length === 0) {
-    commands.entity(parentEntity).addComponent(SpriteAreaGeneratorGenerated, {});
+    commands
+      .entity(parentEntity)
+      .addComponent(SpriteAreaGeneratorGenerated, {});
     return;
   }
 
@@ -213,7 +213,7 @@ function generateSpritesForEntity(
     const generateUniformPositions = (
       count: number,
       spacingVal: number,
-      center: number
+      center: number,
     ): number[] => {
       const result: number[] = [];
       if (spacingVal === 0) {
@@ -239,7 +239,7 @@ function generateSpritesForEntity(
         const xPositions = generateUniformPositions(
           data.spriteCount,
           spacingX,
-          centerX
+          centerX,
         );
         x = xPositions[i]!;
       } else {
@@ -250,7 +250,7 @@ function generateSpritesForEntity(
         const yPositions = generateUniformPositions(
           data.spriteCount,
           spacingY,
-          centerY
+          centerY,
         );
         y = yPositions[i]!;
       } else {
@@ -261,7 +261,7 @@ function generateSpritesForEntity(
         const zPositions = generateUniformPositions(
           data.spriteCount,
           spacingZ,
-          centerZ
+          centerZ,
         );
         z = zPositions[i]!;
       } else {

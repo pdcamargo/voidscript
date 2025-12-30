@@ -21,48 +21,51 @@
  * ```
  */
 
-import { World } from "../ecs/world.js";
-import { Command } from "../ecs/command.js";
-import { Scheduler, type SystemPhase } from "../ecs/scheduler.js";
-import type { SystemWrapper } from "../ecs/system.js";
-import { Layer, LayerStack } from "./layer.js";
-import { Window, type WindowConfig } from "./window.js";
-import { Renderer, type RendererConfig } from "./renderer.js";
-import { ImGuiLayer, type ImGuiLayerConfig } from "./layers/imgui-layer.js";
-import type { AppEvent, WindowResizeEvent } from "./events.js";
-import { EventType, EventDispatcher } from "./events.js";
+import { World } from '../ecs/world.js';
+import { Command } from '../ecs/command.js';
+import { Scheduler, type SystemPhase } from '../ecs/scheduler.js';
+import type { SystemWrapper } from '../ecs/system.js';
+import { Layer, LayerStack } from './layer.js';
+import { Window, type WindowConfig } from './window.js';
+import { Renderer, type RendererConfig } from './renderer.js';
+import { ImGuiLayer, type ImGuiLayerConfig } from './layers/imgui-layer.js';
+import type { AppEvent, WindowResizeEvent } from './events.js';
+import { EventType, EventDispatcher } from './events.js';
 
 // Built-in systems and managers
-import { TweenManager } from "../animation/tween.js";
-import { AnimationManager } from "../animation/animation-manager.js";
-import { ShaderManager } from "../shader/shader-manager.js";
-import { tweenUpdateSystem } from "../ecs/systems/tween-system.js";
-import { animationUpdateSystem } from "../ecs/systems/animation-system.js";
-import { shaderUpdateSystem } from "../ecs/systems/shader-system.js";
-import { SpriteRenderManager, spriteSyncSystem } from "../ecs/systems/sprite-sync-system.js";
+import { TweenManager } from '../animation/tween.js';
+import { AnimationManager } from '../animation/animation-manager.js';
+import { ShaderManager } from '../shader/shader-manager.js';
+import { tweenUpdateSystem } from '../ecs/systems/tween-system.js';
+import { animationUpdateSystem } from '../ecs/systems/animation-system.js';
+import { shaderUpdateSystem } from '../ecs/systems/shader-system.js';
+import {
+  SpriteRenderManager,
+  spriteSyncSystem,
+} from '../ecs/systems/sprite-sync-system.js';
 import {
   Render3DManager,
   transformPropagationSystem,
   render3DSyncSystem,
-} from "../ecs/systems/renderer-sync-system.js";
-import { cameraSyncSystem } from "../ecs/systems/camera-sync-system.js";
-import { virtualCameraFollowSystem } from "../ecs/systems/virtual-camera-follow-system.js";
-import { virtualCameraSelectionSystem } from "../ecs/systems/virtual-camera-selection-system.js";
-import { cameraBrainSystem } from "../ecs/systems/camera-brain-system.js";
+} from '../ecs/systems/renderer-sync-system.js';
+import { cameraSyncSystem } from '../ecs/systems/camera-sync-system.js';
+import { virtualCameraFollowSystem } from '../ecs/systems/virtual-camera-follow-system.js';
+import { virtualCameraSelectionSystem } from '../ecs/systems/virtual-camera-selection-system.js';
+import { cameraBrainSystem } from '../ecs/systems/camera-brain-system.js';
 import {
   SkyGradientRenderManager,
   skyGradient2DSystem,
-} from "../ecs/systems/sky-gradient-system.js";
+} from '../ecs/systems/sky-gradient-system.js';
 import {
   Rain2DRenderManager,
   rain2DSyncSystem,
-} from "../ecs/systems/rain-2d-system.js";
+} from '../ecs/systems/rain-2d-system.js';
 import {
   LightningField2DRenderManager,
   lightningField2DSyncSystem,
-} from "../ecs/systems/lightning-field-2d-system.js";
-import { TiledAssetRegistry } from "../tiled/tiled-asset-registry.js";
-import { TilemapRenderManager } from "../tiled/tilemap-render-manager.js";
+} from '../ecs/systems/lightning-field-2d-system.js';
+import { TiledAssetRegistry } from '../tiled/tiled-asset-registry.js';
+import { TilemapRenderManager } from '../tiled/tilemap-render-manager.js';
 import {
   tiledMapLoaderSystem,
   tiledObjectSpawnerSystem,
@@ -70,14 +73,14 @@ import {
   tiledAnimationSystem,
   tiledTilesetCollisionSystem,
   tiledObjectCollisionSystem,
-} from "../tiled/systems/index.js";
-import { AssetDatabase, type AssetsConfig } from "../ecs/asset-database.js";
-import { PrefabManager } from "../ecs/prefab-manager.js";
-import { EditorCameraManager } from "./editor-camera-manager.js";
-import { EditorManager } from "../editor/editor-manager.js";
-import { ConsoleLogger } from "./console-logger.js";
-import { PostProcessingManager } from "../post-processing/managers/post-processing-manager.js";
-import { isInitializableResource } from "../ecs/resource.js";
+} from '../tiled/systems/index.js';
+import { AssetDatabase, type AssetsConfig } from '../ecs/asset-database.js';
+import { PrefabManager } from '../ecs/prefab-manager.js';
+import { EditorCameraManager } from './editor-camera-manager.js';
+import { EditorManager } from '../editor/editor-manager.js';
+import { ConsoleLogger } from './console-logger.js';
+import { PostProcessingManager } from '../post-processing/managers/post-processing-manager.js';
+import { isInitializableResource } from '../ecs/resource.js';
 
 // Physics systems (2D and 3D)
 import {
@@ -86,14 +89,14 @@ import {
   physics2DCleanupSystem,
   Physics2DContext,
   physics2DCollisionEventSystem,
-} from "../physics/2d/index.js";
+} from '../physics/2d/index.js';
 import {
   physics3DComponentSyncSystem,
   physics3DSyncSystem,
   physics3DCleanupSystem,
   Physics3DContext,
   physics3DCollisionEventSystem,
-} from "../physics/3d/index.js";
+} from '../physics/3d/index.js';
 import {
   CollisionStarted2D,
   CollisionEnded2D,
@@ -105,18 +108,18 @@ import {
   TriggerZoneLeave2D,
   TriggerZoneEnter3D,
   TriggerZoneLeave3D,
-} from "../physics/collision/index.js";
+} from '../physics/collision/index.js';
 
 // Trigger zone systems
 import {
   triggerZone2DSystem,
   triggerZone3DSystem,
-} from "../ecs/systems/trigger/index.js";
+} from '../ecs/systems/trigger/index.js';
 
 // UI systems
-import { UIManager } from "../ui/ui-manager.js";
-import { UIViewportBounds } from "../ui/ui-viewport-bounds.js";
-import { UIInteractionManager } from "../ui/ui-interaction.js";
+import { UIManager } from '../ui/ui-manager.js';
+import { UIViewportBounds } from '../ui/ui-viewport-bounds.js';
+import { UIInteractionManager } from '../ui/ui-interaction.js';
 import {
   uiCanvasSyncSystem,
   uiBlockSyncSystem,
@@ -124,37 +127,40 @@ import {
   uiButtonSyncSystem,
   uiUpdateSystem,
   uiRenderSystem,
-} from "../ui/ui-systems.js";
+} from '../ui/ui-systems.js';
 import {
   setupUIInteractionEvents,
   uiInteractionUpdateSystem,
-} from "../ui/ui-interaction-event-system.js";
-import { UIInteraction } from "../ui/components/ui-interaction.js";
+} from '../ui/ui-interaction-event-system.js';
+import { UIInteraction } from '../ui/components/ui-interaction.js';
 
 // Post-processing system
-import { postProcessingSystem } from "../ecs/systems/post-processing-system.js";
+import { postProcessingSystem } from '../ecs/systems/post-processing-system.js';
 
 // Audio systems
-import { AudioManager } from "../ecs/systems/audio-manager.js";
-import { audioSyncSystem } from "../ecs/systems/audio-sync-system.js";
+import { AudioManager } from '../ecs/systems/audio-manager.js';
+import { audioSyncSystem } from '../ecs/systems/audio-sync-system.js';
 
 // Play mode cleanup
-import { setupPlayModeCleanup } from "../ecs/systems/play-mode-cleanup-system.js";
+import { setupPlayModeCleanup } from '../ecs/systems/play-mode-cleanup-system.js';
 
 // Generator systems
-import { spriteAreaGeneratorSystem } from "../ecs/systems/sprite-area-generator-system.js";
+import { spriteAreaGeneratorSystem } from '../ecs/systems/sprite-area-generator-system.js';
 
 // Event system
-import { Events, type EventClass } from "../ecs/events.js";
+import { Events, type EventClass } from '../ecs/events.js';
 
 // Editor and world loading
-import type { EditorPlatform } from "../editor/editor-platform.js";
-import { WebPlatform } from "../editor/editor-platform.js";
-import { EditorLayer, type EditorConfig as EditorLayerConfig } from "../editor/editor-layer.js";
-import type { MenuBarCallbacks } from "./imgui/menu-bar.js";
-import type { WorldData } from "../ecs/serialization/schemas.js";
-import { WorldLoader } from "./world-loader.js";
-import { preloadAssets } from "../ecs/asset-preloader.js";
+import type { EditorPlatform } from '../editor/editor-platform.js';
+import { WebPlatform } from '../editor/editor-platform.js';
+import {
+  EditorLayer,
+  type EditorConfig as EditorLayerConfig,
+} from '../editor/editor-layer.js';
+import type { MenuBarCallbacks } from './imgui/menu-bar.js';
+import type { WorldData } from '../ecs/serialization/schemas.js';
+import { WorldLoader } from './world-loader.js';
+import { preloadAssets } from '../ecs/asset-preloader.js';
 
 /**
  * Default world configuration for loading a scene on startup
@@ -459,7 +465,7 @@ export class Application {
    */
   static get(): Application {
     if (!Application.instance) {
-      throw new Error("Application not created");
+      throw new Error('Application not created');
     }
     return Application.instance;
   }
@@ -482,9 +488,7 @@ export class Application {
     // Preload all registered assets (especially prefabs needed for world deserialization)
     const allGuids = AssetDatabase.getAllGuids();
     if (allGuids.length > 0) {
-      console.log(`[Application] Preloading ${allGuids.length} assets...`);
       await preloadAssets(...allGuids);
-      console.log(`[Application] Asset preloading complete`);
     }
 
     // Detect target FPS if not specified
@@ -492,9 +496,7 @@ export class Application {
       const detectedFPS = await this.detectTargetFPS();
       this.targetFPS = Math.max(detectedFPS, 60);
       this.fixedDeltaTime = 1 / this.targetFPS;
-      console.log(
-        `Target FPS: ${this.targetFPS} (detected: ${detectedFPS})`
-      );
+      console.log(`Target FPS: ${this.targetFPS} (detected: ${detectedFPS})`);
     }
 
     // Initialize ImGui layer (async)
@@ -508,7 +510,7 @@ export class Application {
       this.imguiLayer.updateDisplaySize(
         this.window.getWidth(),
         this.window.getHeight(),
-        pixelRatio
+        pixelRatio,
       );
     }
 
@@ -529,9 +531,9 @@ export class Application {
     await this.loadDefaultWorld();
 
     // Run startup systems
-    this.scheduler.executeSystems("earlyStartup", { commands: this.commands });
-    this.scheduler.executeSystems("startup", { commands: this.commands });
-    this.scheduler.executeSystems("lateStartup", { commands: this.commands });
+    this.scheduler.executeSystems('earlyStartup', { commands: this.commands });
+    this.scheduler.executeSystems('startup', { commands: this.commands });
+    this.scheduler.executeSystems('lateStartup', { commands: this.commands });
     this.world.flushEvents();
 
     // Start game loop
@@ -610,7 +612,7 @@ export class Application {
 
     if (!this.isPaused) {
       // === UPDATE PHASE ===
-      this.scheduler.executeSystems("earlyUpdate", {
+      this.scheduler.executeSystems('earlyUpdate', {
         commands: this.commands,
       });
 
@@ -619,13 +621,13 @@ export class Application {
         layer.onUpdate(this.deltaTime);
       }
 
-      this.scheduler.executeSystems("update", { commands: this.commands });
-      this.scheduler.executeSystems("lateUpdate", { commands: this.commands });
+      this.scheduler.executeSystems('update', { commands: this.commands });
+      this.scheduler.executeSystems('lateUpdate', { commands: this.commands });
 
       // === FIXED UPDATE PHASE ===
       this.accumulator += this.deltaTime;
       while (this.accumulator >= this.fixedDeltaTime) {
-        this.scheduler.executeSystems("earlyFixedUpdate", {
+        this.scheduler.executeSystems('earlyFixedUpdate', {
           commands: this.commands,
         });
 
@@ -633,10 +635,10 @@ export class Application {
           layer.onFixedUpdate(this.fixedDeltaTime);
         }
 
-        this.scheduler.executeSystems("fixedUpdate", {
+        this.scheduler.executeSystems('fixedUpdate', {
           commands: this.commands,
         });
-        this.scheduler.executeSystems("lateFixedUpdate", {
+        this.scheduler.executeSystems('lateFixedUpdate', {
           commands: this.commands,
         });
 
@@ -648,7 +650,7 @@ export class Application {
     }
 
     // === RENDER PHASE ===
-    this.scheduler.executeSystems("earlyRender", { commands: this.commands });
+    this.scheduler.executeSystems('earlyRender', { commands: this.commands });
 
     // Begin Three.js frame
     this.renderer.beginFrame();
@@ -658,7 +660,7 @@ export class Application {
       layer.onRender();
     }
 
-    this.scheduler.executeSystems("render", { commands: this.commands });
+    this.scheduler.executeSystems('render', { commands: this.commands });
 
     // Render Three.js scene (skip if editor viewports are handling rendering)
     const editorMgr = this.getResource(EditorManager);
@@ -667,11 +669,11 @@ export class Application {
       this.renderer.renderPipeline(
         this.renderer.getScene(),
         this.renderer.getCamera(),
-        this.deltaTime
+        this.deltaTime,
       );
     }
 
-    this.scheduler.executeSystems("lateRender", { commands: this.commands });
+    this.scheduler.executeSystems('lateRender', { commands: this.commands });
 
     // Reset WebGL state after Three.js (required before ImGui)
     this.renderer.resetState();
@@ -691,7 +693,7 @@ export class Application {
     }
 
     // After render
-    this.scheduler.executeSystems("afterRender", { commands: this.commands });
+    this.scheduler.executeSystems('afterRender', { commands: this.commands });
 
     // Clear EditorManager step request (if any) after frame completes
     const editorManager = this.getResource(EditorManager);
@@ -819,16 +821,19 @@ export class Application {
   // ============================================================================
 
   /** localStorage key for caching scene path */
-  private static readonly LAST_SCENE_PATH_KEY = 'voidscript-editor-last-scene-path';
+  private static readonly LAST_SCENE_PATH_KEY =
+    'voidscript-editor-last-scene-path';
 
   /**
    * Check if editor mode is enabled
    */
   isEditorEnabled(): boolean {
     const editorConfig = this.config.editor;
-    return editorConfig !== undefined &&
-           editorConfig !== false &&
-           (editorConfig.enabled ?? true);
+    return (
+      editorConfig !== undefined &&
+      editorConfig !== false &&
+      (editorConfig.enabled ?? true)
+    );
   }
 
   /**
@@ -845,9 +850,8 @@ export class Application {
     const editorConfig = this.config.editor as AppEditorConfig;
 
     // Create EditorManager
-    const editorManager = new EditorManager(
-      this.world,
-      () => this.getCommands()
+    const editorManager = new EditorManager(this.world, () =>
+      this.getCommands(),
     );
 
     // Subscribe to mode changes
@@ -856,7 +860,10 @@ export class Application {
         if (event.type === 'mode-changed') {
           if (event.to === 'play' && event.from === 'edit') {
             editorConfig.onPlay?.();
-          } else if (event.to === 'edit' && (event.from === 'play' || event.from === 'pause')) {
+          } else if (
+            event.to === 'edit' &&
+            (event.from === 'play' || event.from === 'pause')
+          ) {
             editorConfig.onStop?.();
           } else if (event.to === 'pause' && event.from === 'play') {
             editorConfig.onPause?.();
@@ -887,8 +894,6 @@ export class Application {
 
     this.editorLayer = new EditorLayer(layerConfig);
     this.pushLayer(this.editorLayer);
-
-    console.log('[Application] Editor initialized');
   }
 
   /**
@@ -918,10 +923,8 @@ export class Application {
       }
 
       const assets = AssetDatabase.parseAssetsJson(jsonString);
-      const assetCount = Object.keys(assets).length;
 
       AssetDatabase.registerAdditionalAssets(assets);
-      console.log(`[Application] Loaded ${assetCount} assets from manifest`);
     } catch (error) {
       console.error(`[Application] Failed to load asset manifest:`, error);
     }
@@ -934,8 +937,6 @@ export class Application {
     const defaultWorldConfig = this.config.defaultWorld;
     const isEditorMode = this.isEditorEnabled();
 
-    console.log(`[Application] loadDefaultWorld called - isEditorMode: ${isEditorMode}, hasDefaultWorld: ${!!defaultWorldConfig}`);
-
     // In editor mode, check localStorage for cached scene path first
     if (isEditorMode) {
       const cachedPath = this.getCachedScenePath();
@@ -943,11 +944,13 @@ export class Application {
         try {
           const success = await this.loadWorldFromPath(cachedPath);
           if (success) {
-            console.log(`[Application] Loaded cached scene: ${cachedPath}`);
             return;
           }
         } catch (e) {
-          console.warn(`[Application] Failed to load cached scene, falling back to default:`, e);
+          console.warn(
+            `[Application] Failed to load cached scene, falling back to default:`,
+            e,
+          );
           this.clearCachedScenePath();
         }
       }
@@ -972,13 +975,13 @@ export class Application {
     const result = await loader.load(
       this.world,
       this.commands,
-      defaultWorldConfig.source
+      defaultWorldConfig.source,
     );
 
-    if (result.success) {
-      console.log(`[Application] Default world loaded: ${result.entitiesCreated} entities`);
-    } else {
-      console.error(`[Application] Failed to load default world: ${result.error}`);
+    if (!result.success) {
+      console.error(
+        `[Application] Failed to load default world: ${result.error}`,
+      );
     }
   }
 
@@ -1090,7 +1093,7 @@ export class Application {
    * @returns The layer or null if not found
    */
   getLayer<T extends Layer>(
-    LayerClass: new (...args: unknown[]) => T
+    LayerClass: new (...args: unknown[]) => T,
   ): T | null {
     return this.layerStack.find(LayerClass) ?? null;
   }
@@ -1099,7 +1102,7 @@ export class Application {
    * Check if a layer of the given type exists
    */
   hasLayer<T extends Layer>(
-    LayerClass: new (...args: unknown[]) => T
+    LayerClass: new (...args: unknown[]) => T,
   ): boolean {
     return this.layerStack.has(LayerClass);
   }
@@ -1136,67 +1139,67 @@ export class Application {
 
   /** Add system to earlyStartup phase (runs once before startup) */
   addEarlyStartupSystem(system: SystemWrapper): this {
-    return this.addSystem("earlyStartup", system);
+    return this.addSystem('earlyStartup', system);
   }
 
   /** Add system to startup phase (runs once at start) */
   addStartupSystem(system: SystemWrapper): this {
-    return this.addSystem("startup", system);
+    return this.addSystem('startup', system);
   }
 
   /** Add system to lateStartup phase (runs once after startup) */
   addLateStartupSystem(system: SystemWrapper): this {
-    return this.addSystem("lateStartup", system);
+    return this.addSystem('lateStartup', system);
   }
 
   /** Add system to earlyUpdate phase (runs before update each frame) */
   addEarlyUpdateSystem(system: SystemWrapper): this {
-    return this.addSystem("earlyUpdate", system);
+    return this.addSystem('earlyUpdate', system);
   }
 
   /** Add system to update phase (runs each frame) */
   addUpdateSystem(system: SystemWrapper): this {
-    return this.addSystem("update", system);
+    return this.addSystem('update', system);
   }
 
   /** Add system to lateUpdate phase (runs after update each frame) */
   addLateUpdateSystem(system: SystemWrapper): this {
-    return this.addSystem("lateUpdate", system);
+    return this.addSystem('lateUpdate', system);
   }
 
   /** Add system to earlyFixedUpdate phase (runs before fixedUpdate) */
   addEarlyFixedUpdateSystem(system: SystemWrapper): this {
-    return this.addSystem("earlyFixedUpdate", system);
+    return this.addSystem('earlyFixedUpdate', system);
   }
 
   /** Add system to fixedUpdate phase (runs at fixed timestep) */
   addFixedUpdateSystem(system: SystemWrapper): this {
-    return this.addSystem("fixedUpdate", system);
+    return this.addSystem('fixedUpdate', system);
   }
 
   /** Add system to lateFixedUpdate phase (runs after fixedUpdate) */
   addLateFixedUpdateSystem(system: SystemWrapper): this {
-    return this.addSystem("lateFixedUpdate", system);
+    return this.addSystem('lateFixedUpdate', system);
   }
 
   /** Add system to earlyRender phase (runs before render) */
   addEarlyRenderSystem(system: SystemWrapper): this {
-    return this.addSystem("earlyRender", system);
+    return this.addSystem('earlyRender', system);
   }
 
   /** Add system to render phase (runs during rendering) */
   addRenderSystem(system: SystemWrapper): this {
-    return this.addSystem("render", system);
+    return this.addSystem('render', system);
   }
 
   /** Add system to lateRender phase (runs after render) */
   addLateRenderSystem(system: SystemWrapper): this {
-    return this.addSystem("lateRender", system);
+    return this.addSystem('lateRender', system);
   }
 
   /** Add system to afterRender phase (runs after all rendering) */
   addAfterRenderSystem(system: SystemWrapper): this {
-    return this.addSystem("afterRender", system);
+    return this.addSystem('afterRender', system);
   }
 
   // ============================================================================
@@ -1351,7 +1354,10 @@ export class Application {
 
     // UI viewport bounds for coordinate transformation (editor Game View support)
     const viewportBounds = new UIViewportBounds();
-    viewportBounds.setFromFullscreen(this.window.getWidth(), this.window.getHeight());
+    viewportBounds.setFromFullscreen(
+      this.window.getWidth(),
+      this.window.getHeight(),
+    );
     this.insertResource(viewportBounds);
 
     // UI interaction manager for hover/click detection

@@ -9,7 +9,6 @@ async function initTauriClipboard() {
   try {
     const { writeText } = await import('@tauri-apps/plugin-clipboard-manager');
     clipboardWrite = writeText;
-    console.log('[Clipboard] Using Tauri clipboard manager');
   } catch (err) {
     console.log('[Clipboard] Tauri clipboard not available, using browser API');
   }
