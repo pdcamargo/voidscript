@@ -235,8 +235,8 @@ entities:
         typeName: Children
         data:
           ids:
-            - 8
             - 10
+            - 8
             - 7
             - 9
       - typeId: 1
@@ -482,14 +482,14 @@ entities:
       - typeId: 1
         typeName: Name
         data:
-          name: Forest Tree BG
+          name: Forest Tree MID
       - typeId: 2
         typeName: Transform3D
         data:
           position:
             x: 0
-            y: -0.699999988079071
-            z: -3
+            y: -0.5
+            z: -2
           rotation:
             x: 0
             y: 0
@@ -503,8 +503,8 @@ entities:
         data:
           position:
             x: 0
-            y: -0.699999988079071
-            z: -3
+            y: -0.5
+            z: -2
           rotation:
             x: 0
             y: 0
@@ -517,27 +517,27 @@ entities:
         typeName: SpriteAreaGenerator
         data:
           boundsMin:
-            x: -70
+            x: -75
             y: 0
-            z: -0.10000000149011612
+            z: -0.20000000298023224
           boundsMax:
-            x: 70
+            x: 75
             y: 0
             z: 0
           spriteTexture:
             guid: trees
-          seed: 312209
-          spriteCount: 61
-          minScale: 4
-          maxScale: 4.050000190734863
-          minDistance: 1.5
+          seed: 85653
+          spriteCount: 50
+          minScale: 3.299999952316284
+          maxScale: 3.305000066757202
+          minDistance: 2
           sortingLayer: 0
           sortingOrder: 0
           isLit: true
           tintColor:
-            r: 0.2236286997795105
-            g: 0.2236286997795105
-            b: 0.2236286997795105
+            r: 0.5316455364227295
+            g: 0.5316455364227295
+            b: 0.5316455364227295
             a: 1
           anchor:
             x: 0.5
@@ -632,14 +632,14 @@ entities:
       - typeId: 1
         typeName: Name
         data:
-          name: Forest Tree MID
+          name: Forest Tree BG
       - typeId: 2
         typeName: Transform3D
         data:
           position:
             x: 0
-            y: -0.5
-            z: -2
+            y: -0.699999988079071
+            z: -3
           rotation:
             x: 0
             y: 0
@@ -653,8 +653,8 @@ entities:
         data:
           position:
             x: 0
-            y: -0.5
-            z: -2
+            y: -0.699999988079071
+            z: -3
           rotation:
             x: 0
             y: 0
@@ -667,27 +667,27 @@ entities:
         typeName: SpriteAreaGenerator
         data:
           boundsMin:
-            x: -75
+            x: -70
             y: 0
-            z: -0.20000000298023224
+            z: -0.10000000149011612
           boundsMax:
-            x: 75
+            x: 70
             y: 0
             z: 0
           spriteTexture:
             guid: trees
-          seed: 85653
-          spriteCount: 50
-          minScale: 3.299999952316284
-          maxScale: 3.305000066757202
-          minDistance: 2
+          seed: 312209
+          spriteCount: 100
+          minScale: 4
+          maxScale: 4.050000190734863
+          minDistance: 1.5
           sortingLayer: 0
           sortingOrder: 0
           isLit: true
           tintColor:
-            r: 0.5316455364227295
-            g: 0.5316455364227295
-            b: 0.5316455364227295
+            r: 0.2236286997795105
+            g: 0.2236286997795105
+            b: 0.2236286997795105
             a: 1
           anchor:
             x: 0.5
@@ -823,7 +823,7 @@ entities:
             foam_layer_count: 2
             reflection_offset_x: 0
             reflection_offset_y: 0
-            reflection_skew_x: -0.9290000200271606
+            reflection_skew_x: 0.004000000189989805
             reflection_skew_y: 0.1
             wetness_intensity: 0.10400000214576721
             wetness_opacity: 0.9819999933242798
@@ -1401,7 +1401,7 @@ entities:
           enableGroundGlow: false
           groundGlowRadius: 20
 metadata:
-  createdAt: 2025-12-30T05:40:25.074Z
-  modifiedAt: 2025-12-30T05:40:25.074Z
+  createdAt: 2025-12-30T05:44:04.687Z
+  modifiedAt: 2025-12-30T05:44:04.687Z
   entityCount: 22
   archetypeCount: 59

@@ -919,9 +919,21 @@ void fragment() {
 | `COLOR` | `vec4` | V/F | Vertex color / final output |
 | `NORMAL` | `vec3` | V/F | Normal vector |
 | `TIME` | `float` | V/F | Elapsed time (seconds) |
+| `DELTA_TIME` | `float` | V/F | Frame delta time (seconds) |
 | `TEXTURE` | `sampler2D` | F | Main sprite texture |
 | `TEXTURE_SIZE` | `vec2` | F | Texture dimensions |
-| `SCREEN_UV` | `vec2` | F | Screen-space UV |
+| `SCREEN_UV` | `vec2` | F | Screen-space UV (0-1) |
+| `SCREEN_SIZE` | `vec2` | V/F | Screen/viewport size in pixels |
+| `SCREEN_TEXTURE` | `sampler2D` | F | Screen capture texture (for reflections/effects) |
+| `FRAGCOORD` | `vec4` | F | Fragment window-space coordinates |
+| `CLIP_POSITION` | `vec4` | V/F | Clip-space position |
+| `MODEL_POSITION` | `vec3` | V/F | Object world position |
+| `MODEL_MATRIX` | `mat4` | V | Model transformation matrix |
+| `VIEW_MATRIX` | `mat4` | V | View/camera matrix |
+| `PROJECTION_MATRIX` | `mat4` | V | Projection matrix |
+| `MESH_SCREEN_BOUNDS` | `vec4` | F | Mesh screen bounds (minX, minY, maxX, maxY) in UV space |
+| `MESH_WORLD_SCALE` | `vec2` | V/F | Mesh world-space scale (width, height) |
+| `MODEL_CENTER_SCREEN_Y` | `float` | V/F | Model center Y in screen space (for reflections) |
 
 **Uniform Hints (for editor UI):**
 
@@ -930,6 +942,7 @@ void fragment() {
 | `hint_range(min, max)` | `uniform float speed : hint_range(0.0, 10.0) = 1.0;` |
 | `source_color` | `uniform vec4 tint : source_color = vec4(1.0);` |
 | `hint_texture` | `uniform sampler2D noise : hint_texture;` |
+| `hint_default_texture` | `uniform sampler2D noise : hint_default_texture("fbm", 512, 512, 4.0, 6, 2.0, 0.5, 0);` |
 
 **Using Shaders with Sprites:**
 
@@ -1024,6 +1037,154 @@ void fragment() {
 - The `TIME` uniform is automatically updated by `ShaderManager`
 - Use `uniqueInstance: true` when each entity needs different uniform values
 - The editor displays uniform editors based on shader metadata (uniform hints)
+
+### Procedural Noise Textures (hint_default_texture)
+
+The VSL shader system supports auto-generating procedural noise textures using the `hint_default_texture` uniform hint. This eliminates the need to create and load noise texture files manually.
+
+**Key Files:**
+- `packages/engine/src/shader/vsl/ast.ts` - `NoiseTextureParams` types and interfaces
+- `packages/engine/src/shader/vsl/parser.ts` - Parses `hint_default_texture` syntax
+- `packages/engine/src/shader/default-texture-generator.ts` - `DefaultTextureGenerator` class
+- `packages/engine/src/ecs/systems/sprite-sync-system.ts` - Converts params to textures at runtime
+
+**VSL Syntax:**
+
+```glsl
+// Basic syntax: hint_default_texture("type", width, height, ...params)
+uniform sampler2D noise : hint_default_texture("fbm", 512, 512, 4.0, 6, 2.0, 0.5, 0);
+```
+
+**Supported Noise Types:**
+
+| Type | Description | Parameters |
+|------|-------------|------------|
+| `simplex` | 2D Simplex noise | width, height, frequency, offsetX, offsetY, amplitude, seed |
+| `perlin` | 2D Perlin noise with octaves | width, height, cellSize, levels, attenuation, seed, color, alpha |
+| `white` | Pure random white noise | width, height, seed |
+| `fbm` | Fractal Brownian Motion | width, height, frequency, octaves, lacunarity, gain, seed |
+
+**FBM Parameters (most common):**
+
+```glsl
+hint_default_texture("fbm", width, height, frequency, octaves, lacunarity, gain, seed)
+```
+
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| width | int | Texture width in pixels | 256 |
+| height | int | Texture height in pixels | 256 |
+| frequency | float | Base noise frequency (higher = more detail) | 4.0 |
+| octaves | int | Number of noise layers (1-8) | 6 |
+| lacunarity | float | Frequency multiplier per octave | 2.0 |
+| gain | float | Amplitude multiplier per octave (persistence) | 0.5 |
+| seed | int | Random seed (0 = random each run) | 0 |
+
+**Example - Water Shader with FBM Noise:**
+
+```glsl
+shader_type canvas_item;
+render_mode unshaded;
+
+// Distortion noise - low frequency, smooth
+uniform sampler2D noise_texture : hint_default_texture("fbm", 512, 512, 4.0, 3, 1.0, 0.5, 0);
+
+// Foam noise - high frequency, detailed
+uniform sampler2D noise_texture2 : hint_default_texture("fbm", 512, 512, 15.0, 3, 4.0, 0.5, 1);
+
+void fragment() {
+    // Sample noise textures
+    float distortion = texture(noise_texture, UV).r;
+    float foam = texture(noise_texture2, UV).r;
+
+    // Use noise values...
+    COLOR = vec4(foam, foam, foam, 1.0);
+}
+```
+
+**Simplex Noise Parameters:**
+
+```glsl
+hint_default_texture("simplex", width, height, frequency, offsetX, offsetY, amplitude, seed)
+```
+
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| frequency | float | Noise scale | 4.0 |
+| offsetX | float | X sampling offset | 0.0 |
+| offsetY | float | Y sampling offset | 0.0 |
+| amplitude | float | Noise strength | 1.0 |
+
+**Perlin Noise Parameters:**
+
+```glsl
+hint_default_texture("perlin", width, height, cellSize, levels, attenuation, seed, color, alpha)
+```
+
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| cellSize | int | Grid cell size | 32 |
+| levels | int | Octave count | 4 |
+| attenuation | float | Amplitude decay per level | 0.5 |
+| color | bool (0/1) | Generate RGB color noise | false |
+| alpha | bool (0/1) | Vary alpha channel | false |
+
+**White Noise Parameters:**
+
+```glsl
+hint_default_texture("white", width, height, seed)
+```
+
+Simple random noise with only width, height, and seed parameters.
+
+**How It Works:**
+
+1. **Parsing**: VSL parser extracts `hint_default_texture` params into `NoiseTextureParams` object
+2. **Transpilation**: Params stored in `UniformMetadata.noiseParams`
+3. **Component Storage**: Stored in `Sprite2DMaterial.uniforms` as noise param objects
+4. **Runtime Conversion**: `sprite-sync-system.ts` calls `DefaultTextureGenerator.generate()` when applying uniforms
+5. **Caching**: Generated textures are cached by `DefaultTextureGenerator` to avoid regeneration
+
+**TypeScript Types:**
+
+```typescript
+// Base params shared by all types
+interface BaseNoiseParams {
+  width: number;   // Texture width
+  height: number;  // Texture height
+  seed: number;    // Random seed
+}
+
+// FBM-specific params
+interface FbmNoiseParams extends BaseNoiseParams {
+  type: 'fbm';
+  frequency: number;   // Base frequency
+  octaves: number;     // Layer count
+  lacunarity: number;  // Freq multiplier
+  gain: number;        // Amp multiplier
+}
+
+// Union type for all noise params
+type NoiseTextureParams =
+  | SimplexNoiseParams
+  | PerlinNoiseParams
+  | WhiteNoiseParams
+  | FbmNoiseParams;
+```
+
+**Editor Integration:**
+
+The editor automatically displays noise texture previews and parameter editors:
+- Collapsible preview shows the generated texture
+- Each parameter has appropriate sliders/inputs
+- Changes regenerate the texture in real-time
+
+**Important Notes:**
+- Generated textures use `RepeatWrapping` for seamless tiling
+- Textures are cached by `DefaultTextureGenerator` - same params = same texture
+- Use different seeds for different noise patterns in the same shader
+- Higher octaves = more detail but slower generation
+- Lacunarity > 2.0 creates more pronounced detail differences between octaves
 
 ### Event System (Bevy-Inspired)
 
