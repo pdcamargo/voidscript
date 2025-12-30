@@ -800,7 +800,66 @@ entities:
         data:
           shader:
             guid: water-2d-shader
-          uniforms: {}
+          uniforms:
+            surface_position: 0
+            water_color:
+              x: 1
+              y: 1
+              z: 1
+              w: 0.0784313753247261
+            wave_speed: 0.4560000002384186
+            wave_distortion: 0.40799999237060547
+            wave_multiplier: 18.993999481201172
+            enable_water_texture: true
+            foam_scale:
+              x: 20
+              y: 12
+            foam_speed: 0.02
+            foam_intensity: 1.9739999771118164
+            foam_threshold: 0.7
+            foam_softness: 0
+            foam_turbulence: 0.3
+            foam_animation_speed: 0.5
+            foam_layer_count: 2
+            reflection_offset_x: 0
+            reflection_offset_y: 0
+            reflection_skew_x: -0.9290000200271606
+            reflection_skew_y: 0.1
+            wetness_intensity: 0.10400000214576721
+            wetness_opacity: 0.9819999933242798
+            wetness_scale:
+              x: 100
+              y: 5
+            wetness_speed: 0.03
+            wetness_detail_scale:
+              x: 20
+              y: 30
+            wetness_detail_speed: 0.015
+            wetness_contrast: 28.6
+            wetness_brightness: 0.1
+            wetness_color_tint:
+              x: 0.9
+              y: 0.95
+              z: 1
+            tile_size: 27.204999923706055
+            noise_texture:
+              type: fbm
+              width: 512
+              height: 512
+              frequency: 4
+              octaves: 3
+              lacunarity: 1
+              gain: 0.5
+              seed: 0
+            noise_texture2:
+              type: fbm
+              width: 512
+              height: 512
+              frequency: 15
+              octaves: 3
+              lacunarity: 4
+              gain: 0.5
+              seed: 1
           uniqueInstance: true
           enabled: true
   - id: 13
@@ -1174,7 +1233,7 @@ entities:
           fogType: smooth
           fogStart: 0
           fogEnd: 1
-          noiseStrength: 0.15000000596046448
+          noiseStrength: 0
           pixelResolution:
             x: 3000
             y: 3000
@@ -1241,7 +1300,7 @@ entities:
           fogType: smooth
           fogStart: 0
           fogEnd: 1
-          noiseStrength: 0.15000000596046448
+          noiseStrength: 0
           pixelResolution:
             x: 3000
             y: 3000
@@ -1342,7 +1401,7 @@ entities:
           enableGroundGlow: false
           groundGlowRadius: 20
 metadata:
-  createdAt: 2025-12-30T03:07:57.421Z
-  modifiedAt: 2025-12-30T03:07:57.421Z
+  createdAt: 2025-12-30T05:40:25.074Z
+  modifiedAt: 2025-12-30T05:40:25.074Z
   entityCount: 22
   archetypeCount: 59

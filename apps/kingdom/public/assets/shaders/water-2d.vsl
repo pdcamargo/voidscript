@@ -16,23 +16,24 @@ render_mode unshaded;
 uniform float surface_position : hint_range(0.0, 1.0) = 0.0;
 
 // Water color (RGB) and opacity (A) combined
-uniform vec4 water_color : source_color = vec4(0.0, 0.911, 1.0, 0.045);
+// Default: vec4(0.26, 0.23, 0.73, 0.25) - purple-blue tint
+uniform vec4 water_color : source_color = vec4(0.26, 0.23, 0.73, 0.25);
 
 // Wave animation
-uniform float wave_speed : hint_range(0.0, 2.0) = 0.4;
-uniform float wave_distortion : hint_range(0.0, 1.0) = 0.1;
-uniform float wave_multiplier : hint_range(1.0, 50.0) = 20.0;
+uniform float wave_speed : hint_range(0.0, 2.0) = 0.05;
+uniform float wave_distortion : hint_range(0.0, 1.0) = 0.2;
+uniform float wave_multiplier : hint_range(1.0, 50.0) = 7.0;
 
 // Water texture (foam/surface pattern)
 uniform bool enable_water_texture = true;
 uniform vec2 foam_scale = vec2(6.5, 5.4);
-uniform float foam_speed : hint_range(0.0, 0.1) = 0.001;
+uniform float foam_speed : hint_range(0.0, 0.1) = 0.02;
 uniform float foam_intensity : hint_range(0.0, 2.0) = 1.0;
 uniform float foam_threshold : hint_range(0.0, 1.0) = 0.7;
-uniform float foam_softness : hint_range(0.0, 1.0) = 0.0;
-uniform float foam_turbulence : hint_range(0.0, 50.0) = 12.0;
-uniform float foam_animation_speed : hint_range(0.0, 5.0) = 1.5;
-uniform int foam_layer_count : hint_range(1, 20) = 13;
+uniform float foam_softness : hint_range(0.0, 1.0) = 1.0;
+uniform float foam_turbulence : hint_range(0.0, 1.0) = 0.3;
+uniform float foam_animation_speed : hint_range(0.0, 5.0) = 0.5;
+uniform int foam_layer_count : hint_range(1, 5) = 2;
 
 // Reflection settings
 uniform float reflection_offset_x : hint_range(-1.0, 1.0) = 0.0;
@@ -41,58 +42,36 @@ uniform float reflection_skew_x : hint_range(-1.0, 1.0) = 0.0;
 uniform float reflection_skew_y : hint_range(-1.0, 1.0) = 0.1;
 
 // Wetness effect (caustics-like pattern on top of water)
-uniform float wetness_intensity : hint_range(0.0, 20.0) = 5.55;
-uniform float wetness_opacity : hint_range(0.0, 0.1) = 0.008;
-uniform vec2 wetness_scale = vec2(5.0, 5.0);
+uniform float wetness_intensity : hint_range(0.0, 10.0) = 5.55;
+uniform float wetness_opacity : hint_range(0.0, 2.0) = 1.0;
+uniform vec2 wetness_scale = vec2(8.0, 12.0);
 uniform float wetness_speed : hint_range(0.0, 0.1) = 0.03;
-uniform vec2 wetness_detail_scale = vec2(8.6, 22.1);
-uniform float wetness_detail_speed : hint_range(0.0, 0.1) = 0.01;
+uniform vec2 wetness_detail_scale = vec2(20.0, 30.0);
+uniform float wetness_detail_speed : hint_range(0.0, 0.1) = 0.015;
 uniform float wetness_contrast : hint_range(0.0, 50.0) = 28.6;
-uniform float wetness_brightness : hint_range(0.0, 2.0) = 0.853;
-uniform vec3 wetness_color_tint = vec3(1.0, 1.0, 1.0);
+uniform float wetness_brightness : hint_range(0.0, 2.0) = 0.1;
+uniform vec3 wetness_color_tint = vec3(0.9, 0.95, 1.0);
 
-// Tile size for UV scaling
-uniform float tile_size : hint_range(1.0, 100.0) = 28.8;
+// Tile size for world-space tiling - patterns repeat every tile_size world units
+// Higher values = larger patterns (less tiling). Independent of mesh scale.
+uniform float tile_size : hint_range(0.1, 500.0) = 50.0;
 
-// Noise texture for distortion effects
-uniform sampler2D noise_texture : hint_texture;
+// Noise texture 1: Distortion noise - used for wave animation and wetness detail
+// Matches original: scale=4 (frequency), octaves=3, lacunarity=1 (minimal freq increase), gain=0.5
+uniform sampler2D noise_texture : hint_default_texture("fbm", 512, 512, 4.0, 3, 1.0, 0.5, 0);
 
-// Hash function for procedural noise
-float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
-}
-
-// Smooth noise
-float noise(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    f = f * f * (3.0 - 2.0 * f);
-
-    float a = hash(i);
-    float b = hash(i + vec2(1.0, 0.0));
-    float c = hash(i + vec2(0.0, 1.0));
-    float d = hash(i + vec2(1.0, 1.0));
-
-    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
-}
-
-// FBM (Fractal Brownian Motion)
-float fbm(vec2 p, int octaves) {
-    float value = 0.0;
-    float amplitude = 0.5;
-    float frequency = 1.0;
-
-    for (int i = 0; i < octaves; i++) {
-        value += amplitude * noise(p * frequency);
-        amplitude *= 0.5;
-        frequency *= 2.0;
-    }
-
-    return value;
-}
+// Noise texture 2: Foam noise - used for water surface texture and wetness base
+// Matches original: scale=15 (frequency), octaves=3, lacunarity=4 (strong freq increase), gain=0.5
+uniform sampler2D noise_texture2 : hint_default_texture("fbm", 512, 512, 15.0, 3, 4.0, 0.5, 1);
 
 void fragment() {
     vec2 uv = UV;
+
+    // Calculate scale factor for world-space independent tiling
+    // This normalizes the UV so that patterns look the same regardless of mesh scale
+    // A mesh at scale 1400 will have the same pattern density as a mesh at scale 100
+    // tile_size controls how many world units per pattern repeat
+    vec2 world_scale_factor = MESH_WORLD_SCALE / tile_size;
 
     // Calculate wave distortion using noise
     float time_offset = TIME * wave_speed;
@@ -153,34 +132,66 @@ void fragment() {
     // Blend reflection with water color using water_color.a as opacity
     vec4 final_color = mix(reflection, vec4(water_color.rgb, 1.0), water_color.a);
 
-    // Add foam/water texture effect
+    // Add foam/water texture effect (multi-layer like old shader)
     if (enable_water_texture) {
-        vec2 foam_uv = uv * foam_scale + vec2(TIME * foam_speed);
-        float foam = fbm(foam_uv + vec2(TIME * foam_animation_speed * 0.1), foam_layer_count);
-        foam += fbm(foam_uv * 2.0 - vec2(TIME * foam_animation_speed * 0.15), foam_layer_count / 2) * 0.5;
-        foam = foam * foam_intensity;
+        float soft_edge = foam_softness * 0.01;
+        float foam_value = 0.0;
 
-        // Apply turbulence
-        foam += sin(foam * foam_turbulence) * 0.1;
+        // Layer 1: Static base foam (always visible, provides baseline)
+        vec2 foam_uv1 = uv * foam_scale + uv * world_scale_factor;
+        foam_uv1.x += TIME * foam_speed;
+        foam_uv1.y += sin(TIME * foam_speed * 2.0 + uv.x * 3.0) * foam_turbulence * 0.1;
+        float foam1 = texture(noise_texture2, foam_uv1).r;
+        float base_layer = smoothstep(foam_threshold - soft_edge, foam_threshold + soft_edge, foam1);
+        foam_value = base_layer * 0.4;
 
-        // Threshold with softness
-        float foam_edge = smoothstep(foam_threshold - foam_softness, foam_threshold + foam_softness, foam);
-        final_color = mix(final_color, vec4(1.0), foam_edge * 0.3);
+        // Layer 2: Primary animated foam (pulsing)
+        if (foam_layer_count >= 2) {
+            vec2 foam_uv2 = uv * (foam_scale * 0.7) + uv * world_scale_factor * 0.8;
+            foam_uv2.x += TIME * foam_speed * 0.8;
+            foam_uv2.y += TIME * foam_speed * foam_turbulence * 0.25;
+            float foam2 = texture(noise_texture2, foam_uv2).r;
+            float layer2 = smoothstep(foam_threshold - soft_edge, foam_threshold + soft_edge, foam2);
+            float pulse2 = 0.5 + abs(sin(TIME * foam_animation_speed)) * 0.5;
+            foam_value += layer2 * pulse2 * 0.35;
+        }
+
+        // Layer 3: Secondary animated foam (offset phase)
+        if (foam_layer_count >= 3) {
+            vec2 foam_uv3 = uv * (foam_scale * 1.5) + uv * world_scale_factor * 1.2;
+            foam_uv3.x += TIME * foam_speed * 0.4;
+            foam_uv3.y += sin(TIME * foam_speed * 1.5 + uv.x * 5.0) * foam_turbulence * 0.15;
+            float foam3 = texture(noise_texture2, foam_uv3).r;
+            float layer3 = smoothstep(foam_threshold - soft_edge, foam_threshold + soft_edge, foam3);
+            float pulse3 = 0.5 + abs(sin(TIME * foam_animation_speed * 1.3 + 1.57)) * 0.5;
+            foam_value += layer3 * pulse3 * 0.25;
+        }
+
+        // Apply foam intensity
+        final_color.rgb = mix(final_color.rgb, vec3(1.0), foam_value * foam_intensity);
     }
 
-    // Add wetness/caustics effect
+    // Add wetness/caustics effect (dual layer like old shader)
     if (wetness_intensity > 0.0) {
-        vec2 wetness_uv = uv * wetness_scale + vec2(TIME * wetness_speed);
-        vec2 detail_uv = uv * wetness_detail_scale + vec2(TIME * wetness_detail_speed);
+        // Base wetness layer - large scale flowing patterns (uses noise_texture2)
+        vec2 wetness_uv = uv * wetness_scale + uv * world_scale_factor;
+        wetness_uv.x += TIME * wetness_speed;
+        float wetness_base = texture(noise_texture2, wetness_uv).r;
 
-        float wetness = fbm(wetness_uv, 4);
-        float detail = fbm(detail_uv, 3);
+        // Detail wetness layer - fine scale variation (uses noise_texture)
+        vec2 detail_uv = uv * wetness_detail_scale + uv * world_scale_factor * 0.5;
+        detail_uv.x += TIME * wetness_detail_speed;
+        detail_uv.y += sin(TIME * 0.5 + uv.x * 3.0) * 0.02;
+        float wetness_detail = texture(noise_texture, detail_uv).r;
 
-        float caustic = wetness * detail * wetness_intensity;
-        caustic = pow(caustic, wetness_contrast * 0.1) * wetness_brightness;
+        // Combine layers (70% base, 30% detail)
+        float wetness_value = wetness_base * 0.7 + wetness_detail * 0.3;
 
-        vec3 wetness_color = wetness_color_tint * caustic;
-        final_color.rgb += wetness_color * wetness_opacity;
+        // Apply contrast and brightness
+        wetness_value = clamp((wetness_value - 0.5) * wetness_contrast + 0.5 + wetness_brightness, 0.0, 1.0);
+
+        // Apply wetness color
+        final_color.rgb += wetness_color_tint * wetness_value * wetness_intensity * wetness_opacity;
     }
 
     // Apply surface position masking (optional - for partial water coverage)

@@ -14,7 +14,8 @@
  * ```
  */
 
-import { ImGui } from '@mori2003/jsimgui';
+import { ImGui, ImGuiImplWeb, ImTextureRef } from '@mori2003/jsimgui';
+import * as THREE from 'three';
 import type { Entity } from '../../ecs/entity.js';
 import type { RuntimeAsset } from '../../ecs/runtime-asset.js';
 import type {
@@ -45,6 +46,8 @@ import { RuntimeAssetManager } from '../../ecs/runtime-asset-manager.js';
 import { entityPicker } from './entity-picker.js';
 import { renderEventNamePicker } from './event-name-picker.js';
 import { renderComponentNamePicker } from './component-name-picker.js';
+import { DefaultTextureGenerator } from '../../shader/default-texture-generator.js';
+import type { NoiseTextureParams } from '../../shader/vsl/ast.js';
 import type { Events } from '../../ecs/events.js';
 import type { ComponentType } from '../../ecs/component.js';
 
@@ -181,6 +184,73 @@ const pendingAssetSelections = new Map<
 
 // Track pending sprite picker selections (popup ID → result)
 const pendingSpriteSelections = new Map<string, SpriteDefinition | null>();
+
+// ============================================================================
+// Noise Texture Preview Cache
+// ============================================================================
+
+interface NoisePreviewCache {
+  textureId: bigint;
+  texture: THREE.DataTexture;
+  paramsHash: string;
+}
+
+// Cache for generated noise texture previews
+const noisePreviewCache = new Map<string, NoisePreviewCache>();
+
+// Track which previews are expanded (collapsed by default)
+const noisePreviewExpanded = new Map<string, boolean>();
+
+/**
+ * Get or create a noise texture preview for ImGui rendering
+ */
+function getOrCreateNoisePreview(
+  cacheKey: string,
+  params: NoiseTextureParams,
+  renderer: THREE.WebGLRenderer,
+): { textureId: bigint; width: number; height: number } | null {
+  const paramsHash = JSON.stringify(params);
+
+  // Check if we have a cached preview with matching params
+  const cached = noisePreviewCache.get(cacheKey);
+  if (cached && cached.paramsHash === paramsHash) {
+    return { textureId: cached.textureId, width: params.width, height: params.height };
+  }
+
+  // Dispose old texture if params changed
+  if (cached) {
+    cached.texture.dispose();
+    noisePreviewCache.delete(cacheKey);
+  }
+
+  // Generate new noise texture
+  const texture = DefaultTextureGenerator.generate(params);
+
+  // Initialize texture in Three.js
+  renderer.initTexture(texture);
+
+  // Get WebGL texture handle
+  const textureProps = renderer.properties.get(texture) as { __webglTexture?: WebGLTexture };
+  const webglTexture = textureProps.__webglTexture;
+
+  if (!webglTexture) {
+    return null;
+  }
+
+  // Create ImGui texture ID
+  const textureId = ImGuiImplWeb.LoadTexture(undefined, {
+    processFn: () => webglTexture,
+  });
+
+  // Cache it
+  noisePreviewCache.set(cacheKey, {
+    textureId,
+    texture,
+    paramsHash,
+  });
+
+  return { textureId, width: params.width, height: params.height };
+}
 
 // ============================================================================
 // EditorLayout Static Class
@@ -1060,5 +1130,92 @@ export class EditorLayout {
     }
 
     return [newValue, changed];
+  }
+
+  // ==========================================================================
+  // Noise Texture Preview
+  // ==========================================================================
+
+  /**
+   * Render a collapsible noise texture preview
+   * Shows a visual preview of the generated noise texture
+   *
+   * @param label - Label for the preview section
+   * @param params - Noise texture parameters
+   * @param options - Preview options
+   */
+  static noiseTexturePreview(
+    label: string,
+    params: NoiseTextureParams,
+    options?: {
+      /** Preview size in pixels (default: 128) */
+      previewSize?: number;
+      /** Default expanded state (default: false) */
+      defaultExpanded?: boolean;
+      /** Unique ID suffix */
+      id?: string;
+    },
+  ): void {
+    const id = generateUniqueId(label, options?.id);
+    const previewSize = options?.previewSize ?? 128;
+    const cacheKey = `noisePreview_${id}`;
+
+    // Get or set expanded state
+    if (!noisePreviewExpanded.has(cacheKey)) {
+      noisePreviewExpanded.set(cacheKey, options?.defaultExpanded ?? false);
+    }
+
+    // Render collapsible header
+    const isExpanded = noisePreviewExpanded.get(cacheKey) ?? false;
+    const arrow = isExpanded ? '▼' : '▶';
+
+    if (ImGui.SmallButton(`${arrow} ${label}${id}`)) {
+      noisePreviewExpanded.set(cacheKey, !isExpanded);
+    }
+
+    if (!isExpanded) {
+      return;
+    }
+
+    // Get renderer
+    const renderer = getContextRenderer();
+    if (!renderer) {
+      EditorLayout.beginIndent();
+      EditorLayout.textDisabled('(No renderer available)');
+      EditorLayout.endIndent();
+      return;
+    }
+
+    // Get or create preview texture
+    const preview = getOrCreateNoisePreview(cacheKey, params, renderer);
+    if (!preview) {
+      EditorLayout.beginIndent();
+      EditorLayout.textDisabled('(Failed to generate preview)');
+      EditorLayout.endIndent();
+      return;
+    }
+
+    EditorLayout.beginIndent();
+
+    // Calculate display size maintaining aspect ratio
+    const aspectRatio = preview.width / preview.height;
+    let displayWidth = previewSize;
+    let displayHeight = previewSize / aspectRatio;
+
+    if (displayHeight > previewSize) {
+      displayHeight = previewSize;
+      displayWidth = previewSize * aspectRatio;
+    }
+
+    // Render the texture preview
+    ImGui.Image(
+      new ImTextureRef(preview.textureId),
+      { x: displayWidth, y: displayHeight },
+    );
+
+    // Show texture info
+    EditorLayout.textDisabled(`${preview.width}×${preview.height} (${params.type})`);
+
+    EditorLayout.endIndent();
   }
 }

@@ -77,7 +77,79 @@ export type UniformHintType =
   | 'hint_normal' // Normal map texture
   | 'hint_white' // Default white texture
   | 'hint_black' // Default black texture
-  | 'hint_aniso'; // Anisotropy hint
+  | 'hint_aniso' // Anisotropy hint
+  | 'hint_default_texture'; // Auto-generated noise texture
+
+/**
+ * Noise texture types for hint_default_texture
+ */
+export type NoiseTextureType = 'simplex' | 'perlin' | 'white' | 'fbm';
+
+/**
+ * Parameters for simplex noise texture generation
+ * hint_default_texture("simplex", width, height, frequency, offsetX, offsetY, amplitude, seed)
+ */
+export interface SimplexNoiseParams {
+  type: 'simplex';
+  width: number;        // Texture width in pixels (default: 256)
+  height: number;       // Texture height in pixels (default: 256)
+  frequency: number;    // Noise frequency/scale (default: 4.0)
+  offsetX: number;      // X offset for noise sampling (default: 0.0)
+  offsetY: number;      // Y offset for noise sampling (default: 0.0)
+  amplitude: number;    // Noise amplitude/strength (default: 1.0)
+  seed: number;         // Random seed (0 = random) (default: 0)
+}
+
+/**
+ * Parameters for Perlin noise texture generation
+ * hint_default_texture("perlin", width, height, cellSize, levels, attenuation, seed, color, alpha)
+ */
+export interface PerlinNoiseParams {
+  type: 'perlin';
+  width: number;        // Texture width in pixels (default: 256)
+  height: number;       // Texture height in pixels (default: 256)
+  cellSize: number;     // Cell size for Perlin grid (default: 32)
+  levels: number;       // Number of octaves/levels (default: 4)
+  attenuation: number;  // Amplitude reduction per level (default: 0.5)
+  seed: number;         // Random seed (0 = random) (default: 0)
+  color: boolean;       // Generate color noise (default: false)
+  alpha: boolean;       // Include alpha channel variation (default: false)
+}
+
+/**
+ * Parameters for white noise texture generation
+ * hint_default_texture("white", width, height, seed)
+ */
+export interface WhiteNoiseParams {
+  type: 'white';
+  width: number;        // Texture width in pixels (default: 256)
+  height: number;       // Texture height in pixels (default: 256)
+  seed: number;         // Random seed (0 = random) (default: 0)
+}
+
+/**
+ * Parameters for FBM (Fractal Brownian Motion) noise texture generation
+ * hint_default_texture("fbm", width, height, frequency, octaves, lacunarity, gain, seed)
+ */
+export interface FbmNoiseParams {
+  type: 'fbm';
+  width: number;        // Texture width in pixels (default: 256)
+  height: number;       // Texture height in pixels (default: 256)
+  frequency: number;    // Base frequency (default: 4.0)
+  octaves: number;      // Number of octaves (default: 6)
+  lacunarity: number;   // Frequency multiplier per octave (default: 2.0)
+  gain: number;         // Amplitude multiplier per octave (default: 0.5)
+  seed: number;         // Random seed (0 = random) (default: 0)
+}
+
+/**
+ * Union of all noise parameter types
+ */
+export type NoiseTextureParams =
+  | SimplexNoiseParams
+  | PerlinNoiseParams
+  | WhiteNoiseParams
+  | FbmNoiseParams;
 
 /**
  * Uniform hint with optional parameters
@@ -86,6 +158,8 @@ export interface UniformHint {
   type: UniformHintType;
   /** Parameters for hint_range: [min, max, step?] */
   params?: number[];
+  /** Parameters for hint_default_texture - typed noise generation params */
+  noiseParams?: NoiseTextureParams;
 }
 
 /**

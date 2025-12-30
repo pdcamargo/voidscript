@@ -31,6 +31,7 @@ import type {
   VariableDeclaration,
   BlockStatement,
   ReturnStatement,
+  NoiseTextureParams,
 } from './ast.js';
 import {
   getBuiltInsForStage,
@@ -72,6 +73,8 @@ export interface TranspiledUniform {
     type: string;
     params?: number[];
   };
+  /** Noise texture params for hint_default_texture */
+  noiseParams?: NoiseTextureParams;
   /** Whether this is a VSL built-in uniform (TIME, etc.) */
   isBuiltIn: boolean;
 }
@@ -190,6 +193,7 @@ export class Transpiler {
               params: uniform.hint.params,
             }
           : undefined,
+        noiseParams: uniform.hint?.noiseParams,
         isBuiltIn: false,
       });
     }

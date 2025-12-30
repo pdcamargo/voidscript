@@ -209,6 +209,16 @@ export const CANVAS_ITEM_BUILTINS: BuiltInVariable[] = [
     isUniform: true,
     uniformName: 'vsl_meshScreenBounds',
   },
+  {
+    name: 'MESH_WORLD_SCALE',
+    type: 'vec2',
+    stages: ['vertex', 'fragment'],
+    writable: false,
+    glslMapping: 'vsl_meshWorldScale',
+    description: 'Mesh world-space scale (width, height). For sprites, this is the actual rendered size in world units.',
+    isUniform: true,
+    uniformName: 'vsl_meshWorldScale',
+  },
 
   // Global Variables (both stages)
   {

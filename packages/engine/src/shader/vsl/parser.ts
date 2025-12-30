@@ -13,6 +13,12 @@ import type {
   GLSLType,
   UniformHint,
   UniformHintType,
+  NoiseTextureType,
+  NoiseTextureParams,
+  SimplexNoiseParams,
+  PerlinNoiseParams,
+  WhiteNoiseParams,
+  FbmNoiseParams,
   Declaration,
   UniformDeclaration,
   VaryingDeclaration,
@@ -323,7 +329,7 @@ export class Parser {
   }
 
   /**
-   * Parse uniform hint: hint_range(0.0, 1.0) or source_color
+   * Parse uniform hint: hint_range(0.0, 1.0) or source_color or hint_default_texture("simplex", ...)
    */
   private parseUniformHint(): UniformHint {
     if (!this.check(TokenType.Identifier)) {
@@ -341,30 +347,163 @@ export class Parser {
 
     // Check for parameters (e.g., hint_range(0.0, 1.0))
     if (this.match(TokenType.LeftParen)) {
-      hint.params = [];
-      do {
-        // Parse number
-        if (
-          this.check(TokenType.IntLiteral) ||
-          this.check(TokenType.FloatLiteral)
-        ) {
-          hint.params.push(parseFloat(this.advance().value));
-        } else if (this.check(TokenType.Minus)) {
-          // Handle negative numbers
-          this.advance();
+      // Special handling for hint_default_texture
+      if (hintName === 'hint_default_texture') {
+        hint.noiseParams = this.parseNoiseTextureParams();
+      } else {
+        hint.params = [];
+        do {
+          // Parse number
           if (
             this.check(TokenType.IntLiteral) ||
             this.check(TokenType.FloatLiteral)
           ) {
-            hint.params.push(-parseFloat(this.advance().value));
+            hint.params.push(parseFloat(this.advance().value));
+          } else if (this.check(TokenType.Minus)) {
+            // Handle negative numbers
+            this.advance();
+            if (
+              this.check(TokenType.IntLiteral) ||
+              this.check(TokenType.FloatLiteral)
+            ) {
+              hint.params.push(-parseFloat(this.advance().value));
+            }
           }
-        }
-      } while (this.match(TokenType.Comma));
+        } while (this.match(TokenType.Comma));
+      }
 
       this.consume(TokenType.RightParen, 'Expected ")" after hint parameters');
     }
 
     return hint;
+  }
+
+  /**
+   * Parse noise texture parameters for hint_default_texture
+   * Syntax: hint_default_texture("type", param1, param2, ...)
+   *
+   * Supported types and their parameters:
+   * - simplex: width, height, frequency, offsetX, offsetY, amplitude, seed
+   * - perlin: width, height, cellSize, levels, attenuation, seed, color, alpha
+   * - white: width, height, seed
+   * - fbm: width, height, frequency, octaves, lacunarity, gain, seed
+   */
+  private parseNoiseTextureParams(): NoiseTextureParams {
+    // First parameter must be a string (noise type)
+    if (!this.check(TokenType.StringLiteral)) {
+      throw this.error('Expected noise type string (e.g., "simplex", "perlin", "white", "fbm")');
+    }
+
+    const noiseType = this.advance().value as NoiseTextureType;
+    const validTypes = ['simplex', 'perlin', 'white', 'fbm'];
+    if (!validTypes.includes(noiseType)) {
+      throw this.error(`Unknown noise type "${noiseType}". Expected: ${validTypes.join(', ')}`);
+    }
+
+    // Collect remaining numeric and boolean parameters
+    const numericParams: number[] = [];
+    const booleanParams: boolean[] = [];
+
+    while (this.match(TokenType.Comma)) {
+      if (this.check(TokenType.BoolLiteral)) {
+        booleanParams.push(this.advance().value === 'true');
+      } else if (
+        this.check(TokenType.IntLiteral) ||
+        this.check(TokenType.FloatLiteral)
+      ) {
+        numericParams.push(parseFloat(this.advance().value));
+      } else if (this.check(TokenType.Minus)) {
+        // Handle negative numbers
+        this.advance();
+        if (
+          this.check(TokenType.IntLiteral) ||
+          this.check(TokenType.FloatLiteral)
+        ) {
+          numericParams.push(-parseFloat(this.advance().value));
+        }
+      } else {
+        break; // Stop if we hit something unexpected
+      }
+    }
+
+    // Build type-specific params with defaults
+    switch (noiseType) {
+      case 'simplex':
+        return this.buildSimplexParams(numericParams);
+      case 'perlin':
+        return this.buildPerlinParams(numericParams, booleanParams);
+      case 'white':
+        return this.buildWhiteParams(numericParams);
+      case 'fbm':
+        return this.buildFbmParams(numericParams);
+      default:
+        throw this.error(`Unsupported noise type: ${noiseType}`);
+    }
+  }
+
+  /**
+   * Build SimplexNoiseParams with defaults
+   * Order: width, height, frequency, offsetX, offsetY, amplitude, seed
+   */
+  private buildSimplexParams(params: number[]): SimplexNoiseParams {
+    return {
+      type: 'simplex',
+      width: params[0] ?? 256,
+      height: params[1] ?? 256,
+      frequency: params[2] ?? 4.0,
+      offsetX: params[3] ?? 0.0,
+      offsetY: params[4] ?? 0.0,
+      amplitude: params[5] ?? 1.0,
+      seed: params[6] ?? 0,
+    };
+  }
+
+  /**
+   * Build PerlinNoiseParams with defaults
+   * Order: width, height, cellSize, levels, attenuation, seed, then booleans: color, alpha
+   */
+  private buildPerlinParams(numericParams: number[], booleanParams: boolean[]): PerlinNoiseParams {
+    return {
+      type: 'perlin',
+      width: numericParams[0] ?? 256,
+      height: numericParams[1] ?? 256,
+      cellSize: numericParams[2] ?? 32,
+      levels: numericParams[3] ?? 4,
+      attenuation: numericParams[4] ?? 0.5,
+      seed: numericParams[5] ?? 0,
+      color: booleanParams[0] ?? false,
+      alpha: booleanParams[1] ?? false,
+    };
+  }
+
+  /**
+   * Build WhiteNoiseParams with defaults
+   * Order: width, height, seed
+   */
+  private buildWhiteParams(params: number[]): WhiteNoiseParams {
+    return {
+      type: 'white',
+      width: params[0] ?? 256,
+      height: params[1] ?? 256,
+      seed: params[2] ?? 0,
+    };
+  }
+
+  /**
+   * Build FbmNoiseParams with defaults
+   * Order: width, height, frequency, octaves, lacunarity, gain, seed
+   */
+  private buildFbmParams(params: number[]): FbmNoiseParams {
+    return {
+      type: 'fbm',
+      width: params[0] ?? 256,
+      height: params[1] ?? 256,
+      frequency: params[2] ?? 4.0,
+      octaves: params[3] ?? 6,
+      lacunarity: params[4] ?? 2.0,
+      gain: params[5] ?? 0.5,
+      seed: params[6] ?? 0,
+    };
   }
 
   /**

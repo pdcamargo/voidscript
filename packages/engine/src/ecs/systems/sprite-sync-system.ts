@@ -43,6 +43,8 @@ import {
 } from '../../rendering/sprite/index.js';
 import type { ShaderAsset } from '../../shader/shader-asset.js';
 import { ShaderManager } from '../../shader/shader-manager.js';
+import { DefaultTextureGenerator } from '../../shader/default-texture-generator.js';
+import type { NoiseTextureParams } from '../../shader/vsl/ast.js';
 
 /** Standard sprite material type */
 type StandardSpriteMaterial =
@@ -617,6 +619,21 @@ export class SpriteRenderManager {
     // Build uniform overrides from component data
     const uniformOverrides: Record<string, unknown> = {};
 
+    // Auto-generate textures for uniforms with hint_default_texture
+    for (const uniform of shaderAsset.uniforms) {
+      if (uniform.noiseParams && uniform.type === 'sampler2D') {
+        // Check if user has custom noise params in materialData.uniforms
+        const userParams = materialData.uniforms[uniform.name];
+        const noiseParams = this.isNoiseTextureParams(userParams)
+          ? userParams
+          : uniform.noiseParams;
+
+        // Generate noise texture based on params (cached by DefaultTextureGenerator)
+        const generatedTexture = DefaultTextureGenerator.generate(noiseParams);
+        uniformOverrides[uniform.name] = generatedTexture;
+      }
+    }
+
     // Add texture if available
     // Note: TEXTURE is a #define alias to 'map' in the transpiled GLSL
     if (entry.texture) {
@@ -666,10 +683,18 @@ export class SpriteRenderManager {
       shaderManager.trackMaterial(newMaterial);
     }
 
-    // Set up onBeforeRender for MESH_SCREEN_BOUNDS if shader uses it
-    if (newMaterial.uniforms['vsl_meshScreenBounds']) {
-      // Initialize with default bounds
-      newMaterial.uniforms['vsl_meshScreenBounds'].value = new THREE.Vector4(0, 0, 1, 1);
+    // Set up onBeforeRender for MESH_SCREEN_BOUNDS and MESH_WORLD_SCALE if shader uses them
+    const usesMeshScreenBounds = !!newMaterial.uniforms['vsl_meshScreenBounds'];
+    const usesMeshWorldScale = !!newMaterial.uniforms['vsl_meshWorldScale'];
+
+    if (usesMeshScreenBounds || usesMeshWorldScale) {
+      // Initialize uniforms with default values
+      if (usesMeshScreenBounds) {
+        newMaterial.uniforms['vsl_meshScreenBounds']!.value = new THREE.Vector4(0, 0, 1, 1);
+      }
+      if (usesMeshWorldScale) {
+        newMaterial.uniforms['vsl_meshWorldScale']!.value = new THREE.Vector2(1, 1);
+      }
 
       // Store mesh reference for the callback
       const mesh = entry.mesh;
@@ -683,35 +708,48 @@ export class SpriteRenderManager {
       ];
       const tempVec3 = new THREE.Vector3();
 
-      // Set up onBeforeRender to calculate screen-space bounds each frame
+      // Set up onBeforeRender to calculate screen-space bounds and world scale each frame
       mesh.onBeforeRender = (_renderer: THREE.WebGLRenderer, _scene: THREE.Scene, camera: THREE.Camera) => {
         const currentMaterial = mesh.material as THREE.ShaderMaterial;
-        const boundsUniform = currentMaterial.uniforms?.['vsl_meshScreenBounds'];
-        if (!boundsUniform) return;
 
-        // Calculate screen-space bounds by projecting all 4 corners
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-
-        for (const corner of corners) {
-          // Transform corner from local to world space
-          tempVec3.copy(corner);
-          mesh.localToWorld(tempVec3);
-
-          // Project to NDC (-1 to 1)
-          tempVec3.project(camera);
-
-          // Convert to screen UV (0-1 range)
-          const screenX = (tempVec3.x + 1) * 0.5;
-          const screenY = (tempVec3.y + 1) * 0.5;
-
-          minX = Math.min(minX, screenX);
-          minY = Math.min(minY, screenY);
-          maxX = Math.max(maxX, screenX);
-          maxY = Math.max(maxY, screenY);
+        // Update MESH_WORLD_SCALE - the actual world-space size of the mesh
+        // For sprites, mesh.scale represents the rendered size in world units
+        const worldScaleUniform = currentMaterial.uniforms?.['vsl_meshWorldScale'];
+        if (worldScaleUniform) {
+          // Get the absolute world scale (accounting for negative scale from flipX/flipY)
+          (worldScaleUniform.value as THREE.Vector2).set(
+            Math.abs(mesh.scale.x),
+            Math.abs(mesh.scale.y),
+          );
         }
 
-        // Update the uniform (minX, minY, maxX, maxY)
-        (boundsUniform.value as THREE.Vector4).set(minX, minY, maxX, maxY);
+        // Update MESH_SCREEN_BOUNDS
+        const boundsUniform = currentMaterial.uniforms?.['vsl_meshScreenBounds'];
+        if (boundsUniform) {
+          // Calculate screen-space bounds by projecting all 4 corners
+          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+          for (const corner of corners) {
+            // Transform corner from local to world space
+            tempVec3.copy(corner);
+            mesh.localToWorld(tempVec3);
+
+            // Project to NDC (-1 to 1)
+            tempVec3.project(camera);
+
+            // Convert to screen UV (0-1 range)
+            const screenX = (tempVec3.x + 1) * 0.5;
+            const screenY = (tempVec3.y + 1) * 0.5;
+
+            minX = Math.min(minX, screenX);
+            minY = Math.min(minY, screenY);
+            maxX = Math.max(maxX, screenX);
+            maxY = Math.max(maxY, screenY);
+          }
+
+          // Update the uniform (minX, minY, maxX, maxY)
+          (boundsUniform.value as THREE.Vector4).set(minX, minY, maxX, maxY);
+        }
       };
     }
 
@@ -827,6 +865,11 @@ export class SpriteRenderManager {
       return value;
     }
 
+    // Check for NoiseTextureParams - generate texture from params
+    if (this.isNoiseTextureParams(value)) {
+      return DefaultTextureGenerator.generate(value);
+    }
+
     // Check for RuntimeAsset (texture reference)
     if (typeof value === 'object' && 'guid' in value && 'isLoaded' in value) {
       // RuntimeAsset - return loaded texture or null
@@ -892,6 +935,15 @@ export class SpriteRenderManager {
 
   private isColor4(v: unknown): v is { r: number; g: number; b: number; a: number } {
     return typeof v === 'object' && v !== null && 'r' in v && 'g' in v && 'b' in v && 'a' in v;
+  }
+
+  private isNoiseTextureParams(v: unknown): v is NoiseTextureParams {
+    return (
+      v !== null &&
+      typeof v === 'object' &&
+      'type' in v &&
+      (v.type === 'simplex' || v.type === 'perlin' || v.type === 'white' || v.type === 'fbm')
+    );
   }
 
   /**

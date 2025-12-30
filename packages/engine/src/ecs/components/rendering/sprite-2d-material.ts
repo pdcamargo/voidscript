@@ -28,6 +28,7 @@ import { AssetType } from '../../asset-metadata.js';
 import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 import type { ShaderAsset } from '../../../shader/shader-asset.js';
 import type { TranspiledUniform } from '../../../shader/vsl/transpiler.js';
+import type { NoiseTextureParams } from '../../../shader/vsl/ast.js';
 
 /**
  * Serializable uniform value types
@@ -42,6 +43,7 @@ export type UniformValue =
   | { r: number; g: number; b: number }
   | { r: number; g: number; b: number; a: number }
   | RuntimeAsset
+  | NoiseTextureParams
   | null;
 
 export interface Sprite2DMaterialData {
@@ -288,13 +290,316 @@ function vec4ToColor(value: UniformValue): { r: number; g: number; b: number; a:
 }
 
 /**
+ * Check if a value is a NoiseTextureParams object
+ */
+function isNoiseTextureParams(value: unknown): value is NoiseTextureParams {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    'type' in value &&
+    (value.type === 'simplex' || value.type === 'perlin' || value.type === 'white' || value.type === 'fbm')
+  );
+}
+
+/**
+ * Render editor for noise texture parameters (hint_default_texture)
+ */
+function renderNoiseTextureEditor(
+  componentData: Sprite2DMaterialData,
+  uniform: TranspiledUniform,
+): void {
+  const { name, noiseParams } = uniform;
+  if (!noiseParams) return;
+
+  // Get current value or initialize from shader default
+  let currentParams = componentData.uniforms[name];
+  if (!isNoiseTextureParams(currentParams)) {
+    // Initialize with shader's default noise params
+    currentParams = { ...noiseParams };
+    componentData.uniforms[name] = currentParams;
+  }
+
+  // Show noise type (read-only)
+  EditorLayout.text(`${name}:`);
+  EditorLayout.sameLine();
+  EditorLayout.header(`[${currentParams.type} noise]`, { r: 0.5, g: 0.8, b: 1.0 });
+
+  // Render type-specific parameters
+  switch (currentParams.type) {
+    case 'simplex':
+      renderSimplexParams(componentData, name, currentParams);
+      break;
+    case 'perlin':
+      renderPerlinParams(componentData, name, currentParams);
+      break;
+    case 'white':
+      renderWhiteParams(componentData, name, currentParams);
+      break;
+    case 'fbm':
+      renderFbmParams(componentData, name, currentParams);
+      break;
+  }
+
+  // Add collapsible preview
+  EditorLayout.noiseTexturePreview(`Preview (${name})`, currentParams, {
+    previewSize: 128,
+    id: `noise_preview_${name}`,
+  });
+}
+
+/**
+ * Render simplex noise parameters
+ */
+function renderSimplexParams(
+  componentData: Sprite2DMaterialData,
+  uniformName: string,
+  params: NoiseTextureParams & { type: 'simplex' },
+): void {
+  // Size (width x height)
+  const [size, sizeChanged] = EditorLayout.vector2Field('  Size', { x: params.width, y: params.height }, {
+    speed: 1,
+    min: 1,
+    max: 2048,
+    tooltip: 'Texture dimensions (width x height)',
+  });
+  if (sizeChanged) {
+    const updated = { ...params, width: Math.round(size.x), height: Math.round(size.y) };
+    componentData.uniforms[uniformName] = updated;
+  }
+
+  // Frequency
+  const [freq, freqChanged] = EditorLayout.numberField('  Frequency', params.frequency, {
+    speed: 0.1,
+    min: 0.1,
+    max: 100,
+    tooltip: 'Noise frequency/scale',
+  });
+  if (freqChanged) {
+    componentData.uniforms[uniformName] = { ...params, frequency: freq };
+  }
+
+  // Offset
+  const [offset, offsetChanged] = EditorLayout.vector2Field('  Offset', { x: params.offsetX, y: params.offsetY }, {
+    speed: 0.01,
+    tooltip: 'Noise sampling offset',
+  });
+  if (offsetChanged) {
+    componentData.uniforms[uniformName] = { ...params, offsetX: offset.x, offsetY: offset.y };
+  }
+
+  // Amplitude
+  const [amp, ampChanged] = EditorLayout.numberField('  Amplitude', params.amplitude, {
+    speed: 0.01,
+    min: 0,
+    max: 2,
+    tooltip: 'Noise amplitude/strength',
+  });
+  if (ampChanged) {
+    componentData.uniforms[uniformName] = { ...params, amplitude: amp };
+  }
+
+  // Seed
+  const [seed, seedChanged] = EditorLayout.integerField('  Seed', params.seed, {
+    min: 0,
+    tooltip: 'Random seed (0 = random each time)',
+  });
+  if (seedChanged) {
+    componentData.uniforms[uniformName] = { ...params, seed };
+  }
+}
+
+/**
+ * Render Perlin noise parameters
+ */
+function renderPerlinParams(
+  componentData: Sprite2DMaterialData,
+  uniformName: string,
+  params: NoiseTextureParams & { type: 'perlin' },
+): void {
+  // Size
+  const [size, sizeChanged] = EditorLayout.vector2Field('  Size', { x: params.width, y: params.height }, {
+    speed: 1,
+    min: 1,
+    max: 2048,
+    tooltip: 'Texture dimensions',
+  });
+  if (sizeChanged) {
+    componentData.uniforms[uniformName] = { ...params, width: Math.round(size.x), height: Math.round(size.y) };
+  }
+
+  // Cell Size
+  const [cellSize, cellChanged] = EditorLayout.numberField('  Cell Size', params.cellSize, {
+    speed: 1,
+    min: 1,
+    max: 256,
+    tooltip: 'Perlin grid cell size',
+  });
+  if (cellChanged) {
+    componentData.uniforms[uniformName] = { ...params, cellSize };
+  }
+
+  // Levels (octaves)
+  const [levels, levelsChanged] = EditorLayout.integerField('  Levels', params.levels, {
+    min: 1,
+    max: 10,
+    tooltip: 'Number of octaves',
+  });
+  if (levelsChanged) {
+    componentData.uniforms[uniformName] = { ...params, levels };
+  }
+
+  // Attenuation
+  const [atten, attenChanged] = EditorLayout.numberField('  Attenuation', params.attenuation, {
+    speed: 0.01,
+    min: 0,
+    max: 1,
+    tooltip: 'Amplitude reduction per level',
+  });
+  if (attenChanged) {
+    componentData.uniforms[uniformName] = { ...params, attenuation: atten };
+  }
+
+  // Color mode
+  const [color, colorChanged] = EditorLayout.checkboxField('  Color', params.color, {
+    tooltip: 'Generate RGB color noise',
+  });
+  if (colorChanged) {
+    componentData.uniforms[uniformName] = { ...params, color };
+  }
+
+  // Alpha mode
+  const [alpha, alphaChanged] = EditorLayout.checkboxField('  Alpha', params.alpha, {
+    tooltip: 'Include alpha channel variation',
+  });
+  if (alphaChanged) {
+    componentData.uniforms[uniformName] = { ...params, alpha };
+  }
+
+  // Seed
+  const [seed, seedChanged] = EditorLayout.integerField('  Seed', params.seed, {
+    min: 0,
+    tooltip: 'Random seed (0 = random)',
+  });
+  if (seedChanged) {
+    componentData.uniforms[uniformName] = { ...params, seed };
+  }
+}
+
+/**
+ * Render white noise parameters
+ */
+function renderWhiteParams(
+  componentData: Sprite2DMaterialData,
+  uniformName: string,
+  params: NoiseTextureParams & { type: 'white' },
+): void {
+  // Size
+  const [size, sizeChanged] = EditorLayout.vector2Field('  Size', { x: params.width, y: params.height }, {
+    speed: 1,
+    min: 1,
+    max: 2048,
+    tooltip: 'Texture dimensions',
+  });
+  if (sizeChanged) {
+    componentData.uniforms[uniformName] = { ...params, width: Math.round(size.x), height: Math.round(size.y) };
+  }
+
+  // Seed
+  const [seed, seedChanged] = EditorLayout.integerField('  Seed', params.seed, {
+    min: 0,
+    tooltip: 'Random seed (0 = random)',
+  });
+  if (seedChanged) {
+    componentData.uniforms[uniformName] = { ...params, seed };
+  }
+}
+
+/**
+ * Render FBM noise parameters
+ */
+function renderFbmParams(
+  componentData: Sprite2DMaterialData,
+  uniformName: string,
+  params: NoiseTextureParams & { type: 'fbm' },
+): void {
+  // Size
+  const [size, sizeChanged] = EditorLayout.vector2Field('  Size', { x: params.width, y: params.height }, {
+    speed: 1,
+    min: 1,
+    max: 2048,
+    tooltip: 'Texture dimensions',
+  });
+  if (sizeChanged) {
+    componentData.uniforms[uniformName] = { ...params, width: Math.round(size.x), height: Math.round(size.y) };
+  }
+
+  // Frequency
+  const [freq, freqChanged] = EditorLayout.numberField('  Frequency', params.frequency, {
+    speed: 0.1,
+    min: 0.1,
+    max: 100,
+    tooltip: 'Base frequency',
+  });
+  if (freqChanged) {
+    componentData.uniforms[uniformName] = { ...params, frequency: freq };
+  }
+
+  // Octaves
+  const [octaves, octavesChanged] = EditorLayout.integerField('  Octaves', params.octaves, {
+    min: 1,
+    max: 10,
+    tooltip: 'Number of noise layers',
+  });
+  if (octavesChanged) {
+    componentData.uniforms[uniformName] = { ...params, octaves };
+  }
+
+  // Lacunarity
+  const [lac, lacChanged] = EditorLayout.numberField('  Lacunarity', params.lacunarity, {
+    speed: 0.1,
+    min: 1,
+    max: 4,
+    tooltip: 'Frequency multiplier per octave',
+  });
+  if (lacChanged) {
+    componentData.uniforms[uniformName] = { ...params, lacunarity: lac };
+  }
+
+  // Gain
+  const [gain, gainChanged] = EditorLayout.numberField('  Gain', params.gain, {
+    speed: 0.01,
+    min: 0,
+    max: 1,
+    tooltip: 'Amplitude multiplier per octave',
+  });
+  if (gainChanged) {
+    componentData.uniforms[uniformName] = { ...params, gain };
+  }
+
+  // Seed
+  const [seed, seedChanged] = EditorLayout.integerField('  Seed', params.seed, {
+    min: 0,
+    tooltip: 'Random seed (0 = random)',
+  });
+  if (seedChanged) {
+    componentData.uniforms[uniformName] = { ...params, seed };
+  }
+}
+
+/**
  * Render an editor for a single uniform based on its type and hints
  */
 function renderUniformEditor(
   componentData: Sprite2DMaterialData,
   uniform: TranspiledUniform,
 ): void {
-  const { name, type, defaultValue, hint } = uniform;
+  const { name, type, defaultValue, hint, noiseParams } = uniform;
+
+  // Handle hint_default_texture specially - render noise params editor
+  if (noiseParams && type === 'sampler2D') {
+    renderNoiseTextureEditor(componentData, uniform);
+    return;
+  }
 
   // Get current value or initialize from shader default
   let currentValue = componentData.uniforms[name];
