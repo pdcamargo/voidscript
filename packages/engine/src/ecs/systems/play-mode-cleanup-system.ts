@@ -31,6 +31,7 @@ import { Physics2DContext } from '../../physics/2d/physics-2d-context.js';
 import { Physics3DContext } from '../../physics/3d/physics-3d-context.js';
 import { UIManager } from '../../ui/ui-manager.js';
 import { clearUITracking } from '../../ui/ui-systems.js';
+import { ShaderManager } from '../../shader/shader-manager.js';
 
 /**
  * Dispose all render managers
@@ -111,6 +112,16 @@ function disposeAllRenderManagers(commands: Command): void {
 
   // Clear UI tracking maps (separate from UIManager as they track entity -> Three.js object mappings)
   clearUITracking();
+
+  // ShaderManager - Clear tracked materials (they were disposed with sprite/render managers)
+  // Note: We only clear tracked materials, not the shader registry or elapsed time
+  // This ensures TIME continues to work after play mode stops
+  const shaderManager = commands.tryGetResource(ShaderManager);
+  if (shaderManager) {
+    // Clear tracked materials since they were disposed
+    // Don't call full dispose() as we want to keep elapsed time running
+    shaderManager.clearTrackedMaterials();
+  }
 
   console.log('[PlayModeCleanup] Disposed all render managers, physics contexts, and UI');
 }

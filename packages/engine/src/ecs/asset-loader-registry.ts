@@ -251,3 +251,46 @@ AssetLoaderRegistry.register(AssetType.Prefab, async (asset) => {
 
   return prefabData;
 });
+
+/**
+ * Default loader for Shader assets (.vsl files)
+ * Fetches VSL source and compiles into ShaderAsset
+ * Also updates asset metadata with shader information (uniforms, functions, etc.)
+ */
+AssetLoaderRegistry.register(AssetType.Shader, async (asset) => {
+  const url = asset.getLoadableUrl();
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`[ShaderLoader] Failed to load shader from "${url}": ${response.statusText}`);
+  }
+
+  const source = await response.text();
+
+  // Dynamically import to avoid circular dependencies
+  const { ShaderAsset } = await import('../shader/shader-asset.js');
+  const { isShaderMetadata } = await import('./asset-metadata.js');
+
+  const shaderAsset = ShaderAsset.fromSource(source);
+
+  // Update the asset metadata with shader information from the compiled result
+  // This enables the editor to show uniform editors and other shader-specific UI
+  if (isShaderMetadata(asset.metadata)) {
+    const metadata = asset.metadata;
+
+    // Update shader type from the actual compiled shader
+    metadata.shaderType = shaderAsset.shaderType as 'canvas_item' | 'spatial' | 'particles';
+
+    // Extract user-defined uniform names (exclude built-ins)
+    metadata.uniformNames = shaderAsset.userUniformNames;
+
+    // Update function presence flags
+    metadata.hasVertexFunction = shaderAsset.hasVertexFunction;
+    metadata.hasFragmentFunction = shaderAsset.hasFragmentFunction;
+
+    // Update render modes
+    metadata.renderModes = shaderAsset.renderModes;
+  }
+
+  return shaderAsset;
+});

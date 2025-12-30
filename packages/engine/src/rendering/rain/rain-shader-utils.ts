@@ -9,6 +9,11 @@
  * - Hash-based procedural droplet generation for pixel-art style
  * - Multi-layer depth rendering (near/mid/far)
  * - Lightning flash overlay
+ *
+ * TODO: Migrate to VoidShader Language (VSL)
+ * This shader can be rewritten as a .vsl file using the new shader system.
+ * See packages/engine/src/shader/built-in-shaders/ for examples.
+ * Migration benefits: Better tooling, uniform hints for editor, shader library includes.
  */
 
 import * as THREE from 'three';

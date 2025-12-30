@@ -1,0 +1,23 @@
+// Wave Shader - Simple vertex wave effect
+// Makes sprites wobble like they're underwater or floating
+
+shader_type canvas_item;
+render_mode unshaded;
+
+uniform float wave_speed : hint_range(0.5, 5.0) = 2.0;
+uniform float wave_amplitude : hint_range(0.0, 0.2) = 0.05;
+uniform float wave_frequency : hint_range(1.0, 10.0) = 4.0;
+
+void vertex() {
+    // Create a wave offset based on time and vertex position
+    float wave = sin(TIME * wave_speed + VERTEX.x * wave_frequency) * wave_amplitude;
+    VERTEX.y += wave;
+}
+
+void fragment() {
+    // Sample the sprite texture
+    vec4 tex_color = texture(TEXTURE, UV);
+
+    // Multiply by vertex color (tint)
+    COLOR = tex_color * COLOR;
+}

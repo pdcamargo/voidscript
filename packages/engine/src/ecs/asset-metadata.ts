@@ -23,6 +23,7 @@ export enum AssetType {
   TiledMap = 'tiledmap',
   Animation = 'animation',
   Audio = 'audio',
+  Shader = 'shader',
   BlueprintScript = 'blueprint-script',
   BlueprintShader = 'blueprint-shader',
   BlueprintAnimation = 'blueprint-animation',
@@ -496,6 +497,37 @@ export interface AudioAssetMetadata extends BaseAssetMetadata {
 }
 
 /**
+ * VoidShader Language (VSL) shader types
+ */
+export type VSLShaderType = 'canvas_item' | 'spatial' | 'particles';
+
+/**
+ * Shader asset metadata interface
+ * Supports VoidShader Language (.vsl) files
+ */
+export interface ShaderMetadata extends BaseAssetMetadata {
+  type: AssetType.Shader;
+
+  /** Shader type (canvas_item = 2D, spatial = 3D, particles = GPU particles) */
+  shaderType: VSLShaderType;
+
+  /** Render modes active in this shader (e.g., 'unshaded', 'blend_add') */
+  renderModes?: string[];
+
+  /** User-defined uniform names in this shader */
+  uniformNames?: string[];
+
+  /** Whether this shader has a vertex function */
+  hasVertexFunction?: boolean;
+
+  /** Whether this shader has a fragment function */
+  hasFragmentFunction?: boolean;
+
+  /** Shader description/documentation */
+  description?: string;
+}
+
+/**
  * Unknown asset metadata (fallback for unsupported types)
  */
 export interface UnknownAssetMetadata extends BaseAssetMetadata {
@@ -513,6 +545,7 @@ export type AssetMetadata =
   | TiledMapMetadata
   | AnimationMetadata
   | AudioAssetMetadata
+  | ShaderMetadata
   | BlueprintScriptMetadata
   | BlueprintShaderMetadata
   | BlueprintAnimationMetadata
@@ -616,6 +649,15 @@ export function isAudioAssetMetadata(
   metadata: AssetMetadata,
 ): metadata is AudioAssetMetadata {
   return metadata.type === AssetType.Audio;
+}
+
+/**
+ * Type guard for ShaderMetadata
+ */
+export function isShaderMetadata(
+  metadata: AssetMetadata,
+): metadata is ShaderMetadata {
+  return metadata.type === AssetType.Shader;
 }
 
 /**

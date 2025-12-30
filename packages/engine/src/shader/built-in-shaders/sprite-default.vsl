@@ -1,0 +1,19 @@
+// Default Sprite Shader
+// A basic sprite shader that matches the default SpriteMeshBasicMaterial behavior.
+// Use this as a starting point for custom sprite shaders.
+
+shader_type canvas_item;
+render_mode unshaded;
+
+void vertex() {
+    // Default vertex pass-through
+    // VERTEX is already in local space
+}
+
+void fragment() {
+    // Sample texture at current UV
+    vec4 tex_color = texture(TEXTURE, UV);
+
+    // Multiply by vertex color (tint)
+    COLOR = tex_color * COLOR;
+}

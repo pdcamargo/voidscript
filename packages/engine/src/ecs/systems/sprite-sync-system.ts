@@ -30,19 +30,45 @@ import {
   calculateAnchorOffset,
   type Sprite2DData,
 } from '../components/rendering/sprite-2d.js';
+import {
+  Sprite2DMaterial,
+  type Sprite2DMaterialData,
+  type UniformValue,
+} from '../components/rendering/sprite-2d-material.js';
 import { RenderObject } from '../components/rendering/render-object.js';
 import { loadTexture, type TextureLoadOptions } from '../../loaders/texture-loader.js';
 import {
   SpriteMeshBasicMaterial,
   SpriteMeshLambertMaterial,
 } from '../../rendering/sprite/index.js';
+import type { ShaderAsset } from '../../shader/shader-asset.js';
+import { ShaderManager } from '../../shader/shader-manager.js';
+
+/** Standard sprite material type */
+type StandardSpriteMaterial =
+  | InstanceType<typeof SpriteMeshBasicMaterial>
+  | InstanceType<typeof SpriteMeshLambertMaterial>;
+
+/** Any sprite material (standard or custom shader) */
+type AnySpriteMaterial = StandardSpriteMaterial | THREE.ShaderMaterial;
+
+/**
+ * Type guard to check if a material is a standard sprite material
+ * (has color, map, rect, tile properties)
+ */
+function isStandardSpriteMaterial(material: AnySpriteMaterial): material is StandardSpriteMaterial {
+  return (
+    material instanceof SpriteMeshBasicMaterial ||
+    material instanceof SpriteMeshLambertMaterial
+  );
+}
 
 /**
  * Internal sprite entry tracking a Three.js mesh and its state
  */
 interface SpriteEntry {
   mesh: THREE.Mesh;
-  material: InstanceType<typeof SpriteMeshBasicMaterial> | InstanceType<typeof SpriteMeshLambertMaterial>;
+  material: AnySpriteMaterial;
   geometry: THREE.PlaneGeometry;
   texture: THREE.Texture | null;
   textureUrl: string | null;
@@ -52,6 +78,15 @@ interface SpriteEntry {
   lastTileSize: { x: number; y: number } | null;
   lastTilesetSize: { x: number; y: number } | null;
   lastSpriteRect: { x: number; y: number; width: number; height: number } | null;
+  /** Custom shader state tracking */
+  customShader: {
+    /** GUID of the current shader asset */
+    shaderGuid: string | null;
+    /** Whether custom shader is enabled */
+    enabled: boolean;
+    /** Last uniform values (for change detection) */
+    lastUniforms: Record<string, unknown>;
+  };
 }
 
 /**
@@ -126,6 +161,11 @@ export class SpriteRenderManager {
       lastTileSize: spriteData.tileSize ?? null,
       lastTilesetSize: spriteData.tilesetSize ?? null,
       lastSpriteRect: spriteData.spriteRect ?? null,
+      customShader: {
+        shaderGuid: null,
+        enabled: false,
+        lastUniforms: {},
+      },
     };
     this.sprites.set(entity, entry);
 
@@ -155,7 +195,10 @@ export class SpriteRenderManager {
     // Check if lighting mode changed - recreate material if needed
     const isLit = spriteData.isLit ?? false;
     const currentIsLit = material instanceof SpriteMeshLambertMaterial;
-    if (isLit !== currentIsLit) {
+    const isCustomShader = material instanceof THREE.ShaderMaterial && !(material instanceof SpriteMeshBasicMaterial) && !(material instanceof SpriteMeshLambertMaterial);
+
+    // Don't recreate material if using custom shader - custom shaders handle their own lighting
+    if (isLit !== currentIsLit && !isCustomShader) {
       this.recreateMaterial(entity, spriteData);
       return; // Material recreated, updateSprite will be called again
     }
@@ -234,10 +277,6 @@ export class SpriteRenderManager {
 
     mesh.rotation.set(transform.rotation.x, transform.rotation.y, transform.rotation.z);
 
-    // Update material color and opacity
-    material.color.setRGB(spriteData.color.r, spriteData.color.g, spriteData.color.b);
-    material.opacity = spriteData.color.a;
-
     // Update visibility
     mesh.visible = spriteData.visible;
 
@@ -251,55 +290,63 @@ export class SpriteRenderManager {
       entry.lastSortingOrder = spriteData.sortingOrder;
     }
 
-    // Check if spriteRect changed
-    const spriteRectChanged =
-      spriteData.spriteRect?.x !== entry.lastSpriteRect?.x ||
-      spriteData.spriteRect?.y !== entry.lastSpriteRect?.y ||
-      spriteData.spriteRect?.width !== entry.lastSpriteRect?.width ||
-      spriteData.spriteRect?.height !== entry.lastSpriteRect?.height;
+    // Only update standard material properties if using standard material
+    // Custom shader materials handle these through uniforms in updateCustomShader
+    if (isStandardSpriteMaterial(material)) {
+      // Update material color and opacity
+      material.color.setRGB(spriteData.color.r, spriteData.color.g, spriteData.color.b);
+      material.opacity = spriteData.color.a;
 
-    // Update UV mapping based on sprite mode (rect takes precedence over tile)
-    if (spriteData.spriteRect && entry.texture) {
-      // Rect-based sprite
-      if (spriteRectChanged) {
-        const image = entry.texture.image as { width?: number; height?: number } | null;
-        const textureSize = {
-          x: image?.width ?? 1,
-          y: image?.height ?? 1,
-        };
-        material.rect({
-          rect: spriteData.spriteRect,
-          textureSize,
-        });
-        entry.lastSpriteRect = { ...spriteData.spriteRect };
-        // Clear tile tracking when using rect
-        entry.lastTileIndex = null;
-        entry.lastTileSize = null;
-        entry.lastTilesetSize = null;
-      }
-    } else {
-      // Tile-based sprite
-      const tileIndexChanged = spriteData.tileIndex !== entry.lastTileIndex;
-      const tileSizeChanged =
-        spriteData.tileSize?.x !== entry.lastTileSize?.x ||
-        spriteData.tileSize?.y !== entry.lastTileSize?.y;
-      const tilesetSizeChanged =
-        spriteData.tilesetSize?.x !== entry.lastTilesetSize?.x ||
-        spriteData.tilesetSize?.y !== entry.lastTilesetSize?.y;
+      // Check if spriteRect changed
+      const spriteRectChanged =
+        spriteData.spriteRect?.x !== entry.lastSpriteRect?.x ||
+        spriteData.spriteRect?.y !== entry.lastSpriteRect?.y ||
+        spriteData.spriteRect?.width !== entry.lastSpriteRect?.width ||
+        spriteData.spriteRect?.height !== entry.lastSpriteRect?.height;
 
-      if (tileIndexChanged || tileSizeChanged || tilesetSizeChanged) {
-        if (spriteData.tileIndex !== null && spriteData.tileSize && spriteData.tilesetSize) {
-          material.tile({
-            tile: spriteData.tileIndex,
-            tileSize: spriteData.tileSize,
-            tilesetSize: spriteData.tilesetSize,
+      // Update UV mapping based on sprite mode (rect takes precedence over tile)
+      if (spriteData.spriteRect && entry.texture) {
+        // Rect-based sprite
+        if (spriteRectChanged) {
+          const image = entry.texture.image as { width?: number; height?: number } | null;
+          const textureSize = {
+            x: image?.width ?? 1,
+            y: image?.height ?? 1,
+          };
+          material.rect({
+            rect: spriteData.spriteRect,
+            textureSize,
           });
+          entry.lastSpriteRect = { ...spriteData.spriteRect };
+          // Clear tile tracking when using rect
+          entry.lastTileIndex = null;
+          entry.lastTileSize = null;
+          entry.lastTilesetSize = null;
         }
-        entry.lastTileIndex = spriteData.tileIndex;
-        entry.lastTileSize = spriteData.tileSize ?? null;
-        entry.lastTilesetSize = spriteData.tilesetSize ?? null;
-        // Clear rect tracking when using tile
-        entry.lastSpriteRect = null;
+      } else {
+        // Tile-based sprite
+        const tileIndexChanged = spriteData.tileIndex !== entry.lastTileIndex;
+        const tileSizeChanged =
+          spriteData.tileSize?.x !== entry.lastTileSize?.x ||
+          spriteData.tileSize?.y !== entry.lastTileSize?.y;
+        const tilesetSizeChanged =
+          spriteData.tilesetSize?.x !== entry.lastTilesetSize?.x ||
+          spriteData.tilesetSize?.y !== entry.lastTilesetSize?.y;
+
+        if (tileIndexChanged || tileSizeChanged || tilesetSizeChanged) {
+          if (spriteData.tileIndex !== null && spriteData.tileSize && spriteData.tilesetSize) {
+            material.tile({
+              tile: spriteData.tileIndex,
+              tileSize: spriteData.tileSize,
+              tilesetSize: spriteData.tilesetSize,
+            });
+          }
+          entry.lastTileIndex = spriteData.tileIndex;
+          entry.lastTileSize = spriteData.tileSize ?? null;
+          entry.lastTilesetSize = spriteData.tilesetSize ?? null;
+          // Clear rect tracking when using tile
+          entry.lastSpriteRect = null;
+        }
       }
     }
 
@@ -397,7 +444,15 @@ export class SpriteRenderManager {
 
     // Clear old texture
     if (entry.texture) {
-      entry.material.map = null;
+      if (isStandardSpriteMaterial(entry.material)) {
+        entry.material.map = null;
+      } else {
+        // For shader materials, clear texture uniforms (map is the actual uniform name)
+        const shaderMaterial = entry.material as THREE.ShaderMaterial;
+        if (shaderMaterial.uniforms['map']) {
+          shaderMaterial.uniforms['map'].value = null;
+        }
+      }
       entry.material.needsUpdate = true;
       // Don't dispose - might be shared
     }
@@ -406,7 +461,15 @@ export class SpriteRenderManager {
 
     if (!textureUrl) {
       entry.texture = null;
-      entry.material.map = null;
+      if (isStandardSpriteMaterial(entry.material)) {
+        entry.material.map = null;
+      } else {
+        // For shader materials, clear texture uniforms (map is the actual uniform name)
+        const shaderMaterial = entry.material as THREE.ShaderMaterial;
+        if (shaderMaterial.uniforms['map']) {
+          shaderMaterial.uniforms['map'].value = null;
+        }
+      }
       entry.material.needsUpdate = true;
       return;
     }
@@ -428,30 +491,358 @@ export class SpriteRenderManager {
 
       // Apply texture to material
       entry.texture = texture;
-      entry.material.map = texture;
-      entry.material.needsUpdate = true;
 
-      // Apply UV mapping (rect takes precedence over tile)
-      if (spriteData.spriteRect) {
+      if (isStandardSpriteMaterial(entry.material)) {
+        entry.material.map = texture;
+        entry.material.needsUpdate = true;
+
+        // Apply UV mapping (rect takes precedence over tile)
+        if (spriteData.spriteRect) {
+          const image = texture.image as { width?: number; height?: number } | null;
+          const textureSize = {
+            x: image?.width ?? 1,
+            y: image?.height ?? 1,
+          };
+          entry.material.rect({
+            rect: spriteData.spriteRect,
+            textureSize,
+          });
+        } else if (spriteData.tileIndex !== null && spriteData.tileSize && spriteData.tilesetSize) {
+          entry.material.tile({
+            tile: spriteData.tileIndex,
+            tileSize: spriteData.tileSize,
+            tilesetSize: spriteData.tilesetSize,
+          });
+        }
+      } else {
+        // For shader materials, update texture uniforms (map is the actual uniform name)
+        const shaderMaterial = entry.material as THREE.ShaderMaterial;
+        if (shaderMaterial.uniforms['map']) {
+          shaderMaterial.uniforms['map'].value = texture;
+        }
+        // Update texture size uniform
         const image = texture.image as { width?: number; height?: number } | null;
-        const textureSize = {
-          x: image?.width ?? 1,
-          y: image?.height ?? 1,
-        };
-        entry.material.rect({
-          rect: spriteData.spriteRect,
-          textureSize,
-        });
-      } else if (spriteData.tileIndex !== null && spriteData.tileSize && spriteData.tilesetSize) {
-        entry.material.tile({
-          tile: spriteData.tileIndex,
-          tileSize: spriteData.tileSize,
-          tilesetSize: spriteData.tilesetSize,
-        });
+        if (image) {
+          const textureSize = new THREE.Vector2(image.width ?? 1, image.height ?? 1);
+          if (shaderMaterial.uniforms['vsl_textureSize']) {
+            shaderMaterial.uniforms['vsl_textureSize'].value = textureSize;
+          }
+        }
+        entry.material.needsUpdate = true;
       }
     } catch (error) {
       console.warn(`Failed to load texture for sprite entity ${entity}:`, error);
     }
+  }
+
+  /**
+   * Update custom shader material for a sprite
+   *
+   * @param entity - Entity to update
+   * @param spriteData - Sprite2D component data
+   * @param materialData - Sprite2DMaterial component data (or null if not present)
+   * @param shaderManager - ShaderManager resource (optional, for time uniforms)
+   */
+  updateCustomShader(
+    entity: Entity,
+    spriteData: Sprite2DData,
+    materialData: Sprite2DMaterialData | null,
+    shaderManager?: ShaderManager | null,
+  ): void {
+    const entry = this.sprites.get(entity);
+    if (!entry) return;
+
+    // Trigger shader loading if not already loaded
+    if (
+      materialData !== null &&
+      materialData.enabled &&
+      materialData.shader !== null &&
+      !materialData.shader.isLoaded &&
+      !materialData.shader.isLoading
+    ) {
+      // Start loading the shader asset asynchronously
+      materialData.shader.load().catch((error) => {
+        console.error(`[SpriteRenderManager] Failed to load shader: ${error}`);
+      });
+    }
+
+    // Determine if we should use custom shader
+    const shouldUseCustomShader =
+      materialData !== null &&
+      materialData.enabled &&
+      materialData.shader !== null &&
+      materialData.shader.isLoaded;
+
+    const currentShaderGuid = shouldUseCustomShader ? materialData!.shader!.guid : null;
+    const shaderChanged = currentShaderGuid !== entry.customShader.shaderGuid;
+    const enabledChanged = shouldUseCustomShader !== entry.customShader.enabled;
+
+    // Handle shader switching
+    if (shaderChanged || enabledChanged) {
+      if (shouldUseCustomShader && materialData!.shader!.data) {
+        // Switch to custom shader material
+        const shaderAsset = materialData!.shader!.data as ShaderAsset;
+        this.switchToCustomShader(entity, spriteData, shaderAsset, materialData!, shaderManager);
+      } else {
+        // Switch back to standard material
+        this.switchToStandardMaterial(entity, spriteData);
+      }
+
+      entry.customShader.shaderGuid = currentShaderGuid;
+      entry.customShader.enabled = shouldUseCustomShader;
+    }
+
+    // Update custom shader uniforms if using custom shader
+    if (shouldUseCustomShader && entry.material instanceof THREE.ShaderMaterial) {
+      this.updateShaderUniforms(entry, spriteData, materialData!);
+    }
+  }
+
+  /**
+   * Switch sprite to use a custom shader material
+   */
+  private switchToCustomShader(
+    entity: Entity,
+    spriteData: Sprite2DData,
+    shaderAsset: ShaderAsset,
+    materialData: Sprite2DMaterialData,
+    shaderManager?: ShaderManager | null,
+  ): void {
+    const entry = this.sprites.get(entity);
+    if (!entry) return;
+
+    // Dispose old material
+    entry.material.dispose();
+
+    // Build uniform overrides from component data
+    const uniformOverrides: Record<string, unknown> = {};
+
+    // Add texture if available
+    // Note: TEXTURE is a #define alias to 'map' in the transpiled GLSL
+    if (entry.texture) {
+      uniformOverrides['map'] = entry.texture;
+
+      const image = entry.texture.image as { width?: number; height?: number } | null;
+      if (image) {
+        uniformOverrides['vsl_textureSize'] = new THREE.Vector2(
+          image.width ?? 1,
+          image.height ?? 1,
+        );
+      }
+    }
+
+    // Add color
+    uniformOverrides['COLOR'] = new THREE.Vector4(
+      spriteData.color.r,
+      spriteData.color.g,
+      spriteData.color.b,
+      spriteData.color.a,
+    );
+    uniformOverrides['vsl_color'] = uniformOverrides['COLOR'];
+
+    // Add sprite sheet uniforms
+    if (spriteData.tileIndex !== null && spriteData.tileSize && spriteData.tilesetSize) {
+      uniformOverrides['tileIndex'] = spriteData.tileIndex;
+      uniformOverrides['tileSize'] = new THREE.Vector2(spriteData.tileSize.x, spriteData.tileSize.y);
+      uniformOverrides['tilesetSize'] = new THREE.Vector2(spriteData.tilesetSize.x, spriteData.tilesetSize.y);
+    }
+
+    // Add custom uniforms from component
+    for (const [name, value] of Object.entries(materialData.uniforms)) {
+      uniformOverrides[name] = this.convertUniformValue(value);
+    }
+
+    // Create new shader material
+    const newMaterial = shaderAsset.createMaterial(uniformOverrides);
+
+    // Apply standard sprite material settings
+    newMaterial.transparent = true;
+    newMaterial.depthTest = false;
+    newMaterial.depthWrite = false;
+    newMaterial.side = THREE.DoubleSide;
+
+    // Track material for TIME updates if shader manager available
+    if (shaderManager) {
+      shaderManager.trackMaterial(newMaterial);
+    }
+
+    // Update mesh and entry
+    entry.mesh.material = newMaterial;
+    entry.material = newMaterial;
+    entry.customShader.lastUniforms = { ...materialData.uniforms };
+  }
+
+  /**
+   * Switch sprite back to standard material
+   */
+  private switchToStandardMaterial(entity: Entity, spriteData: Sprite2DData): void {
+    const entry = this.sprites.get(entity);
+    if (!entry) return;
+
+    // Dispose old material
+    entry.material.dispose();
+
+    const isLit = spriteData.isLit ?? false;
+
+    // Create new standard material
+    let newMaterial: StandardSpriteMaterial;
+    if (isLit) {
+      newMaterial = new SpriteMeshLambertMaterial({
+        color: new THREE.Color(spriteData.color.r, spriteData.color.g, spriteData.color.b),
+        transparent: true,
+        opacity: spriteData.color.a,
+        depthTest: false,
+        depthWrite: false,
+        map: entry.texture,
+      });
+    } else {
+      newMaterial = new SpriteMeshBasicMaterial({
+        color: new THREE.Color(spriteData.color.r, spriteData.color.g, spriteData.color.b),
+        transparent: true,
+        opacity: spriteData.color.a,
+        depthTest: false,
+        depthWrite: false,
+        map: entry.texture,
+      });
+    }
+
+    // Reapply UV mapping
+    if (spriteData.spriteRect && entry.texture) {
+      const image = entry.texture.image as { width?: number; height?: number } | null;
+      const textureSize = {
+        x: image?.width ?? 1,
+        y: image?.height ?? 1,
+      };
+      newMaterial.rect({
+        rect: spriteData.spriteRect,
+        textureSize,
+      });
+    } else if (spriteData.tileIndex !== null && spriteData.tileSize && spriteData.tilesetSize) {
+      newMaterial.tile({
+        tile: spriteData.tileIndex,
+        tileSize: spriteData.tileSize,
+        tilesetSize: spriteData.tilesetSize,
+      });
+    }
+
+    // Update mesh and entry
+    entry.mesh.material = newMaterial;
+    entry.material = newMaterial;
+    entry.customShader.lastUniforms = {};
+  }
+
+  /**
+   * Update shader uniforms from component data
+   */
+  private updateShaderUniforms(
+    entry: SpriteEntry,
+    spriteData: Sprite2DData,
+    materialData: Sprite2DMaterialData,
+  ): void {
+    const material = entry.material as THREE.ShaderMaterial;
+
+    // Update color
+    const colorUniform = material.uniforms['COLOR'] || material.uniforms['vsl_color'];
+    if (colorUniform) {
+      (colorUniform.value as THREE.Vector4).set(
+        spriteData.color.r,
+        spriteData.color.g,
+        spriteData.color.b,
+        spriteData.color.a,
+      );
+    }
+
+    // Update texture if changed (map is the actual uniform name)
+    if (entry.texture && material.uniforms['map']) {
+      material.uniforms['map'].value = entry.texture;
+    }
+
+    // Update custom uniforms
+    for (const [name, value] of Object.entries(materialData.uniforms)) {
+      if (material.uniforms[name]) {
+        const convertedValue = this.convertUniformValue(value);
+        material.uniforms[name].value = convertedValue;
+      }
+    }
+  }
+
+  /**
+   * Convert component uniform value to THREE.js type
+   */
+  private convertUniformValue(value: UniformValue): unknown {
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return value;
+    }
+
+    // Check for RuntimeAsset (texture reference)
+    if (typeof value === 'object' && 'guid' in value && 'isLoaded' in value) {
+      // RuntimeAsset - return loaded texture or null
+      return value.isLoaded ? value.data : null;
+    }
+
+    // Type check using plain object property checks to avoid TypeScript narrowing issues
+    if (typeof value === 'object') {
+      const obj = value as Record<string, unknown>;
+
+      // Check for color types first (has 'r' property)
+      if ('r' in obj && 'g' in obj && 'b' in obj) {
+        const r = obj['r'] as number;
+        const g = obj['g'] as number;
+        const b = obj['b'] as number;
+        if ('a' in obj) {
+          // Color4 (as Vector4)
+          const a = obj['a'] as number;
+          return new THREE.Vector4(r, g, b, a);
+        }
+        // Color3
+        return new THREE.Color(r, g, b);
+      }
+
+      // Check for vector types (has 'x' property)
+      if ('x' in obj && 'y' in obj) {
+        const x = obj['x'] as number;
+        const y = obj['y'] as number;
+        if ('z' in obj) {
+          const z = obj['z'] as number;
+          if ('w' in obj) {
+            // Vector4
+            const w = obj['w'] as number;
+            return new THREE.Vector4(x, y, z, w);
+          }
+          // Vector3
+          return new THREE.Vector3(x, y, z);
+        }
+        // Vector2
+        return new THREE.Vector2(x, y);
+      }
+    }
+
+    return value;
+  }
+
+  // Type guards for uniform values
+  private isVec2(v: unknown): v is { x: number; y: number } {
+    return typeof v === 'object' && v !== null && 'x' in v && 'y' in v && !('z' in v) && !('r' in v);
+  }
+
+  private isVec3(v: unknown): v is { x: number; y: number; z: number } {
+    return typeof v === 'object' && v !== null && 'x' in v && 'y' in v && 'z' in v && !('w' in v);
+  }
+
+  private isVec4(v: unknown): v is { x: number; y: number; z: number; w: number } {
+    return typeof v === 'object' && v !== null && 'x' in v && 'y' in v && 'z' in v && 'w' in v;
+  }
+
+  private isColor3(v: unknown): v is { r: number; g: number; b: number } {
+    return typeof v === 'object' && v !== null && 'r' in v && 'g' in v && 'b' in v && !('a' in v);
+  }
+
+  private isColor4(v: unknown): v is { r: number; g: number; b: number; a: number } {
+    return typeof v === 'object' && v !== null && 'r' in v && 'g' in v && 'b' in v && 'a' in v;
   }
 
   /**
@@ -542,6 +933,7 @@ export class SpriteRenderManager {
  *
  * Sprites use mesh-based rendering with custom sprite materials.
  * Lit sprites (isLit: true) automatically respond to THREE.js lights in the scene.
+ * Custom shaders can be applied via the Sprite2DMaterial component.
  *
  * @example
  * ```typescript
@@ -552,6 +944,7 @@ export class SpriteRenderManager {
  */
 export const spriteSyncSystem = system(({ commands }) => {
   const spriteManager = commands.getResource(SpriteRenderManager);
+  const shaderManager = commands.tryGetResource(ShaderManager);
 
   // 1. Create sprites for new Sprite2D entities (have Sprite2D + Transform3D but no RenderObject)
   commands
@@ -563,10 +956,11 @@ export const spriteSyncSystem = system(({ commands }) => {
       commands.entity(entity).addComponent(RenderObject, { handle });
     });
 
-  // 2. Update existing sprites
+  // 2. Update existing sprites (without custom material)
   commands
     .query()
     .all(Transform3D, Sprite2D, RenderObject)
+    .none(Sprite2DMaterial)
     .each((entity, transform, sprite) => {
       spriteManager.updateSprite(
         entity,
@@ -577,9 +971,29 @@ export const spriteSyncSystem = system(({ commands }) => {
           scale: { x: transform.scale.x, y: transform.scale.y },
         },
       );
+      // Ensure any previous custom shader is disabled
+      spriteManager.updateCustomShader(entity, sprite, null, shaderManager);
     });
 
-  // 3. Remove sprites for entities that lost their Sprite2D component
+  // 3. Update existing sprites with custom material
+  commands
+    .query()
+    .all(Transform3D, Sprite2D, RenderObject, Sprite2DMaterial)
+    .each((entity, transform, sprite, _renderObj, spriteMaterial) => {
+      spriteManager.updateSprite(
+        entity,
+        sprite,
+        {
+          position: { x: transform.position.x, y: transform.position.y, z: transform.position.z },
+          rotation: { x: transform.rotation.x, y: transform.rotation.y, z: transform.rotation.z },
+          scale: { x: transform.scale.x, y: transform.scale.y },
+        },
+      );
+      // Update custom shader material
+      spriteManager.updateCustomShader(entity, sprite, spriteMaterial, shaderManager);
+    });
+
+  // 4. Remove sprites for entities that lost their Sprite2D component
   // (have RenderObject but no Sprite2D)
   commands
     .query()
@@ -592,7 +1006,7 @@ export const spriteSyncSystem = system(({ commands }) => {
       }
     });
 
-  // 4. Clean up sprites for entities that were destroyed
+  // 5. Clean up sprites for entities that were destroyed
   // (entity no longer exists in world but sprite still tracked)
   for (const entity of spriteManager.getTrackedEntities()) {
     if (!commands.isAlive(entity)) {

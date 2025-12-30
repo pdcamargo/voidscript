@@ -863,6 +863,168 @@ animManager.togglePause();
 - `SpriteTrack` automatically looks up sprite metadata from textures
 - The `AnimationManager` resource must be registered (done automatically in `Application.addBuiltInSystems()`)
 
+### VoidShader Language (VSL) - Custom Shader System
+
+The engine includes a Godot-inspired shader language called VoidShader Language (VSL) that transpiles to THREE.js GLSL. This allows writing shaders in a more intuitive syntax with built-in variables and automatic uniform management.
+
+**Key Files:**
+- `packages/engine/src/shader/vsl/` - Lexer, parser, and transpiler
+- `packages/engine/src/shader/shader-asset.ts` - ShaderAsset class
+- `packages/engine/src/shader/shader-manager.ts` - Runtime shader management
+- `packages/engine/src/shader/shader-library.ts` - Reusable shader snippets
+- `packages/engine/src/shader/material-factory.ts` - Material creation utilities
+- `packages/engine/src/ecs/components/rendering/sprite-2d-material.ts` - Sprite2DMaterial component
+
+**VSL Shader Syntax:**
+
+```glsl
+shader_type canvas_item;  // or: spatial, particles
+render_mode unshaded;     // or: blend_add, blend_mul
+
+uniform float wave_amplitude : hint_range(0.0, 1.0) = 0.1;
+uniform float wave_speed = 2.0;
+uniform sampler2D noise_tex : hint_texture;
+
+void vertex() {
+    VERTEX.y += sin(TIME * wave_speed + VERTEX.x * 4.0) * wave_amplitude;
+}
+
+void fragment() {
+    COLOR = texture(TEXTURE, UV) * COLOR;
+}
+```
+
+**Shader Types:**
+
+| Type | THREE.js Target | Use Case |
+|------|-----------------|----------|
+| `canvas_item` | ShaderMaterial (2D) | Sprites, UI, 2D effects |
+| `spatial` | ShaderMaterial (3D) | 3D objects, PBR (future) |
+| `particles` | Points ShaderMaterial | GPU particles (future) |
+
+**Render Modes:**
+
+| Mode | THREE.js Mapping |
+|------|------------------|
+| `unshaded` | `lights: false` (default) |
+| `blend_add` | `THREE.AdditiveBlending` |
+| `blend_mul` | `THREE.MultiplyBlending` |
+
+**Built-in Variables (canvas_item):**
+
+| Variable | Type | Stage | Description |
+|----------|------|-------|-------------|
+| `VERTEX` | `vec2` | V | Vertex position (writable) |
+| `UV` | `vec2` | V/F | Texture coordinates |
+| `COLOR` | `vec4` | V/F | Vertex color / final output |
+| `NORMAL` | `vec3` | V/F | Normal vector |
+| `TIME` | `float` | V/F | Elapsed time (seconds) |
+| `TEXTURE` | `sampler2D` | F | Main sprite texture |
+| `TEXTURE_SIZE` | `vec2` | F | Texture dimensions |
+| `SCREEN_UV` | `vec2` | F | Screen-space UV |
+
+**Uniform Hints (for editor UI):**
+
+| Hint | Example |
+|------|---------|
+| `hint_range(min, max)` | `uniform float speed : hint_range(0.0, 10.0) = 1.0;` |
+| `hint_color` / `source_color` | `uniform vec4 tint : hint_color = vec4(1.0);` |
+| `hint_texture` | `uniform sampler2D noise : hint_texture;` |
+
+**Using Shaders with Sprites:**
+
+Add the `Sprite2DMaterial` component alongside `Sprite2D` to apply custom shaders:
+
+```typescript
+commands.spawn()
+  .with(Transform3D, { position: new Vector3(0, 0, 0) })
+  .with(Sprite2D, { texture: myTexture })
+  .with(Sprite2DMaterial, {
+    shader: myShaderAsset,  // RuntimeAsset pointing to .vsl file
+    uniforms: {
+      wave_speed: 2.0,
+      wave_amplitude: 0.1,
+    },
+    uniqueInstance: true,   // Create unique material for this entity
+    enabled: true,
+  })
+  .build();
+```
+
+**Registering Shader Assets:**
+
+```typescript
+// In ApplicationConfig.assets
+{
+  "water-shader": {
+    type: AssetType.Shader,
+    path: "/shaders/water.vsl"
+  }
+}
+```
+
+**JSON Manifest Format:**
+
+```json
+{
+  "water-shader": {
+    "type": "shader",
+    "path": "/shaders/water.vsl"
+  }
+}
+```
+
+**ShaderManager Resource:**
+
+The `ShaderManager` automatically updates the `TIME` uniform on all materials each frame:
+
+```typescript
+const shaderManager = commands.getResource(ShaderManager);
+
+// Compile shader from source
+const shader = shaderManager.compileFromSource(`
+  shader_type canvas_item;
+  uniform float time = 0.0;
+  void fragment() {
+    COLOR = vec4(sin(time), 0.0, 0.0, 1.0);
+  }
+`);
+
+// Create material from shader
+const material = shader.createMaterial({ time: 0 });
+```
+
+**Default Sprite Shader:**
+
+The default sprite shader is located at `packages/engine/src/shader/built-in-shaders/sprite-default.vsl`:
+
+```glsl
+shader_type canvas_item;
+render_mode unshaded;
+
+void vertex() {
+    // Default vertex pass-through
+}
+
+void fragment() {
+    vec4 tex_color = texture(TEXTURE, UV);
+    COLOR = tex_color * COLOR;
+}
+```
+
+**Creating Custom Shaders:**
+
+1. Create a `.vsl` file in your assets folder
+2. Register it in your asset manifest or ApplicationConfig
+3. Add `Sprite2DMaterial` component to entities with the shader RuntimeAsset
+4. Define uniforms in the component's `uniforms` object
+
+**Important Notes:**
+- Shaders are compiled at load time via the asset loader
+- The `TIME` uniform is automatically updated by `ShaderManager`
+- Use `uniqueInstance: true` when each entity needs different uniform values
+- The editor displays uniform editors based on shader metadata (uniform hints)
+
 ### Event System (Bevy-Inspired)
 
 The engine has a Bevy-inspired event system for type-safe communication between systems. Events are retained for multiple frames to ensure systems across different phases can read them.

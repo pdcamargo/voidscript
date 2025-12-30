@@ -33,39 +33,41 @@ componentRegistry:
   - id: 15
     name: Sprite2D
   - id: 16
-    name: RigidBody2D
-  - id: 17
-    name: Collider2D
-  - id: 18
-    name: CharacterController2D
-  - id: 19
-    name: Ccd
-  - id: 20
-    name: AnimationController
-  - id: 21
-    name: DesiredMovement2D
-  - id: 22
-    name: ActiveCollisionEvents2D
-  - id: 23
-    name: Player2D
-  - id: 24
     name: CampFire
-  - id: 25
+  - id: 17
     name: Light3D
-  - id: 26
+  - id: 18
     name: SunLight
-  - id: 27
+  - id: 19
     name: SkyGradient2D
-  - id: 28
+  - id: 20
     name: Fog2D
-  - id: 29
+  - id: 21
     name: FogSkySync
-  - id: 30
+  - id: 22
     name: PrefabInstance
-  - id: 31
+  - id: 23
     name: Rain2D
-  - id: 32
+  - id: 24
     name: LightningField2D
+  - id: 25
+    name: Sprite2DMaterial
+  - id: 26
+    name: RigidBody2D
+  - id: 27
+    name: Collider2D
+  - id: 28
+    name: CharacterController2D
+  - id: 29
+    name: Ccd
+  - id: 30
+    name: AnimationController
+  - id: 31
+    name: DesiredMovement2D
+  - id: 32
+    name: ActiveCollisionEvents2D
+  - id: 33
+    name: Player2D
 entities:
   - id: 0
     generation: 0
@@ -74,7 +76,7 @@ entities:
         typeName: Children
         data:
           ids:
-            - 13
+            - 12
       - typeId: 1
         typeName: Name
         data:
@@ -87,8 +89,8 @@ entities:
         data:
           ids:
             - 4
+            - 17
             - 18
-            - 19
       - typeId: 1
         typeName: Name
         data:
@@ -147,7 +149,7 @@ entities:
       - typeId: 4
         typeName: VirtualCameraFollow
         data:
-          target: 12
+          target: 21
           mode: transposer
           offset:
             x: 0
@@ -303,11 +305,11 @@ entities:
             y: 1
           surfacePosition: 0
           waterColor:
-            r: 1
-            g: 1
+            r: 0
+            g: 0.9113924503326416
             b: 1
             a: 1
-          waterOpacity: 0.05999999865889549
+          waterOpacity: 0.04500000178813934
           waveSpeed: 0.4000000059604645
           waveDistortion: 0.10000000149011612
           waveMultiplier: 20
@@ -316,7 +318,7 @@ entities:
             x: 6.5
             y: 5.400000095367432
           foamSpeed: 0.0010000000474974513
-          foamIntensity: 0.800000011920929
+          foamIntensity: 1
           foamThreshold: 0.699999988079071
           reflectionOffsetX: 0
           reflectionOffsetY: 0
@@ -327,7 +329,7 @@ entities:
           visible: true
           isLit: true
           wetnessIntensity: 5.550000190734863
-          wetnessOpacity: 0.007000000216066837
+          wetnessOpacity: 0.00800000037997961
           wetnessScale:
             x: 5
             y: 5
@@ -337,11 +339,11 @@ entities:
             y: 22.100000381469727
           wetnessDetailSpeed: 0.009999999776482582
           wetnessContrast: 28.600000381469727
-          wetnessBrightness: 0.699999988079071
+          wetnessBrightness: 0.8529999852180481
           wetnessColorTint:
-            r: 0.5083943009376526
-            g: 0.7520875930786133
-            b: 0.9957805871963501
+            r: 1
+            g: 1
+            b: 1
           foamSoftness: 0
           foamTurbulence: 12
           foamAnimationSpeed: 1.5
@@ -770,121 +772,6 @@ entities:
   - id: 12
     generation: 0
     components:
-      - typeId: 1
-        typeName: Name
-        data:
-          name: Character
-      - typeId: 2
-        typeName: Transform3D
-        data:
-          position:
-            x: -10.484401816396781
-            y: 1.100000023841858
-            z: 0
-          rotation:
-            x: 0
-            y: 0
-            z: 0
-          scale:
-            x: 0.5
-            y: 1
-            z: 1
-      - typeId: 15
-        typeName: Sprite2D
-        data:
-          texture: null
-          color:
-            r: 1
-            g: 1
-            b: 1
-            a: 1
-          tileIndex: 1
-          tileSize:
-            x: 32
-            y: 84
-          tilesetSize:
-            x: 425
-            y: 84
-          pixelsPerUnit: 100
-          flipX: false
-          flipY: false
-          sortingLayer: 0
-          sortingOrder: 0
-          anchor:
-            x: 0.5
-            y: 0.5
-          visible: true
-          isLit: true
-          spriteRect: null
-      - typeId: 16
-        typeName: RigidBody2D
-        data:
-          bodyType: kinematic
-          canSleep: false
-      - typeId: 17
-        typeName: Collider2D
-        data:
-          shape:
-            type: cuboid
-            halfWidth: 0.5
-            halfHeight: 0.5
-          offset:
-            x: 0
-            y: 0
-          rotationOffset: 0
-          isSensor: false
-          friction: 0
-          restitution: 0
-          density: 0
-      - typeId: 18
-        typeName: CharacterController2D
-        data:
-          offset: 0.01
-          up:
-            x: 0
-            y: 1
-          maxSlopeClimbAngle: 0.7853981633974483
-          minSlopeSlideAngle: 1.0471975511965976
-          autostepEnabled: false
-          autostepMaxHeight: 0.5
-          autostepMinWidth: 0.2
-          autostepIncludesDynamicBodies: false
-          snapToGroundEnabled: false
-          snapToGroundDistance: 0.2
-          slideEnabled: true
-          normalNudgeFactor: 0
-          applyImpulsesToDynamicBodies: false
-          characterMass: null
-      - typeId: 19
-        typeName: Ccd
-        data:
-          enabled: false
-      - typeId: 20
-        typeName: AnimationController
-        data:
-          animations: []
-          currentAnimationId: null
-          isPlaying: false
-          currentTime: 0
-          speed: 1
-          loopCount: 0
-      - typeId: 21
-        typeName: DesiredMovement2D
-        data:
-          translation:
-            x: 0
-            y: 0
-      - typeId: 22
-        typeName: ActiveCollisionEvents2D
-        data:
-          events: 1
-      - typeId: 23
-        typeName: Player2D
-        data:
-          movementSpeed: 20
-  - id: 13
-    generation: 0
-    components:
       - typeId: 9
         typeName: Parent
         data:
@@ -936,10 +823,10 @@ entities:
             y: 0
             width: 38
             height: 38
-      - typeId: 24
+      - typeId: 16
         typeName: CampFire
         data: {}
-  - id: 14
+  - id: 13
     generation: 0
     components:
       - typeId: 1
@@ -961,7 +848,7 @@ entities:
             x: 1
             y: 1
             z: 1
-      - typeId: 25
+      - typeId: 17
         typeName: Light3D
         data:
           type: directional
@@ -978,11 +865,11 @@ entities:
             bias: -0.0001
             normalBias: 0.02
           shadowCameraSize: 10
-      - typeId: 26
+      - typeId: 18
         typeName: SunLight
         data:
           isAmbient: false
-  - id: 15
+  - id: 14
     generation: 0
     components:
       - typeId: 1
@@ -1004,7 +891,7 @@ entities:
             x: 1
             y: 1
             z: 1
-      - typeId: 25
+      - typeId: 17
         typeName: Light3D
         data:
           type: ambient
@@ -1021,11 +908,11 @@ entities:
             bias: -0.0001
             normalBias: 0.02
           shadowCameraSize: 10
-      - typeId: 26
+      - typeId: 18
         typeName: SunLight
         data:
           isAmbient: true
-  - id: 16
+  - id: 15
     generation: 0
     components:
       - typeId: 1
@@ -1047,7 +934,7 @@ entities:
             x: 1400
             y: 33.79999923706055
             z: 1
-      - typeId: 27
+      - typeId: 19
         typeName: SkyGradient2D
         data:
           stops:
@@ -1077,7 +964,7 @@ entities:
           starSeed: 30
           flickerSpeed: 2
           flickerIntensity: 0.3
-  - id: 17
+  - id: 16
     generation: 0
     components:
       - typeId: 1
@@ -1099,7 +986,7 @@ entities:
             x: 1
             y: 1
             z: 1
-      - typeId: 28
+      - typeId: 20
         typeName: Fog2D
         data:
           baseSize:
@@ -1121,11 +1008,11 @@ entities:
           sortingOrder: 0
           visible: true
           isLit: true
-      - typeId: 29
+      - typeId: 21
         typeName: FogSkySync
         data:
-          skyEntity: 16
-  - id: 18
+          skyEntity: 15
+  - id: 17
     generation: 0
     components:
       - typeId: 9
@@ -1166,7 +1053,7 @@ entities:
             x: 1
             y: 1
             z: 1
-      - typeId: 28
+      - typeId: 20
         typeName: Fog2D
         data:
           baseSize:
@@ -1188,11 +1075,11 @@ entities:
           sortingOrder: 0
           visible: true
           isLit: false
-      - typeId: 29
+      - typeId: 21
         typeName: FogSkySync
         data:
-          skyEntity: 16
-  - id: 19
+          skyEntity: 15
+  - id: 18
     generation: 0
     components:
       - typeId: 9
@@ -1233,7 +1120,7 @@ entities:
             x: 1
             y: 1
             z: 1
-      - typeId: 28
+      - typeId: 20
         typeName: Fog2D
         data:
           baseSize:
@@ -1255,14 +1142,14 @@ entities:
           sortingOrder: 0
           visible: true
           isLit: false
-      - typeId: 29
+      - typeId: 21
         typeName: FogSkySync
         data:
-          skyEntity: 16
-  - id: 20
+          skyEntity: 15
+  - id: 19
     generation: 1
     components:
-      - typeId: 30
+      - typeId: 22
         typeName: PrefabInstance
         data:
           prefabAssetGuid: fe28a3a2-7584-4b06-a5a0-ef066846ddba
@@ -1285,7 +1172,7 @@ entities:
             x: 1
             y: 1
             z: 1
-  - id: 21
+  - id: 20
     generation: 0
     components:
       - typeId: 1
@@ -1307,7 +1194,7 @@ entities:
             x: 1
             y: 1
             z: 1
-      - typeId: 32
+      - typeId: 24
         typeName: LightningField2D
         data:
           baseSize:
@@ -1347,8 +1234,131 @@ entities:
           flashIntensity: 0.671999990940094
           enableGroundGlow: false
           groundGlowRadius: 20
+  - id: 21
+    generation: 0
+    components:
+      - typeId: 1
+        typeName: Name
+        data:
+          name: Character
+      - typeId: 2
+        typeName: Transform3D
+        data:
+          position:
+            x: -10.484401816396781
+            y: 1.100000023841858
+            z: 0
+          rotation:
+            x: 0
+            y: 0
+            z: 0
+          scale:
+            x: 0.5
+            y: 1
+            z: 1
+      - typeId: 15
+        typeName: Sprite2D
+        data:
+          texture:
+            guid: moon
+          color:
+            r: 1
+            g: 1
+            b: 1
+            a: 1
+          tileIndex: 0
+          tileSize:
+            x: 512
+            y: 512
+          tilesetSize:
+            x: 512
+            y: 512
+          pixelsPerUnit: 100
+          flipX: false
+          flipY: false
+          sortingLayer: 0
+          sortingOrder: 0
+          anchor:
+            x: 0.5
+            y: 0.5
+          visible: true
+          isLit: true
+          spriteRect: null
+      - typeId: 25
+        typeName: Sprite2DMaterial
+        data:
+          shader: null
+          uniforms: {}
+          uniqueInstance: true
+          enabled: false
+      - typeId: 26
+        typeName: RigidBody2D
+        data:
+          bodyType: kinematic
+          canSleep: false
+      - typeId: 27
+        typeName: Collider2D
+        data:
+          shape:
+            type: cuboid
+            halfWidth: 0.5
+            halfHeight: 0.5
+          offset:
+            x: 0
+            y: 0
+          rotationOffset: 0
+          isSensor: false
+          friction: 0
+          restitution: 0
+          density: 0
+      - typeId: 28
+        typeName: CharacterController2D
+        data:
+          offset: 0.01
+          up:
+            x: 0
+            y: 1
+          maxSlopeClimbAngle: 0.7853981633974483
+          minSlopeSlideAngle: 1.0471975511965976
+          autostepEnabled: false
+          autostepMaxHeight: 0.5
+          autostepMinWidth: 0.2
+          autostepIncludesDynamicBodies: false
+          snapToGroundEnabled: false
+          snapToGroundDistance: 0.2
+          slideEnabled: true
+          normalNudgeFactor: 0
+          applyImpulsesToDynamicBodies: false
+          characterMass: null
+      - typeId: 29
+        typeName: Ccd
+        data:
+          enabled: false
+      - typeId: 30
+        typeName: AnimationController
+        data:
+          animations: []
+          currentAnimationId: null
+          isPlaying: false
+          currentTime: 0
+          speed: 1
+          loopCount: 0
+      - typeId: 31
+        typeName: DesiredMovement2D
+        data:
+          translation:
+            x: 0
+            y: 0
+      - typeId: 32
+        typeName: ActiveCollisionEvents2D
+        data:
+          events: 1
+      - typeId: 33
+        typeName: Player2D
+        data:
+          movementSpeed: 20
 metadata:
-  createdAt: 2025-12-29T21:57:29.564Z
-  modifiedAt: 2025-12-29T21:57:29.564Z
+  createdAt: 2025-12-30T02:14:15.521Z
+  modifiedAt: 2025-12-30T02:14:15.521Z
   entityCount: 22
-  archetypeCount: 59
+  archetypeCount: 60

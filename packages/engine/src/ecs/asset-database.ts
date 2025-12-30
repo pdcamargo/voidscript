@@ -35,7 +35,9 @@ import type {
   AnimationMetadata,
   AudioAssetMetadata,
   PrefabMetadata,
+  ShaderMetadata,
   SpriteDefinition,
+  VSLShaderType,
 } from './asset-metadata.js';
 import { AssetType, TextureFilter, TextureWrap, ModelFormat, isTextureMetadata } from './asset-metadata.js';
 import { RuntimeAssetManager } from './runtime-asset-manager.js';
@@ -136,6 +138,19 @@ export interface PrefabAssetConfig extends BaseAssetConfig {
 }
 
 /**
+ * VoidShader Language (.vsl) asset configuration
+ * Used in ApplicationConfig.assets
+ */
+export interface ShaderAssetConfig extends BaseAssetConfig {
+  type: AssetType.Shader;
+  path: string;
+  /** Shader type (canvas_item = 2D, spatial = 3D, particles = GPU particles) */
+  shaderType?: VSLShaderType;
+  /** Shader description/documentation */
+  description?: string;
+}
+
+/**
  * Discriminated union of all asset configs
  */
 export type AssetConfig =
@@ -144,7 +159,8 @@ export type AssetConfig =
   | TiledMapAssetConfig
   | AnimationAssetConfig
   | AudioAssetConfig
-  | PrefabAssetConfig;
+  | PrefabAssetConfig
+  | ShaderAssetConfig;
 
 /**
  * Assets configuration for ApplicationConfig
@@ -447,6 +463,17 @@ export class AssetDatabase {
           break;
         }
 
+        case AssetType.Shader: {
+          const shaderConfig: ShaderAssetConfig = {
+            type: AssetType.Shader,
+            path: config['path'] as string,
+            shaderType: config['shaderType'] as VSLShaderType | undefined,
+            description: config['description'] as string | undefined,
+          };
+          result[guid] = shaderConfig;
+          break;
+        }
+
         default:
           console.warn(`[AssetDatabase] Unsupported asset type "${type}" for ${guid}, skipping`);
       }
@@ -641,6 +668,23 @@ export class AssetDatabase {
         };
       }
 
+      case AssetType.Shader: {
+        const shaderMetadata = metadata as ShaderMetadata;
+        const config: Record<string, unknown> = {
+          type: 'shader',
+          path: metadata.path,
+        };
+
+        if (shaderMetadata.shaderType && shaderMetadata.shaderType !== 'canvas_item') {
+          config['shaderType'] = shaderMetadata.shaderType;
+        }
+        if (shaderMetadata.description) {
+          config['description'] = shaderMetadata.description;
+        }
+
+        return config;
+      }
+
       default:
         // Fallback for unknown types
         return {
@@ -769,6 +813,15 @@ export class AssetDatabase {
           componentTypes: [],
           nestedPrefabs: [],
         } satisfies PrefabMetadata;
+      }
+
+      case AssetType.Shader: {
+        return {
+          ...base,
+          type: AssetType.Shader,
+          shaderType: config.shaderType ?? 'canvas_item',
+          description: config.description,
+        } satisfies ShaderMetadata;
       }
 
       default:

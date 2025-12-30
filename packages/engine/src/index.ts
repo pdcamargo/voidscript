@@ -758,3 +758,13 @@ export {
   setSelectedResource,
   getSelectedResource,
 } from './app/imgui/resource-viewer.js';
+
+// Shader System (VoidShader Language)
+export * from './shader/index.js';
+
+// Shader Components
+export { Sprite2DMaterial } from './ecs/components/rendering/sprite-2d-material.js';
+export type { Sprite2DMaterialData, UniformValue as Sprite2DUniformValue } from './ecs/components/rendering/sprite-2d-material.js';
+
+// Shader Systems
+export { shaderUpdateSystem } from './ecs/systems/shader-system.js';

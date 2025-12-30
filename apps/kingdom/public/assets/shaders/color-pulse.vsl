@@ -1,0 +1,27 @@
+// Color Pulse Shader - Pulsing color overlay effect
+// Makes sprites pulse with a configurable color
+
+shader_type canvas_item;
+render_mode unshaded;
+
+uniform float pulse_speed : hint_range(0.5, 5.0) = 1.5;
+uniform float pulse_intensity : hint_range(0.0, 1.0) = 0.3;
+uniform vec3 pulse_color : source_color = vec3(1.0, 0.5, 0.0);
+
+void vertex() {
+    // No vertex modifications
+}
+
+void fragment() {
+    // Sample the sprite texture
+    vec4 tex_color = texture(TEXTURE, UV);
+
+    // Calculate pulse factor (0 to 1, oscillating)
+    float pulse = (sin(TIME * pulse_speed) + 1.0) * 0.5;
+
+    // Mix original color with pulse color
+    vec3 final_color = mix(tex_color.rgb, pulse_color, pulse * pulse_intensity);
+
+    // Apply to output with original alpha
+    COLOR = vec4(final_color, tex_color.a) * COLOR;
+}

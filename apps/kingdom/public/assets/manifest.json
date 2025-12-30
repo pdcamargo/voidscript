@@ -342,5 +342,25 @@
   "fe28a3a2-7584-4b06-a5a0-ef066846ddba": {
     "type": "prefab",
     "path": "/prefabs/rain.prefab.yaml"
+  },
+  "wave-shader": {
+    "type": "shader",
+    "path": "/assets/shaders/wave.vsl"
+  },
+  "color-pulse-shader": {
+    "type": "shader",
+    "path": "/assets/shaders/color-pulse.vsl"
+  },
+  "test-red-shader": {
+    "type": "shader",
+    "path": "/assets/shaders/test-red.vsl"
+  },
+  "test-texture-shader": {
+    "type": "shader",
+    "path": "/assets/shaders/test-texture.vsl"
+  },
+  "test-tint-shader": {
+    "type": "shader",
+    "path": "/assets/shaders/test-tint.vsl"
   }
 }

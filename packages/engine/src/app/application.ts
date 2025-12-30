@@ -35,8 +35,10 @@ import { EventType, EventDispatcher } from "./events.js";
 // Built-in systems and managers
 import { TweenManager } from "../animation/tween.js";
 import { AnimationManager } from "../animation/animation-manager.js";
+import { ShaderManager } from "../shader/shader-manager.js";
 import { tweenUpdateSystem } from "../ecs/systems/tween-system.js";
 import { animationUpdateSystem } from "../ecs/systems/animation-system.js";
+import { shaderUpdateSystem } from "../ecs/systems/shader-system.js";
 import { SpriteRenderManager, spriteSyncSystem } from "../ecs/systems/sprite-sync-system.js";
 import {
   Render3DManager,
@@ -1241,6 +1243,10 @@ export class Application {
     // Animation system
     this.insertResource(new AnimationManager());
     this.addUpdateSystem(animationUpdateSystem);
+
+    // Shader system (for VSL shader management and TIME uniform updates)
+    this.insertResource(new ShaderManager());
+    this.addUpdateSystem(shaderUpdateSystem);
 
     // Sprite rendering system (2D)
     // Uses mesh-based rendering with sprite materials
