@@ -743,6 +743,39 @@ export {
   getSelectedResource,
 } from './app/imgui/resource-viewer.js';
 
+// Asset Browser
+export {
+  renderAssetBrowserPanel,
+  getAssetBrowserState,
+  buildFolderTree,
+  selectFolder,
+  selectAsset,
+  setSearchQuery,
+  getFilteredAssets,
+  isAssetBrowserOpen,
+  openAssetBrowser,
+  closeAssetBrowser,
+  openImportDialog,
+  closeImportDialog,
+  executeImport,
+} from './app/imgui/asset-browser/index.js';
+export type {
+  FolderNode,
+  AssetBrowserState,
+  AssetBrowserPanelOptions,
+} from './app/imgui/asset-browser/index.js';
+export {
+  parseAssetQuery,
+  evaluateAssetQuery,
+  getAssetTypeFilterOptions,
+  getSearchHintText,
+} from './app/imgui/asset-browser/index.js';
+export type {
+  AssetQueryFilter,
+  AssetQueryResult,
+  AssetQueryParseResult,
+} from './app/imgui/asset-browser/index.js';
+
 // Shader System (VoidShader Language)
 export * from './shader/index.js';
 

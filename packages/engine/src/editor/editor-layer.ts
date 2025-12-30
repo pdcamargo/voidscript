@@ -82,6 +82,7 @@ import {
   openSpriteEditor,
   closeSpriteEditor,
 } from '../app/imgui/sprite-editor/index.js';
+import { renderAssetBrowserPanel } from '../app/imgui/asset-browser/index.js';
 import { renderImGuiResourceViewer } from '../app/imgui/resource-viewer.js';
 import { Input, KeyCode } from '../app/input.js';
 import { SceneViewBounds } from './scene-view-bounds.js';
@@ -1322,6 +1323,12 @@ export class EditorLayer extends Layer {
         label: isPanelVisible('resources') ? '✓ Resources' : '   Resources',
         onClick: () => togglePanelVisibility('resources'),
       },
+      {
+        label: isPanelVisible('assetBrowser')
+          ? '✓ Asset Browser'
+          : '   Asset Browser',
+        onClick: () => togglePanelVisibility('assetBrowser'),
+      },
     ];
     const userWindowMenuItems =
       this.config.menuCallbacks?.windowMenuItems ?? [];
@@ -1794,6 +1801,15 @@ export class EditorLayer extends Layer {
       // Render resources panel if visible
       if (isPanelVisible('resources')) {
         renderImGuiResourceViewer(app);
+      }
+
+      // Render asset browser panel if visible
+      if (isPanelVisible('assetBrowser')) {
+        renderAssetBrowserPanel({
+          platform: this.config.platform ?? null,
+          renderer: app.getRenderer().getThreeRenderer(),
+          assetsManifest: app.getAssetsManifestPath(),
+        });
       }
     } else {
       ImGui.PopStyleVar(3);

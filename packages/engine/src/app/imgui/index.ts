@@ -65,3 +65,6 @@ export {
   setSelectedResource,
   getSelectedResource,
 } from './resource-viewer.js';
+
+// Asset Browser - Unity-style asset management panel
+export * from './asset-browser/index.js';
