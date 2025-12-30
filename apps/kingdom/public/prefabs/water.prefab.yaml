@@ -40,7 +40,7 @@ world:
           data:
             position:
               x: 0
-              y: -4.199999809265137
+              y: -3
               z: 0
             rotation:
               x: 0
@@ -48,7 +48,7 @@ world:
               z: 0
             scale:
               x: 1400
-              y: 8
+              y: 5.280
               z: 1
         - typeId: 3
           typeName: Sprite2D
@@ -90,15 +90,15 @@ world:
               wave_multiplier: 18.993999481201172
               enable_water_texture: true
               foam_scale:
-                x: 20
-                y: 12
+                x: 70
+                y: 14
               foam_speed: 0.02
-              foam_intensity: 1.9739999771118164
-              foam_threshold: 0.621
+              foam_intensity: 3
+              foam_threshold: 0.616
               foam_softness: 0
-              foam_turbulence: 0.3
+              foam_turbulence: 0.8
               foam_animation_speed: 0.5
-              foam_layer_count: 2
+              foam_layer_count: 13
               reflection_offset_x: 0
               reflection_offset_y: 0
               reflection_skew_x: 0.004000000189989805
@@ -120,6 +120,7 @@ world:
                 y: 0.95
                 z: 1
               tile_size: 27.204999923706055
+              parallax_strength: 0.7
               noise_texture:
                 type: fbm
                 width: 512

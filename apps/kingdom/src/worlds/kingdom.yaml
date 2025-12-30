@@ -53,17 +53,17 @@ componentRegistry:
   - id: 25
     name: Player2D
   - id: 26
-    name: Light3D
-  - id: 27
-    name: SunLight
-  - id: 28
-    name: SkyGradient2D
-  - id: 29
-    name: Rain2D
-  - id: 30
     name: LightningController
-  - id: 31
+  - id: 27
     name: FogSkySync
+  - id: 28
+    name: Light3D
+  - id: 29
+    name: SunLight
+  - id: 30
+    name: SkyGradient2D
+  - id: 31
+    name: Rain2D
 entities:
   - id: 0
     generation: 0
@@ -85,8 +85,8 @@ entities:
         data:
           ids:
             - 4
-            - 19
-            - 20
+            - 15
+            - 16
       - typeId: 1
         typeName: Name
         data:
@@ -707,7 +707,7 @@ entities:
         data:
           position:
             x: 0
-            y: -4.199999809265137
+            y: -2.5999999046325684
             z: 0
           rotation:
             x: 0
@@ -715,7 +715,7 @@ entities:
             z: 0
           scale:
             x: 1400
-            y: 8
+            y: 4.539999961853027
             z: 1
   - id: 12
     generation: 0
@@ -910,217 +910,6 @@ entities:
       - typeId: 1
         typeName: Name
         data:
-          name: Sun Light
-      - typeId: 2
-        typeName: Transform3D
-        data:
-          position:
-            x: 0
-            y: 0
-            z: 0
-          rotation:
-            x: 0
-            y: 0
-            z: 0
-          scale:
-            x: 1
-            y: 1
-            z: 1
-      - typeId: 26
-        typeName: Light3D
-        data:
-          type: directional
-          color:
-            r: 1
-            g: 1
-            b: 1
-          intensity: 4
-          shadow:
-            enabled: false
-            mapSize: 1024
-            cameraNear: 0.5
-            cameraFar: 500
-            bias: -0.0001
-            normalBias: 0.02
-          shadowCameraSize: 10
-      - typeId: 27
-        typeName: SunLight
-        data:
-          isAmbient: false
-  - id: 15
-    generation: 0
-    components:
-      - typeId: 1
-        typeName: Name
-        data:
-          name: Ambient Light
-      - typeId: 2
-        typeName: Transform3D
-        data:
-          position:
-            x: 0
-            y: 0
-            z: 0
-          rotation:
-            x: 0
-            y: 0
-            z: 0
-          scale:
-            x: 1
-            y: 1
-            z: 1
-      - typeId: 26
-        typeName: Light3D
-        data:
-          type: ambient
-          color:
-            r: 1
-            g: 1
-            b: 1
-          intensity: 1
-          shadow:
-            enabled: false
-            mapSize: 1024
-            cameraNear: 0.5
-            cameraFar: 500
-            bias: -0.0001
-            normalBias: 0.02
-          shadowCameraSize: 10
-      - typeId: 27
-        typeName: SunLight
-        data:
-          isAmbient: true
-  - id: 16
-    generation: 0
-    components:
-      - typeId: 1
-        typeName: Name
-        data:
-          name: Sky
-      - typeId: 2
-        typeName: Transform3D
-        data:
-          position:
-            x: 0
-            y: -5.400000095367432
-            z: 0
-          rotation:
-            x: 0
-            y: 0
-            z: 0
-          scale:
-            x: 1400
-            y: 33.79999923706055
-            z: 1
-      - typeId: 28
-        typeName: SkyGradient2D
-        data:
-          stops:
-            - color:
-                r: 0.658823549747467
-                g: 0.7686274647712708
-                b: 0.929411768913269
-                a: 1
-              position: 0
-            - color:
-                r: 0.20392157137393951
-                g: 0.5137255191802979
-                b: 0.8549019694328308
-                a: 1
-              position: 1
-          height: 256
-          sortingLayer: -1000
-          sortingOrder: 0
-          visible: true
-          isLit: true
-          dirty: false
-          enableStars: false
-          starCount: 200000
-          starMinSize: 0.009999999776482582
-          starMaxSize: 0.10000000149011612
-          starHeightRange: 0.6
-          starSeed: 30
-          flickerSpeed: 2
-          flickerIntensity: 0.3
-  - id: 17
-    generation: 0
-    components:
-      - typeId: 1
-        typeName: Name
-        data:
-          name: Rain
-      - typeId: 2
-        typeName: Transform3D
-        data:
-          position:
-            x: 0
-            y: 0
-            z: 0
-          rotation:
-            x: 0
-            y: 0
-            z: 0
-          scale:
-            x: 1
-            y: 1
-            z: 1
-      - typeId: 29
-        typeName: Rain2D
-        data:
-          baseSize:
-            x: 3000
-            y: 3000
-          tileSize: 3
-          visible: false
-          sortingLayer: 500000000
-          sortingOrder: 1783793664
-          density: 300
-          fallSpeed: 448.8909912109375
-          speedVariation: 0.6079999804496765
-          angle: 0.15000000596046448
-          windStrength: 0.30000001192092896
-          windSpeed: 1.5
-          dropletMinLength: 12.420999526977539
-          dropletMaxLength: 26.94499969482422
-          dropletWidth: 1.5019999742507935
-          seed: 20
-          dropletColor:
-            r: 1
-            g: 1
-            b: 1
-          dropletOpacity: 1
-          enableLayers: true
-          nearLayerSpeed: 3
-          nearLayerOpacity: 0.8500000238418579
-          nearLayerScale: 1.2999999523162842
-          midLayerSpeed: 3
-          midLayerOpacity: 0.6000000238418579
-          midLayerScale: 1
-          farLayerSpeed: 2
-          farLayerOpacity: 0.3499999940395355
-          farLayerScale: 1.2640000581741333
-          enableWetnessTint: true
-          wetnessTintColor:
-            r: 0.4
-            g: 0.5
-            b: 0.6
-          wetnessTintIntensity: 0.15000000596046448
-          enableLightning: false
-          lightningColor:
-            r: 1
-            g: 1
-            b: 1
-          lightningMinInterval: 3.2980000972747803
-          lightningMaxInterval: 9.140000343322754
-          lightningDuration: 0.15000000596046448
-          lightningIntensity: 0.9959999918937683
-          stormIntensity: 0.8500000238418579
-  - id: 18
-    generation: 0
-    components:
-      - typeId: 1
-        typeName: Name
-        data:
           name: Lightning Field
       - typeId: 2
         typeName: Transform3D
@@ -1188,7 +977,7 @@ entities:
             ground_glow_radius: 20
           uniqueInstance: true
           enabled: true
-      - typeId: 30
+      - typeId: 26
         typeName: LightningController
         data:
           minInterval: 3.617000102996826
@@ -1201,7 +990,7 @@ entities:
           angleVariation: 0.5
           enableScreenFlash: true
           flashIntensity: 0.671999990940094
-  - id: 19
+  - id: 15
     generation: 0
     components:
       - typeId: 9
@@ -1288,11 +1077,11 @@ entities:
             edge_fade_right: 0.34599998593330383
           uniqueInstance: true
           enabled: true
-      - typeId: 31
+      - typeId: 27
         typeName: FogSkySync
         data:
-          skyEntity: 16
-  - id: 20
+          skyEntity: 20
+  - id: 16
     generation: 0
     components:
       - typeId: 9
@@ -1379,11 +1168,11 @@ entities:
             edge_fade_right: 0.22300000488758087
           uniqueInstance: true
           enabled: true
-      - typeId: 31
+      - typeId: 27
         typeName: FogSkySync
         data:
-          skyEntity: 16
-  - id: 21
+          skyEntity: 20
+  - id: 17
     generation: 0
     components:
       - typeId: 1
@@ -1451,12 +1240,223 @@ entities:
             edge_fade_right: 0.5
           uniqueInstance: true
           enabled: true
-      - typeId: 31
+      - typeId: 27
         typeName: FogSkySync
         data:
-          skyEntity: 16
+          skyEntity: 20
+  - id: 18
+    generation: 0
+    components:
+      - typeId: 1
+        typeName: Name
+        data:
+          name: Sun Light
+      - typeId: 2
+        typeName: Transform3D
+        data:
+          position:
+            x: 0
+            y: 0
+            z: 0
+          rotation:
+            x: 0
+            y: 0
+            z: 0
+          scale:
+            x: 1
+            y: 1
+            z: 1
+      - typeId: 28
+        typeName: Light3D
+        data:
+          type: directional
+          color:
+            r: 1
+            g: 1
+            b: 1
+          intensity: 4
+          shadow:
+            enabled: false
+            mapSize: 1024
+            cameraNear: 0.5
+            cameraFar: 500
+            bias: -0.0001
+            normalBias: 0.02
+          shadowCameraSize: 10
+      - typeId: 29
+        typeName: SunLight
+        data:
+          isAmbient: false
+  - id: 19
+    generation: 0
+    components:
+      - typeId: 1
+        typeName: Name
+        data:
+          name: Ambient Light
+      - typeId: 2
+        typeName: Transform3D
+        data:
+          position:
+            x: 0
+            y: 0
+            z: 0
+          rotation:
+            x: 0
+            y: 0
+            z: 0
+          scale:
+            x: 1
+            y: 1
+            z: 1
+      - typeId: 28
+        typeName: Light3D
+        data:
+          type: ambient
+          color:
+            r: 1
+            g: 1
+            b: 1
+          intensity: 1
+          shadow:
+            enabled: false
+            mapSize: 1024
+            cameraNear: 0.5
+            cameraFar: 500
+            bias: -0.0001
+            normalBias: 0.02
+          shadowCameraSize: 10
+      - typeId: 29
+        typeName: SunLight
+        data:
+          isAmbient: true
+  - id: 20
+    generation: 0
+    components:
+      - typeId: 1
+        typeName: Name
+        data:
+          name: Sky
+      - typeId: 2
+        typeName: Transform3D
+        data:
+          position:
+            x: 0
+            y: -5.400000095367432
+            z: 0
+          rotation:
+            x: 0
+            y: 0
+            z: 0
+          scale:
+            x: 1400
+            y: 33.79999923706055
+            z: 1
+      - typeId: 30
+        typeName: SkyGradient2D
+        data:
+          stops:
+            - color:
+                r: 0.658823549747467
+                g: 0.7686274647712708
+                b: 0.929411768913269
+                a: 1
+              position: 0
+            - color:
+                r: 0.20392157137393951
+                g: 0.5137255191802979
+                b: 0.8549019694328308
+                a: 1
+              position: 1
+          height: 256
+          sortingLayer: -1000
+          sortingOrder: 0
+          visible: true
+          isLit: true
+          dirty: false
+          enableStars: false
+          starCount: 200000
+          starMinSize: 0.009999999776482582
+          starMaxSize: 0.10000000149011612
+          starHeightRange: 0.6
+          starSeed: 30
+          flickerSpeed: 2
+          flickerIntensity: 0.3
+  - id: 21
+    generation: 0
+    components:
+      - typeId: 1
+        typeName: Name
+        data:
+          name: Rain
+      - typeId: 2
+        typeName: Transform3D
+        data:
+          position:
+            x: 0
+            y: 0
+            z: 0
+          rotation:
+            x: 0
+            y: 0
+            z: 0
+          scale:
+            x: 1
+            y: 1
+            z: 1
+      - typeId: 31
+        typeName: Rain2D
+        data:
+          baseSize:
+            x: 3000
+            y: 3000
+          tileSize: 3
+          visible: false
+          sortingLayer: 500000000
+          sortingOrder: 1783793664
+          density: 300
+          fallSpeed: 448.8909912109375
+          speedVariation: 0.6079999804496765
+          angle: 0.15000000596046448
+          windStrength: 0.30000001192092896
+          windSpeed: 1.5
+          dropletMinLength: 12.420999526977539
+          dropletMaxLength: 26.94499969482422
+          dropletWidth: 1.5019999742507935
+          seed: 20
+          dropletColor:
+            r: 1
+            g: 1
+            b: 1
+          dropletOpacity: 1
+          enableLayers: true
+          nearLayerSpeed: 3
+          nearLayerOpacity: 0.8500000238418579
+          nearLayerScale: 1.2999999523162842
+          midLayerSpeed: 3
+          midLayerOpacity: 0.6000000238418579
+          midLayerScale: 1
+          farLayerSpeed: 2
+          farLayerOpacity: 0.3499999940395355
+          farLayerScale: 1.2640000581741333
+          enableWetnessTint: true
+          wetnessTintColor:
+            r: 0.4
+            g: 0.5
+            b: 0.6
+          wetnessTintIntensity: 0.15000000596046448
+          enableLightning: false
+          lightningColor:
+            r: 1
+            g: 1
+            b: 1
+          lightningMinInterval: 3.2980000972747803
+          lightningMaxInterval: 9.140000343322754
+          lightningDuration: 0.15000000596046448
+          lightningIntensity: 0.9959999918937683
+          stormIntensity: 0.8500000238418579
 metadata:
-  createdAt: 2025-12-30T06:20:35.586Z
-  modifiedAt: 2025-12-30T06:20:35.586Z
+  createdAt: 2025-12-30T22:40:41.507Z
+  modifiedAt: 2025-12-30T22:40:41.507Z
   entityCount: 22
-  archetypeCount: 61
+  archetypeCount: 59

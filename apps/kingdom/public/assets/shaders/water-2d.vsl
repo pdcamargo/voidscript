@@ -56,6 +56,10 @@ uniform vec3 wetness_color_tint = vec3(0.9, 0.95, 1.0);
 // Higher values = larger patterns (less tiling). Independent of mesh scale.
 uniform float tile_size : hint_range(0.1, 500.0) = 50.0;
 
+// Parallax animation - controls speed difference between near/far
+// 0 = uniform speed, 1 = maximum parallax (top moves at 0% speed)
+uniform float parallax_strength : hint_range(0.0, 1.0) = 0.7;
+
 // Noise texture 1: Distortion noise - used for wave animation and wetness detail
 // Matches original: scale=4 (frequency), octaves=3, lacunarity=1 (minimal freq increase), gain=0.5
 uniform sampler2D noise_texture : hint_default_texture("fbm", 512, 512, 4.0, 3, 1.0, 0.5, 0);
@@ -72,6 +76,9 @@ void fragment() {
     // A mesh at scale 1400 will have the same pattern density as a mesh at scale 100
     // tile_size controls how many world units per pattern repeat
     vec2 world_scale_factor = MESH_WORLD_SCALE / tile_size;
+
+    // Parallax: bottom (uv.y=0) = full speed, top (uv.y=1) = reduced speed
+    float parallax_speed = mix(1.0, 1.0 - parallax_strength, uv.y);
 
     // Calculate wave distortion using noise
     float time_offset = TIME * wave_speed;
@@ -139,8 +146,8 @@ void fragment() {
 
         // Layer 1: Static base foam (always visible, provides baseline)
         vec2 foam_uv1 = uv * foam_scale + uv * world_scale_factor;
-        foam_uv1.x += TIME * foam_speed;
-        foam_uv1.y += sin(TIME * foam_speed * 2.0 + uv.x * 3.0) * foam_turbulence * 0.1;
+        foam_uv1.x += TIME * foam_speed * parallax_speed;
+        foam_uv1.y += sin(TIME * foam_speed * 2.0 * parallax_speed + uv.x * 3.0) * foam_turbulence * 0.1;
         float foam1 = texture(noise_texture2, foam_uv1).r;
         float base_layer = smoothstep(foam_threshold - soft_edge, foam_threshold + soft_edge, foam1);
         foam_value = base_layer * 0.4;
@@ -148,8 +155,8 @@ void fragment() {
         // Layer 2: Primary animated foam (pulsing)
         if (foam_layer_count >= 2) {
             vec2 foam_uv2 = uv * (foam_scale * 0.7) + uv * world_scale_factor * 0.8;
-            foam_uv2.x += TIME * foam_speed * 0.8;
-            foam_uv2.y += TIME * foam_speed * foam_turbulence * 0.25;
+            foam_uv2.x += TIME * foam_speed * 0.8 * parallax_speed;
+            foam_uv2.y += TIME * foam_speed * foam_turbulence * 0.25 * parallax_speed;
             float foam2 = texture(noise_texture2, foam_uv2).r;
             float layer2 = smoothstep(foam_threshold - soft_edge, foam_threshold + soft_edge, foam2);
             float pulse2 = 0.5 + abs(sin(TIME * foam_animation_speed)) * 0.5;
@@ -159,8 +166,8 @@ void fragment() {
         // Layer 3: Secondary animated foam (offset phase)
         if (foam_layer_count >= 3) {
             vec2 foam_uv3 = uv * (foam_scale * 1.5) + uv * world_scale_factor * 1.2;
-            foam_uv3.x += TIME * foam_speed * 0.4;
-            foam_uv3.y += sin(TIME * foam_speed * 1.5 + uv.x * 5.0) * foam_turbulence * 0.15;
+            foam_uv3.x += TIME * foam_speed * 0.4 * parallax_speed;
+            foam_uv3.y += sin(TIME * foam_speed * 1.5 * parallax_speed + uv.x * 5.0) * foam_turbulence * 0.15;
             float foam3 = texture(noise_texture2, foam_uv3).r;
             float layer3 = smoothstep(foam_threshold - soft_edge, foam_threshold + soft_edge, foam3);
             float pulse3 = 0.5 + abs(sin(TIME * foam_animation_speed * 1.3 + 1.57)) * 0.5;
@@ -175,13 +182,13 @@ void fragment() {
     if (wetness_intensity > 0.0) {
         // Base wetness layer - large scale flowing patterns (uses noise_texture2)
         vec2 wetness_uv = uv * wetness_scale + uv * world_scale_factor;
-        wetness_uv.x += TIME * wetness_speed;
+        wetness_uv.x += TIME * wetness_speed * parallax_speed;
         float wetness_base = texture(noise_texture2, wetness_uv).r;
 
         // Detail wetness layer - fine scale variation (uses noise_texture)
         vec2 detail_uv = uv * wetness_detail_scale + uv * world_scale_factor * 0.5;
-        detail_uv.x += TIME * wetness_detail_speed;
-        detail_uv.y += sin(TIME * 0.5 + uv.x * 3.0) * 0.02;
+        detail_uv.x += TIME * wetness_detail_speed * parallax_speed;
+        detail_uv.y += sin(TIME * 0.5 * parallax_speed + uv.x * 3.0) * 0.02;
         float wetness_detail = texture(noise_texture, detail_uv).r;
 
         // Combine layers (70% base, 30% detail)
