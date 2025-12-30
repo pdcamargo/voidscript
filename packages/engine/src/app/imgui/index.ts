@@ -27,6 +27,18 @@ export type { ComponentNamePickerOptions } from './component-name-picker.js';
 
 // EditorLayout - Standardized component UI rendering
 export { EditorLayout } from './editor-layout.js';
+
+// Editor Icons - Material Symbols icon definitions
+export { EDITOR_ICONS, ICON_RANGES, ICON_MIN, ICON_MAX } from './editor-icons.js';
+export type { EditorIconName } from './editor-icons.js';
+
+// Editor Fonts - Multi-size font management
+export {
+  EditorFonts,
+  ICON_SMALL_SIZE,
+  ICON_MEDIUM_SIZE,
+  ICON_BIG_SIZE,
+} from './editor-fonts.js';
 export type {
   FieldResult,
   BaseFieldOptions,

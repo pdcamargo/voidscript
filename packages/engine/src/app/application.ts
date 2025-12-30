@@ -158,6 +158,10 @@ import type { WorldData } from '../ecs/serialization/schemas.js';
 import { WorldLoader } from './world-loader.js';
 import { preloadAssets } from '../ecs/asset-preloader.js';
 
+// Editor icon font
+import { getMaterialIconsFontData } from './imgui/material-icons-font.js';
+import { ICON_RANGES } from './imgui/editor-icons.js';
+
 /**
  * Default world configuration for loading a scene on startup
  */
@@ -441,7 +445,18 @@ export class Application {
 
     // Initialize ImGui (unless disabled)
     if (config.imgui !== false) {
-      this.imguiLayer = new ImGuiLayer(config.imgui ?? {});
+      // Auto-configure icon font when editor is enabled
+      let imguiConfig = config.imgui ?? {};
+      if (this.isEditorEnabled()) {
+        imguiConfig = {
+          ...imguiConfig,
+          iconFont: {
+            data: getMaterialIconsFontData(),
+            ranges: ICON_RANGES,
+          },
+        };
+      }
+      this.imguiLayer = new ImGuiLayer(imguiConfig);
     }
 
     // Configure fixed timestep

@@ -21,9 +21,15 @@
  */
 
 import { Layer } from '../layer.js';
-import { ImGui, ImGuiImplWeb, ImVec2, ImVec4 } from '@mori2003/jsimgui';
+import { ImGui, ImGuiImplWeb, ImVec2, ImVec4, ImFontConfig } from '@mori2003/jsimgui';
 import type { AppEvent } from '../events.js';
 import { EventType, EventDispatcher } from '../events.js';
+import {
+  EditorFonts,
+  ICON_SMALL_SIZE,
+  ICON_MEDIUM_SIZE,
+  ICON_BIG_SIZE,
+} from '../imgui/editor-fonts.js';
 
 /**
  * ImGui layer configuration options
@@ -61,6 +67,19 @@ export interface ImGuiLayerConfig {
     url: string;
     /** Font size in pixels (default: 16) */
     size?: number;
+  };
+
+  /**
+   * Icon font configuration for merging icons into the main font
+   * If provided, merges icon glyphs into the main font atlas
+   */
+  iconFont?: {
+    /** Font data as Uint8Array */
+    data: Uint8Array;
+    /** Font size in pixels (defaults to main font size) */
+    size?: number;
+    /** Glyph ranges [start, end, 0] (default: Material Symbols range) */
+    ranges?: number[];
   };
 
   /**
@@ -225,7 +244,7 @@ const JSIMGUI_HANDLED_KEYS = new Set([
 
 export class ImGuiLayer extends Layer {
   private initialized = false;
-  private config: Required<ImGuiLayerConfig>;
+  private config: Omit<Required<ImGuiLayerConfig>, 'iconFont'> & Pick<ImGuiLayerConfig, 'iconFont'>;
   private blockEvents: boolean;
   private themeApplied = false;
   private currentPixelRatio = 1;
@@ -244,6 +263,7 @@ export class ImGuiLayer extends Layer {
         url: '/font.ttf',
         size: 16,
       },
+      iconFont: config.iconFont,
       theme: config.theme ?? 'default',
     };
     this.blockEvents = this.config.blockEvents;
@@ -284,23 +304,140 @@ export class ImGuiLayer extends Layer {
     });
 
     // Load custom font if provided
+    let mainFontSize = 16;
+    let mainFontFileName = 'font.ttf';
     if (this.config.customFont) {
       try {
         const fontUrl = this.config.customFont.url;
-        const fontSize = this.config.customFont.size ?? 16;
+        mainFontSize = this.config.customFont.size ?? 16;
 
         // Fetch font file as ArrayBuffer
         const fontBuf = await (await fetch(fontUrl)).arrayBuffer();
 
         // Load font data into ImGui's virtual filesystem
-        const fontFileName = fontUrl.split('/').pop() || 'font.ttf';
-        ImGuiImplWeb.LoadFont(fontFileName, new Uint8Array(fontBuf));
+        mainFontFileName = fontUrl.split('/').pop() || 'font.ttf';
+        ImGuiImplWeb.LoadFont(mainFontFileName, new Uint8Array(fontBuf));
 
         // Add font to ImGui with specified size
-        ImGui.GetIO().Fonts.AddFontFromFileTTF(fontFileName, fontSize);
+        ImGui.GetIO().Fonts.AddFontFromFileTTF(mainFontFileName, mainFontSize);
       } catch (error) {
         console.error('[ImGuiLayer] Failed to load custom font:', error);
         // Continue with default font on error
+      }
+    }
+
+    // Merge icon font if provided (icons will be merged into the main font)
+    // Following the C++ pattern of loading multiple font sizes with merged icons
+    if (this.config.iconFont) {
+      try {
+        const iconFontData = this.config.iconFont.data;
+        // Default to Material Symbols Unicode range (Private Use Area)
+        const glyphRanges = this.config.iconFont.ranges ?? [0xe000, 0xf8ff, 0];
+
+        // Load icon font data into ImGui's virtual filesystem
+        ImGuiImplWeb.LoadFont('material-icons.ttf', iconFontData);
+
+        const io = ImGui.GetIO();
+
+        // Helper to create a font config for merging
+        const createMergeConfig = (): InstanceType<typeof ImFontConfig> => {
+          const cfg = ImFontConfig.New();
+          cfg.RasterizerDensity = 1.0;
+          cfg.RasterizerMultiply = 1.0;
+          cfg.FontDataOwnedByAtlas = true;
+          cfg.MergeMode = true;
+          return cfg;
+        };
+
+        // Helper to create a font config for non-merging
+        const createNonMergeConfig = (): InstanceType<typeof ImFontConfig> => {
+          const cfg = ImFontConfig.New();
+          cfg.RasterizerDensity = 1.0;
+          cfg.RasterizerMultiply = 1.0;
+          cfg.FontDataOwnedByAtlas = true;
+          cfg.MergeMode = false;
+          return cfg;
+        };
+
+        // Merge icons into the default/main font at its size
+        const mainMergeConfig = createMergeConfig();
+        io.Fonts.AddFontFromFileTTF(
+          'material-icons.ttf',
+          mainFontSize,
+          mainMergeConfig,
+          glyphRanges,
+        );
+        mainMergeConfig.Drop();
+
+        // === Create additional font sizes with merged icons ===
+        // Each size needs: 1) main font at that size, 2) icons merged in
+
+        // Icon Small (14px)
+        const smallConfig = createNonMergeConfig();
+        const iconSmallFont = io.Fonts.AddFontFromFileTTF(
+          mainFontFileName,
+          ICON_SMALL_SIZE,
+          smallConfig,
+          null,
+        );
+        smallConfig.Drop();
+
+        const smallMergeConfig = createMergeConfig();
+        io.Fonts.AddFontFromFileTTF(
+          'material-icons.ttf',
+          ICON_SMALL_SIZE,
+          smallMergeConfig,
+          glyphRanges,
+        );
+        smallMergeConfig.Drop();
+
+        // Icon Medium (18px)
+        const mediumConfig = createNonMergeConfig();
+        const iconMediumFont = io.Fonts.AddFontFromFileTTF(
+          mainFontFileName,
+          ICON_MEDIUM_SIZE,
+          mediumConfig,
+          null,
+        );
+        mediumConfig.Drop();
+
+        const mediumMergeConfig = createMergeConfig();
+        io.Fonts.AddFontFromFileTTF(
+          'material-icons.ttf',
+          ICON_MEDIUM_SIZE,
+          mediumMergeConfig,
+          glyphRanges,
+        );
+        mediumMergeConfig.Drop();
+
+        // Icon Big (24px)
+        const bigConfig = createNonMergeConfig();
+        const iconBigFont = io.Fonts.AddFontFromFileTTF(
+          mainFontFileName,
+          ICON_BIG_SIZE,
+          bigConfig,
+          null,
+        );
+        bigConfig.Drop();
+
+        const bigMergeConfig = createMergeConfig();
+        io.Fonts.AddFontFromFileTTF(
+          'material-icons.ttf',
+          ICON_BIG_SIZE,
+          bigMergeConfig,
+          glyphRanges,
+        );
+        bigMergeConfig.Drop();
+
+        // Store font references in EditorFonts for easy access
+        EditorFonts._setFonts(iconSmallFont, iconMediumFont, iconBigFont);
+
+        console.log(
+          `[ImGuiLayer] Loaded icon fonts: small=${ICON_SMALL_SIZE}px, medium=${ICON_MEDIUM_SIZE}px, big=${ICON_BIG_SIZE}px`,
+        );
+      } catch (error) {
+        console.error('[ImGuiLayer] Failed to load icon font:', error);
+        // Continue without icons on error
       }
     }
 

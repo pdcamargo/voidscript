@@ -94,7 +94,7 @@ world:
                 y: 12
               foam_speed: 0.02
               foam_intensity: 1.9739999771118164
-              foam_threshold: 0.7
+              foam_threshold: 0.621
               foam_softness: 0
               foam_turbulence: 0.3
               foam_animation_speed: 0.5

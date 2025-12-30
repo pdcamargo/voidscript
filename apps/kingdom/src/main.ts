@@ -79,7 +79,7 @@ async function main() {
         url: '/font.ttf',
         size: 16,
       },
-      theme: 'moonlight',
+      theme: 'default',
     },
     physics: {
       enable2D: true,

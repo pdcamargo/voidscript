@@ -50,6 +50,8 @@ import { DefaultTextureGenerator } from '../../shader/default-texture-generator.
 import type { NoiseTextureParams } from '../../shader/vsl/ast.js';
 import type { Events } from '../../ecs/events.js';
 import type { ComponentType } from '../../ecs/component.js';
+import { EDITOR_ICONS } from './editor-icons.js';
+import { EditorFonts, ICON_SMALL_SIZE, ICON_MEDIUM_SIZE, ICON_BIG_SIZE } from './editor-fonts.js';
 
 // ============================================================================
 // Types and Interfaces
@@ -257,6 +259,9 @@ function getOrCreateNoisePreview(
 // ============================================================================
 
 export class EditorLayout {
+  /** Material Icons for use in ImGui buttons/text */
+  static readonly ICONS = EDITOR_ICONS;
+
   // ==========================================================================
   // Layout Utilities
   // ==========================================================================
@@ -351,6 +356,174 @@ export class EditorLayout {
    */
   static hint(text: string): void {
     ImGui.TextColored({ x: 0.7, y: 0.7, z: 0.7, w: 1 }, text);
+  }
+
+  // ==========================================================================
+  // Icon Buttons
+  // ==========================================================================
+
+  /**
+   * Icon button size options
+   */
+  static readonly IconSize = {
+    Small: 'small',
+    Medium: 'medium',
+    Big: 'big',
+  } as const;
+
+  /**
+   * Render an icon button with proper centering and styling
+   *
+   * @param icon - Icon from EDITOR_ICONS (e.g., EditorLayout.ICONS.PLAY)
+   * @param options - Button configuration options
+   * @returns true if the button was clicked
+   *
+   * @example
+   * ```typescript
+   * if (EditorLayout.iconButton(EditorLayout.ICONS.PLAY, {
+   *   size: 'medium',
+   *   tooltip: 'Play',
+   *   color: { r: 0.2, g: 0.6, b: 0.2 },
+   *   hoverColor: { r: 0.3, g: 0.7, b: 0.3 },
+   * })) {
+   *   manager.play();
+   * }
+   * ```
+   */
+  static iconButton(
+    icon: string,
+    options?: {
+      /** Icon size: 'small' (16px), 'medium' (28px), or 'big' (48px). Default: 'medium' */
+      size?: 'small' | 'medium' | 'big';
+      /** Tooltip text shown on hover */
+      tooltip?: string;
+      /** Button background color */
+      color?: { r: number; g: number; b: number; a?: number };
+      /** Button hover color */
+      hoverColor?: { r: number; g: number; b: number; a?: number };
+      /** Unique ID suffix for the button (for multiple buttons with same icon) */
+      id?: string;
+      /** Explicit button width. Default: same as height for square buttons */
+      width?: number;
+      /** Explicit button height. Default: 24 */
+      height?: number;
+      /** Vertical offset for icon position adjustment. Positive = down, Negative = up. Default: 0 */
+      iconOffsetY?: number;
+    },
+  ): boolean {
+    const size = options?.size ?? 'medium';
+    const iconOffsetY = options?.iconOffsetY ?? 0;
+
+    // Get icon size in pixels
+    let iconSizePx: number;
+    switch (size) {
+      case 'small':
+        iconSizePx = ICON_SMALL_SIZE;
+        break;
+      case 'big':
+        iconSizePx = ICON_BIG_SIZE;
+        break;
+      default:
+        iconSizePx = ICON_MEDIUM_SIZE;
+    }
+
+    // Calculate button dimensions - default to square buttons matching standard ImGui button height
+    // GetFrameHeight() returns font size + frame padding * 2, which is the standard button height
+    const defaultSize = ImGui.GetFrameHeight();
+    const buttonHeight = options?.height && options.height > 0 ? options.height : defaultSize;
+    const buttonWidth = options?.width && options.width > 0 ? options.width : buttonHeight;
+
+    // Create unique button ID
+    const buttonId = options?.id ? `##iconbtn_${options.id}` : `##iconbtn_${icon}`;
+
+    // Push button colors
+    let colorsPushed = 0;
+    if (options?.color) {
+      const c = options.color;
+      ImGui.PushStyleColorImVec4(ImGui.Col.Button, {
+        x: c.r,
+        y: c.g,
+        z: c.b,
+        w: c.a ?? 1.0,
+      });
+      colorsPushed++;
+    }
+    if (options?.hoverColor) {
+      const c = options.hoverColor;
+      ImGui.PushStyleColorImVec4(ImGui.Col.ButtonHovered, {
+        x: c.r,
+        y: c.g,
+        z: c.b,
+        w: c.a ?? 1.0,
+      });
+      colorsPushed++;
+    }
+
+    // Push font for icon BEFORE the button so the button uses the icon font
+    let fontPushed = false;
+    switch (size) {
+      case 'small':
+        fontPushed = EditorFonts.pushIconSmall();
+        break;
+      case 'big':
+        fontPushed = EditorFonts.pushIconBig();
+        break;
+      default:
+        fontPushed = EditorFonts.pushIconMedium();
+        break;
+    }
+
+    // Calculate padding to center the icon within the button
+    // The icon is iconSizePx, button is buttonWidth x buttonHeight
+    // Padding = (buttonSize - iconSize) / 2
+    const paddingX = Math.max(0, (buttonWidth - iconSizePx) / 2);
+    const paddingY = Math.max(0, (buttonHeight - iconSizePx) / 2) + iconOffsetY;
+
+    ImGui.PushStyleVarImVec2(ImGui.StyleVar.FramePadding, { x: paddingX, y: paddingY });
+
+    // Render button with the icon as text
+    const clicked = ImGui.Button(`${icon}${buttonId}`, { x: buttonWidth, y: buttonHeight });
+    const isHovered = ImGui.IsItemHovered();
+
+    // Pop frame padding
+    ImGui.PopStyleVar();
+
+    // Pop font
+    if (fontPushed) {
+      EditorFonts.pop();
+    }
+
+    // Pop colors
+    if (colorsPushed > 0) {
+      ImGui.PopStyleColor(colorsPushed);
+    }
+
+    // Show tooltip AFTER popping the icon font so it uses the default font
+    if (options?.tooltip && isHovered) {
+      ImGui.SetTooltip(options.tooltip);
+    }
+
+    return clicked;
+  }
+
+  /**
+   * Render an icon button that appears disabled (grayed out, not clickable)
+   */
+  static iconButtonDisabled(
+    icon: string,
+    options?: {
+      size?: 'small' | 'medium' | 'big';
+      tooltip?: string;
+      id?: string;
+      width?: number;
+      height?: number;
+      iconOffsetY?: number;
+    },
+  ): void {
+    EditorLayout.iconButton(icon, {
+      ...options,
+      color: { r: 0.3, g: 0.3, b: 0.3 },
+    });
   }
 
   // ==========================================================================
