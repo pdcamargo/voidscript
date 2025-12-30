@@ -323,7 +323,7 @@ export class Parser {
   }
 
   /**
-   * Parse uniform hint: hint_range(0.0, 1.0) or hint_color
+   * Parse uniform hint: hint_range(0.0, 1.0) or source_color
    */
   private parseUniformHint(): UniformHint {
     if (!this.check(TokenType.Identifier)) {

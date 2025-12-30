@@ -24,11 +24,5 @@ export const shaderUpdateSystem = system(({ commands }) => {
   const app = Application.exists() ? Application.get() : null;
   const deltaTime = app?.getDeltaTime() ?? 0;
 
-  // Debug: Log every 60 frames (roughly once per second at 60fps)
-  const trackedCount = shaderManager.getTrackedMaterialCount();
-  if (trackedCount > 0 && Math.random() < 0.02) {
-    console.log('[ShaderUpdateSystem] Updating TIME:', shaderManager.getElapsedTime().toFixed(2), 'on', trackedCount, 'materials');
-  }
-
   shaderManager.update(deltaTime);
 });

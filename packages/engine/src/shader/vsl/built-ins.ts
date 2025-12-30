@@ -172,6 +172,43 @@ export const CANVAS_ITEM_BUILTINS: BuiltInVariable[] = [
     glslMapping: 'gl_FragCoord',
     description: 'Fragment coordinates (window-space)',
   },
+  {
+    name: 'CLIP_POSITION',
+    type: 'vec4',
+    stages: ['vertex', 'fragment'],
+    writable: false,
+    glslMapping: 'vsl_clipPosition',
+    description: 'Clip-space position (for mesh-relative screen UV calculations)',
+    isVarying: true,
+  },
+  {
+    name: 'MODEL_POSITION',
+    type: 'vec3',
+    stages: ['vertex', 'fragment'],
+    writable: false,
+    glslMapping: 'vsl_modelPosition',
+    description: 'Object world position (extracted from model matrix)',
+    isVarying: true,
+  },
+  {
+    name: 'MODEL_CENTER_SCREEN_Y',
+    type: 'float',
+    stages: ['vertex', 'fragment'],
+    writable: false,
+    glslMapping: 'vsl_modelCenterScreenY',
+    description: 'Model center Y position in screen space (0-1), for reflection calculations',
+    isVarying: true,
+  },
+  {
+    name: 'MESH_SCREEN_BOUNDS',
+    type: 'vec4',
+    stages: ['fragment'],
+    writable: false,
+    glslMapping: 'vsl_meshScreenBounds',
+    description: 'Mesh screen-space bounds (minX, minY, maxX, maxY) in UV space (0-1). Calculated from mesh corners projected to screen.',
+    isUniform: true,
+    uniformName: 'vsl_meshScreenBounds',
+  },
 
   // Global Variables (both stages)
   {

@@ -23,50 +23,48 @@ componentRegistry:
   - id: 10
     name: LocalTransform3D
   - id: 11
-    name: RenderObject
-  - id: 12
-    name: Water2D
-  - id: 13
     name: SpriteAreaGeneratorGenerated
-  - id: 14
+  - id: 12
     name: SpriteAreaGenerator
-  - id: 15
+  - id: 13
+    name: RenderObject
+  - id: 14
     name: Sprite2D
-  - id: 16
+  - id: 15
     name: CampFire
-  - id: 17
+  - id: 16
     name: Sprite2DMaterial
-  - id: 18
+  - id: 17
     name: RigidBody2D
-  - id: 19
+  - id: 18
     name: Collider2D
-  - id: 20
+  - id: 19
     name: CharacterController2D
-  - id: 21
+  - id: 20
     name: Ccd
-  - id: 22
+  - id: 21
     name: AnimationController
-  - id: 23
+  - id: 22
     name: DesiredMovement2D
-  - id: 24
+  - id: 23
     name: ActiveCollisionEvents2D
-  - id: 25
+  - id: 24
     name: Player2D
-  - id: 26
+  - id: 25
     name: Light3D
-  - id: 27
+  - id: 26
     name: SunLight
-  - id: 28
+  - id: 27
     name: SkyGradient2D
-  - id: 29
+  - id: 28
     name: Fog2D
-  - id: 30
+  - id: 29
     name: FogSkySync
-  - id: 31
+  - id: 30
     name: PrefabInstance
-  - id: 32
+  - id: 31
     name: Rain2D
-  - id: 33
+  - id: 32
     name: LightningField2D
 entities:
   - id: 0
@@ -76,7 +74,7 @@ entities:
         typeName: Children
         data:
           ids:
-            - 12
+            - 11
       - typeId: 1
         typeName: Name
         data:
@@ -237,10 +235,10 @@ entities:
         typeName: Children
         data:
           ids:
-            - 9
-            - 11
             - 8
             - 10
+            - 7
+            - 9
       - typeId: 1
         typeName: Name
         data:
@@ -278,80 +276,6 @@ entities:
   - id: 5
     generation: 0
     components:
-      - typeId: 1
-        typeName: Name
-        data:
-          name: Water
-      - typeId: 2
-        typeName: Transform3D
-        data:
-          position:
-            x: 0
-            y: -4.199999809265137
-            z: 0
-          rotation:
-            x: 0
-            y: 0
-            z: 0
-          scale:
-            x: 1400
-            y: 8
-            z: 1
-      - typeId: 12
-        typeName: Water2D
-        data:
-          baseSize:
-            x: 1
-            y: 1
-          surfacePosition: 0
-          waterColor:
-            r: 0
-            g: 0.9113924503326416
-            b: 1
-            a: 1
-          waterOpacity: 0.04500000178813934
-          waveSpeed: 0.4000000059604645
-          waveDistortion: 0.10000000149011612
-          waveMultiplier: 20
-          enableWaterTexture: true
-          foamScale:
-            x: 6.5
-            y: 5.400000095367432
-          foamSpeed: 0.0010000000474974513
-          foamIntensity: 1
-          foamThreshold: 0.699999988079071
-          reflectionOffsetX: 0
-          reflectionOffsetY: 0
-          reflectionSkewX: 0
-          reflectionSkewY: 0.10000000149011612
-          sortingLayer: 2
-          sortingOrder: 0
-          visible: true
-          isLit: true
-          wetnessIntensity: 5.550000190734863
-          wetnessOpacity: 0.00800000037997961
-          wetnessScale:
-            x: 5
-            y: 5
-          wetnessSpeed: 0.029999999329447746
-          wetnessDetailScale:
-            x: 8.600000381469727
-            y: 22.100000381469727
-          wetnessDetailSpeed: 0.009999999776482582
-          wetnessContrast: 28.600000381469727
-          wetnessBrightness: 0.8529999852180481
-          wetnessColorTint:
-            r: 1
-            g: 1
-            b: 1
-          foamSoftness: 0
-          foamTurbulence: 12
-          foamAnimationSpeed: 1.5
-          foamLayerCount: 13
-          tileSize: 28.799999237060547
-  - id: 6
-    generation: 0
-    components:
       - typeId: 0
         typeName: Children
         data:
@@ -375,7 +299,7 @@ entities:
             x: 1
             y: 1
             z: 1
-      - typeId: 14
+      - typeId: 12
         typeName: SpriteAreaGenerator
         data:
           boundsMin:
@@ -406,7 +330,7 @@ entities:
             y: 0.5
           additionalComponents:
             - Cloud2D
-  - id: 7
+  - id: 6
     generation: 0
     components:
       - typeId: 0
@@ -432,7 +356,7 @@ entities:
             x: 1
             y: 1
             z: 1
-      - typeId: 14
+      - typeId: 12
         typeName: SpriteAreaGenerator
         data:
           boundsMin:
@@ -469,7 +393,7 @@ entities:
             x: 0.5
             y: 0.5
           additionalComponents: []
-  - id: 8
+  - id: 7
     generation: 0
     components:
       - typeId: 9
@@ -514,7 +438,7 @@ entities:
             x: 1
             y: 1
             z: 1
-      - typeId: 14
+      - typeId: 12
         typeName: SpriteAreaGenerator
         data:
           boundsMin:
@@ -544,7 +468,7 @@ entities:
             x: 0.5
             y: 0
           additionalComponents: []
-  - id: 9
+  - id: 8
     generation: 0
     components:
       - typeId: 9
@@ -589,7 +513,7 @@ entities:
             x: 1
             y: 1
             z: 1
-      - typeId: 14
+      - typeId: 12
         typeName: SpriteAreaGenerator
         data:
           boundsMin:
@@ -619,7 +543,7 @@ entities:
             x: 0.5
             y: 0
           additionalComponents: []
-  - id: 10
+  - id: 9
     generation: 0
     components:
       - typeId: 9
@@ -664,7 +588,7 @@ entities:
             x: 1
             y: 1
             z: 1
-      - typeId: 14
+      - typeId: 12
         typeName: SpriteAreaGenerator
         data:
           boundsMin:
@@ -694,7 +618,7 @@ entities:
             x: 0.5
             y: 0
           additionalComponents: []
-  - id: 11
+  - id: 10
     generation: 0
     components:
       - typeId: 9
@@ -739,7 +663,7 @@ entities:
             x: 1
             y: 1
             z: 1
-      - typeId: 14
+      - typeId: 12
         typeName: SpriteAreaGenerator
         data:
           boundsMin:
@@ -769,7 +693,7 @@ entities:
             x: 0.5
             y: 0
           additionalComponents: []
-  - id: 12
+  - id: 11
     generation: 0
     components:
       - typeId: 9
@@ -795,7 +719,7 @@ entities:
             x: 5
             y: 5
             z: 1
-      - typeId: 15
+      - typeId: 14
         typeName: Sprite2D
         data:
           texture:
@@ -823,9 +747,62 @@ entities:
             y: 0
             width: 38
             height: 38
-      - typeId: 16
+      - typeId: 15
         typeName: CampFire
         data: {}
+  - id: 12
+    generation: 0
+    components:
+      - typeId: 1
+        typeName: Name
+        data:
+          name: Water
+      - typeId: 2
+        typeName: Transform3D
+        data:
+          position:
+            x: 0
+            y: -4.199999809265137
+            z: 0
+          rotation:
+            x: 0
+            y: 0
+            z: 0
+          scale:
+            x: 1400
+            y: 8
+            z: 1
+      - typeId: 14
+        typeName: Sprite2D
+        data:
+          texture: null
+          color:
+            r: 1
+            g: 1
+            b: 1
+            a: 1
+          tileIndex: null
+          tileSize: null
+          tilesetSize: null
+          pixelsPerUnit: 100
+          flipX: false
+          flipY: false
+          sortingLayer: 1
+          sortingOrder: 0
+          anchor:
+            x: 0.5
+            y: 0.5
+          visible: true
+          isLit: false
+          spriteRect: null
+      - typeId: 16
+        typeName: Sprite2DMaterial
+        data:
+          shader:
+            guid: water-2d-shader
+          uniforms: {}
+          uniqueInstance: true
+          enabled: true
   - id: 13
     generation: 0
     components:
@@ -848,7 +825,7 @@ entities:
             x: 0.5
             y: 1
             z: 1
-      - typeId: 15
+      - typeId: 14
         typeName: Sprite2D
         data:
           texture:
@@ -876,7 +853,7 @@ entities:
           visible: true
           isLit: true
           spriteRect: null
-      - typeId: 17
+      - typeId: 16
         typeName: Sprite2DMaterial
         data:
           shader:
@@ -890,12 +867,12 @@ entities:
             pulse_speed: 1
           uniqueInstance: true
           enabled: true
-      - typeId: 18
+      - typeId: 17
         typeName: RigidBody2D
         data:
           bodyType: kinematic
           canSleep: false
-      - typeId: 19
+      - typeId: 18
         typeName: Collider2D
         data:
           shape:
@@ -910,7 +887,7 @@ entities:
           friction: 0
           restitution: 0
           density: 0
-      - typeId: 20
+      - typeId: 19
         typeName: CharacterController2D
         data:
           offset: 0.01
@@ -929,11 +906,11 @@ entities:
           normalNudgeFactor: 0
           applyImpulsesToDynamicBodies: false
           characterMass: null
-      - typeId: 21
+      - typeId: 20
         typeName: Ccd
         data:
           enabled: false
-      - typeId: 22
+      - typeId: 21
         typeName: AnimationController
         data:
           animations: []
@@ -942,17 +919,17 @@ entities:
           currentTime: 0
           speed: 1
           loopCount: 0
-      - typeId: 23
+      - typeId: 22
         typeName: DesiredMovement2D
         data:
           translation:
             x: 0
             y: 0
-      - typeId: 24
+      - typeId: 23
         typeName: ActiveCollisionEvents2D
         data:
           events: 1
-      - typeId: 25
+      - typeId: 24
         typeName: Player2D
         data:
           movementSpeed: 20
@@ -978,7 +955,7 @@ entities:
             x: 1
             y: 1
             z: 1
-      - typeId: 26
+      - typeId: 25
         typeName: Light3D
         data:
           type: directional
@@ -995,7 +972,7 @@ entities:
             bias: -0.0001
             normalBias: 0.02
           shadowCameraSize: 10
-      - typeId: 27
+      - typeId: 26
         typeName: SunLight
         data:
           isAmbient: false
@@ -1021,7 +998,7 @@ entities:
             x: 1
             y: 1
             z: 1
-      - typeId: 26
+      - typeId: 25
         typeName: Light3D
         data:
           type: ambient
@@ -1038,7 +1015,7 @@ entities:
             bias: -0.0001
             normalBias: 0.02
           shadowCameraSize: 10
-      - typeId: 27
+      - typeId: 26
         typeName: SunLight
         data:
           isAmbient: true
@@ -1064,7 +1041,7 @@ entities:
             x: 1400
             y: 33.79999923706055
             z: 1
-      - typeId: 28
+      - typeId: 27
         typeName: SkyGradient2D
         data:
           stops:
@@ -1116,7 +1093,7 @@ entities:
             x: 1
             y: 1
             z: 1
-      - typeId: 29
+      - typeId: 28
         typeName: Fog2D
         data:
           baseSize:
@@ -1138,7 +1115,7 @@ entities:
           sortingOrder: 0
           visible: true
           isLit: true
-      - typeId: 30
+      - typeId: 29
         typeName: FogSkySync
         data:
           skyEntity: 16
@@ -1183,7 +1160,7 @@ entities:
             x: 1
             y: 1
             z: 1
-      - typeId: 29
+      - typeId: 28
         typeName: Fog2D
         data:
           baseSize:
@@ -1205,7 +1182,7 @@ entities:
           sortingOrder: 0
           visible: true
           isLit: false
-      - typeId: 30
+      - typeId: 29
         typeName: FogSkySync
         data:
           skyEntity: 16
@@ -1250,7 +1227,7 @@ entities:
             x: 1
             y: 1
             z: 1
-      - typeId: 29
+      - typeId: 28
         typeName: Fog2D
         data:
           baseSize:
@@ -1272,14 +1249,14 @@ entities:
           sortingOrder: 0
           visible: true
           isLit: false
-      - typeId: 30
+      - typeId: 29
         typeName: FogSkySync
         data:
           skyEntity: 16
   - id: 20
     generation: 1
     components:
-      - typeId: 31
+      - typeId: 30
         typeName: PrefabInstance
         data:
           prefabAssetGuid: fe28a3a2-7584-4b06-a5a0-ef066846ddba
@@ -1324,7 +1301,7 @@ entities:
             x: 1
             y: 1
             z: 1
-      - typeId: 33
+      - typeId: 32
         typeName: LightningField2D
         data:
           baseSize:
@@ -1365,7 +1342,7 @@ entities:
           enableGroundGlow: false
           groundGlowRadius: 20
 metadata:
-  createdAt: 2025-12-30T02:34:49.030Z
-  modifiedAt: 2025-12-30T02:34:49.030Z
+  createdAt: 2025-12-30T03:07:57.421Z
+  modifiedAt: 2025-12-30T03:07:57.421Z
   entityCount: 22
-  archetypeCount: 60
+  archetypeCount: 59

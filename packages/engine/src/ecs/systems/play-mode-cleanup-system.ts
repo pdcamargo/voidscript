@@ -20,7 +20,6 @@ import type { Command } from '../command.js';
 import { EditorManager } from '../../editor/editor-manager.js';
 import { Render3DManager } from './renderer-sync-system.js';
 import { SpriteRenderManager } from './sprite-sync-system.js';
-import { Water2DRenderManager } from './water-2d-system.js';
 import { SkyGradientRenderManager } from './sky-gradient-system.js';
 import { Fog2DRenderManager } from './rendering/fog-2d-system.js';
 import { Rain2DRenderManager } from './rain-2d-system.js';
@@ -48,12 +47,6 @@ function disposeAllRenderManagers(commands: Command): void {
   const spriteManager = commands.tryGetResource(SpriteRenderManager);
   if (spriteManager) {
     spriteManager.dispose();
-  }
-
-  // Water2DRenderManager - Water effects
-  const waterManager = commands.tryGetResource(Water2DRenderManager);
-  if (waterManager) {
-    waterManager.dispose();
   }
 
   // SkyGradientRenderManager - Sky gradients

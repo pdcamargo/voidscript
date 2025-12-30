@@ -11,9 +11,6 @@ import { TilemapMaterial } from './TilemapMaterial.js';
 // Re-export types and utilities
 export * from './SpriteMaterial.js';
 export * from './TilemapMaterial.js';
-export * from './WaterSpriteMaterial.js';
-export * from './Water2DMaterial.js';
-export * from './LitWater2DMaterial.js';
 export * from './shaders.js';
 
 /**

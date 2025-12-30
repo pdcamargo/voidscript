@@ -50,10 +50,6 @@ import { virtualCameraFollowSystem } from "../ecs/systems/virtual-camera-follow-
 import { virtualCameraSelectionSystem } from "../ecs/systems/virtual-camera-selection-system.js";
 import { cameraBrainSystem } from "../ecs/systems/camera-brain-system.js";
 import {
-  Water2DRenderManager,
-  water2DSyncSystem,
-} from "../ecs/systems/water-2d-system.js";
-import {
   SkyGradientRenderManager,
   skyGradient2DSystem,
 } from "../ecs/systems/sky-gradient-system.js";
@@ -1244,8 +1240,10 @@ export class Application {
     this.insertResource(new AnimationManager());
     this.addUpdateSystem(animationUpdateSystem);
 
-    // Shader system (for VSL shader management and TIME uniform updates)
-    this.insertResource(new ShaderManager());
+    // Shader system (for VSL shader management and TIME/SCREEN_TEXTURE uniform updates)
+    const shaderManager = new ShaderManager();
+    shaderManager.setRenderer(this.renderer);
+    this.insertResource(shaderManager);
     this.addUpdateSystem(shaderUpdateSystem);
 
     // Sprite rendering system (2D)
@@ -1269,12 +1267,6 @@ export class Application {
     this.addRenderSystem(cameraSyncSystem); // Must run after brain system to sync final camera state
     this.addRenderSystem(transformPropagationSystem);
     this.addRenderSystem(render3DSyncSystem);
-
-    // Water 2D rendering system
-    // Uses onBeforeRender callback for render-order-based screen capture
-    // Works with both main framebuffer and editor viewports
-    this.insertResource(new Water2DRenderManager(this.renderer));
-    this.addUpdateSystem(water2DSyncSystem);
 
     // Sky Gradient 2D rendering system
     // - render: Create and update gradient backgrounds

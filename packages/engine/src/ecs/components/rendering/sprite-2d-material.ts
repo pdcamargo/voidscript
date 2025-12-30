@@ -24,9 +24,10 @@
 
 import { component } from '../../component.js';
 import { RuntimeAsset } from '../../runtime-asset.js';
-import { AssetDatabase } from '../../asset-database.js';
-import { AssetType, isShaderMetadata } from '../../asset-metadata.js';
+import { AssetType } from '../../asset-metadata.js';
 import { EditorLayout } from '../../../app/imgui/editor-layout.js';
+import type { ShaderAsset } from '../../../shader/shader-asset.js';
+import type { TranspiledUniform } from '../../../shader/vsl/transpiler.js';
 
 /**
  * Serializable uniform value types
@@ -104,7 +105,7 @@ export const Sprite2DMaterial = component<Sprite2DMaterialData>(
     displayName: 'Sprite 2D Material',
     description:
       'Custom shader material for Sprite2D. Requires Sprite2D component on the same entity.',
-    customEditor: ({ componentData, commands }) => {
+    customEditor: ({ componentData }) => {
       // === Shader Section ===
       if (EditorLayout.beginGroup('Shader', true)) {
         EditorLayout.beginLabelsWidth(['Shader', 'Enabled', 'Unique Instance']);
@@ -152,100 +153,22 @@ export const Sprite2DMaterial = component<Sprite2DMaterialData>(
       }
 
       // === Uniforms Section ===
-      // Only show if shader is selected
-      if (componentData.shader && componentData.shader.guid) {
-        const metadata = AssetDatabase.getMetadata(componentData.shader.guid);
+      // Only show if shader is selected and loaded
+      if (componentData.shader && componentData.shader.guid && componentData.shader.isLoaded) {
+        const shaderAsset = componentData.shader.data as ShaderAsset;
 
-        if (metadata && isShaderMetadata(metadata)) {
-          const uniformNames = metadata.uniformNames || [];
+        if (shaderAsset && shaderAsset.uniforms) {
+          // Filter out built-in uniforms (user shouldn't edit TIME, TEXTURE, etc.)
+          const userUniforms = shaderAsset.uniforms.filter((u) => !u.isBuiltIn);
 
-          if (uniformNames.length > 0) {
+          if (userUniforms.length > 0) {
             if (EditorLayout.beginGroup('Uniforms', true)) {
-              EditorLayout.beginLabelsWidth(uniformNames);
+              // Calculate label width from uniform names
+              const uniformLabels = userUniforms.map((u) => u.name);
+              EditorLayout.beginLabelsWidth(uniformLabels);
 
-              for (const uniformName of uniformNames) {
-                const currentValue = componentData.uniforms[uniformName];
-
-                // Render uniform editor based on current value type
-                // If no value set, show a type picker
-                if (currentValue === undefined || currentValue === null) {
-                  EditorLayout.text(`${uniformName}:`);
-                  EditorLayout.sameLine();
-                  EditorLayout.textDisabled('(Not set)');
-                  EditorLayout.sameLine();
-
-                  // Type selection buttons
-                  if (EditorLayout.button(`Number##${uniformName}`)) {
-                    componentData.uniforms[uniformName] = 0;
-                  }
-                  EditorLayout.sameLine();
-                  if (EditorLayout.button(`Vec2##${uniformName}`)) {
-                    componentData.uniforms[uniformName] = { x: 0, y: 0 };
-                  }
-                  EditorLayout.sameLine();
-                  if (EditorLayout.button(`Color##${uniformName}`)) {
-                    componentData.uniforms[uniformName] = { r: 1, g: 1, b: 1 };
-                  }
-                } else if (typeof currentValue === 'number') {
-                  const [val, changed] = EditorLayout.numberField(uniformName, currentValue, {
-                    speed: 0.01,
-                    tooltip: `Shader uniform: ${uniformName}`,
-                  });
-                  if (changed) {
-                    componentData.uniforms[uniformName] = val;
-                  }
-                } else if (typeof currentValue === 'boolean') {
-                  const [val, changed] = EditorLayout.checkboxField(uniformName, currentValue, {
-                    tooltip: `Shader uniform: ${uniformName}`,
-                  });
-                  if (changed) {
-                    componentData.uniforms[uniformName] = val;
-                  }
-                } else if (isVec2(currentValue)) {
-                  const [val, changed] = EditorLayout.vector2Field(uniformName, currentValue, {
-                    speed: 0.01,
-                    tooltip: `Shader uniform: ${uniformName}`,
-                  });
-                  if (changed) {
-                    componentData.uniforms[uniformName] = { x: val.x, y: val.y };
-                  }
-                } else if (isVec3(currentValue)) {
-                  const [val, changed] = EditorLayout.vector3Field(uniformName, currentValue, {
-                    speed: 0.01,
-                    tooltip: `Shader uniform: ${uniformName}`,
-                  });
-                  if (changed) {
-                    componentData.uniforms[uniformName] = { x: val.x, y: val.y, z: val.z };
-                  }
-                } else if (isColor3(currentValue)) {
-                  const [val, changed] = EditorLayout.colorField(uniformName, currentValue, {
-                    tooltip: `Shader uniform: ${uniformName}`,
-                  });
-                  if (changed) {
-                    componentData.uniforms[uniformName] = { r: val.r, g: val.g, b: val.b };
-                  }
-                } else if (isColor4(currentValue)) {
-                  const [val, changed] = EditorLayout.colorField(uniformName, currentValue, {
-                    tooltip: `Shader uniform: ${uniformName}`,
-                    hasAlpha: true,
-                  });
-                  if (changed) {
-                    componentData.uniforms[uniformName] = {
-                      r: val.r,
-                      g: val.g,
-                      b: val.b,
-                      a: val.a ?? 1,
-                    };
-                  }
-                }
-
-                // Clear button for each uniform
-                if (currentValue !== undefined && currentValue !== null) {
-                  EditorLayout.sameLine();
-                  if (EditorLayout.button(`X##clear-${uniformName}`)) {
-                    delete componentData.uniforms[uniformName];
-                  }
-                }
+              for (const uniform of userUniforms) {
+                renderUniformEditor(componentData, uniform);
               }
 
               EditorLayout.endLabelsWidth();
@@ -259,56 +182,255 @@ export const Sprite2DMaterial = component<Sprite2DMaterialData>(
             }
           }
         }
+      } else if (componentData.shader && componentData.shader.guid && !componentData.shader.isLoaded) {
+        // Shader is selected but not yet loaded
+        if (EditorLayout.beginGroup('Uniforms', false)) {
+          EditorLayout.textDisabled('Loading shader...');
+          EditorLayout.endGroup();
+        }
       }
-
-      // Show warning if no Sprite2D component is present
-      // This would require entity context which we don't have in the custom editor
-      // The system will handle this validation at runtime
     },
   },
 );
 
-// Type guards for uniform values
-function isVec2(value: UniformValue): value is { x: number; y: number } {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'x' in value &&
-    'y' in value &&
-    !('z' in value) &&
-    !('r' in value)
-  );
+// ============================================================================
+// Uniform Editor Helpers
+// ============================================================================
+
+/**
+ * Parse a default value string from the shader into a serializable format
+ */
+function parseDefaultValue(type: string, defaultValue: string | undefined): UniformValue {
+  if (!defaultValue) {
+    return getTypeDefault(type);
+  }
+
+  // Handle simple number values
+  if (type === 'float' || type === 'int' || type === 'uint') {
+    const parsed = parseFloat(defaultValue);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+
+  if (type === 'bool') {
+    return defaultValue === 'true';
+  }
+
+  // Handle vector constructors like "vec2(1.0, 2.0)" or "vec4(0.0, 0.911, 1.0, 0.045)"
+  const vecMatch = defaultValue.match(/^(vec[234]|ivec[234]|uvec[234])\s*\(\s*(.+)\s*\)$/);
+  if (vecMatch && vecMatch[2]) {
+    const components = vecMatch[2].split(',').map((c) => parseFloat(c.trim()));
+    switch (type) {
+      case 'vec2':
+      case 'ivec2':
+      case 'uvec2':
+        return { x: components[0] ?? 0, y: components[1] ?? 0 };
+      case 'vec3':
+      case 'ivec3':
+      case 'uvec3':
+        return { x: components[0] ?? 0, y: components[1] ?? 0, z: components[2] ?? 0 };
+      case 'vec4':
+      case 'ivec4':
+      case 'uvec4':
+        return {
+          x: components[0] ?? 0,
+          y: components[1] ?? 0,
+          z: components[2] ?? 0,
+          w: components[3] ?? 1,
+        };
+    }
+  }
+
+  return getTypeDefault(type);
 }
 
-function isVec3(value: UniformValue): value is { x: number; y: number; z: number } {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'x' in value &&
-    'y' in value &&
-    'z' in value &&
-    !('w' in value)
-  );
+/**
+ * Get default value for a GLSL type
+ */
+function getTypeDefault(type: string): UniformValue {
+  switch (type) {
+    case 'bool':
+      return false;
+    case 'int':
+    case 'uint':
+    case 'float':
+      return 0;
+    case 'vec2':
+    case 'ivec2':
+    case 'uvec2':
+      return { x: 0, y: 0 };
+    case 'vec3':
+    case 'ivec3':
+    case 'uvec3':
+      return { x: 0, y: 0, z: 0 };
+    case 'vec4':
+    case 'ivec4':
+    case 'uvec4':
+      return { x: 0, y: 0, z: 0, w: 1 };
+    case 'sampler2D':
+    case 'samplerCube':
+      return null;
+    default:
+      return 0;
+  }
 }
 
-function isColor3(value: UniformValue): value is { r: number; g: number; b: number } {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'r' in value &&
-    'g' in value &&
-    'b' in value &&
-    !('a' in value)
-  );
+/**
+ * Convert vec4 to RGBA color format for source_color uniforms
+ */
+function vec4ToColor(value: UniformValue): { r: number; g: number; b: number; a: number } | null {
+  if (value && typeof value === 'object' && 'x' in value && 'y' in value && 'z' in value && 'w' in value) {
+    return { r: value.x, g: value.y, b: value.z, a: value.w };
+  }
+  if (value && typeof value === 'object' && 'r' in value && 'g' in value && 'b' in value) {
+    return { r: value.r, g: value.g, b: value.b, a: 'a' in value ? value.a : 1 };
+  }
+  return null;
 }
 
-function isColor4(value: UniformValue): value is { r: number; g: number; b: number; a: number } {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'r' in value &&
-    'g' in value &&
-    'b' in value &&
-    'a' in value
-  );
+/**
+ * Render an editor for a single uniform based on its type and hints
+ */
+function renderUniformEditor(
+  componentData: Sprite2DMaterialData,
+  uniform: TranspiledUniform,
+): void {
+  const { name, type, defaultValue, hint } = uniform;
+
+  // Get current value or initialize from shader default
+  let currentValue = componentData.uniforms[name];
+  if (currentValue === undefined) {
+    // Initialize with shader's default value
+    currentValue = parseDefaultValue(type, defaultValue);
+    componentData.uniforms[name] = currentValue;
+  }
+
+  // Determine if this is a color uniform (source_color)
+  const isColorUniform = hint?.type === 'source_color';
+
+  // Determine if this has a range hint
+  const hasRangeHint = hint?.type === 'hint_range' && hint.params && hint.params.length >= 2;
+
+  // Determine if this is a texture uniform
+  const isTextureUniform = type === 'sampler2D' || hint?.type === 'hint_texture';
+
+  // Build tooltip with type info
+  let tooltip = `Shader uniform: ${name} (${type})`;
+  if (hasRangeHint) {
+    tooltip += ` [${hint!.params![0]} - ${hint!.params![1]}]`;
+  }
+
+  // Render based on type and hints
+  if (isTextureUniform) {
+    // Texture uniform - use RuntimeAsset picker
+    const textureAsset = currentValue instanceof RuntimeAsset ? currentValue : null;
+    const [val, changed] = EditorLayout.runtimeAssetField(name, textureAsset, {
+      assetTypes: [AssetType.Texture],
+      tooltip: `${tooltip} - Texture asset`,
+    });
+    if (changed) {
+      componentData.uniforms[name] = val;
+    }
+  } else if (type === 'bool') {
+    const boolVal = typeof currentValue === 'boolean' ? currentValue : false;
+    const [val, changed] = EditorLayout.checkboxField(name, boolVal, { tooltip });
+    if (changed) {
+      componentData.uniforms[name] = val;
+    }
+  } else if (type === 'float' || type === 'int' || type === 'uint') {
+    const numVal = typeof currentValue === 'number' ? currentValue : 0;
+    const isInteger = type === 'int' || type === 'uint';
+
+    if (hasRangeHint) {
+      // Use slider for hint_range
+      const min = hint!.params![0]!;
+      const max = hint!.params![1]!;
+
+      if (isInteger) {
+        const [val, changed] = EditorLayout.integerField(name, numVal, {
+          min,
+          max,
+          useSlider: true,
+          tooltip,
+        });
+        if (changed) {
+          componentData.uniforms[name] = val;
+        }
+      } else {
+        const [val, changed] = EditorLayout.numberField(name, numVal, {
+          min,
+          max,
+          useSlider: true,
+          tooltip,
+        });
+        if (changed) {
+          componentData.uniforms[name] = val;
+        }
+      }
+    } else {
+      // Use drag input for numbers without range hint
+      if (isInteger) {
+        const [val, changed] = EditorLayout.integerField(name, numVal, { tooltip });
+        if (changed) {
+          componentData.uniforms[name] = val;
+        }
+      } else {
+        const [val, changed] = EditorLayout.numberField(name, numVal, { speed: 0.01, tooltip });
+        if (changed) {
+          componentData.uniforms[name] = val;
+        }
+      }
+    }
+  } else if (type === 'vec2' || type === 'ivec2' || type === 'uvec2') {
+    const vec2Val =
+      currentValue && typeof currentValue === 'object' && 'x' in currentValue && 'y' in currentValue
+        ? { x: currentValue.x, y: currentValue.y }
+        : { x: 0, y: 0 };
+    const [val, changed] = EditorLayout.vector2Field(name, vec2Val, { speed: 0.01, tooltip });
+    if (changed) {
+      componentData.uniforms[name] = { x: val.x, y: val.y };
+    }
+  } else if (type === 'vec3' || type === 'ivec3' || type === 'uvec3') {
+    if (isColorUniform) {
+      // Render as RGB color
+      const colorVal = vec4ToColor(currentValue) ?? { r: 1, g: 1, b: 1, a: 1 };
+      const [val, changed] = EditorLayout.colorField(name, colorVal, { tooltip, hasAlpha: false });
+      if (changed) {
+        componentData.uniforms[name] = { x: val.r, y: val.g, z: val.b };
+      }
+    } else {
+      // Render as vec3
+      const vec3Val =
+        currentValue && typeof currentValue === 'object' && 'x' in currentValue && 'y' in currentValue && 'z' in currentValue
+          ? { x: currentValue.x, y: currentValue.y, z: currentValue.z }
+          : { x: 0, y: 0, z: 0 };
+      const [val, changed] = EditorLayout.vector3Field(name, vec3Val, { speed: 0.01, tooltip });
+      if (changed) {
+        componentData.uniforms[name] = { x: val.x, y: val.y, z: val.z };
+      }
+    }
+  } else if (type === 'vec4' || type === 'ivec4' || type === 'uvec4') {
+    if (isColorUniform) {
+      // Render as RGBA color
+      const colorVal = vec4ToColor(currentValue) ?? { r: 1, g: 1, b: 1, a: 1 };
+      const [val, changed] = EditorLayout.colorField(name, colorVal, { tooltip, hasAlpha: true });
+      if (changed) {
+        componentData.uniforms[name] = { x: val.r, y: val.g, z: val.b, w: val.a ?? 1 };
+      }
+    } else {
+      // Render as vec4
+      const vec4Val =
+        currentValue && typeof currentValue === 'object' && 'x' in currentValue && 'y' in currentValue && 'z' in currentValue && 'w' in currentValue
+          ? { x: currentValue.x, y: currentValue.y, z: currentValue.z, w: currentValue.w }
+          : { x: 0, y: 0, z: 0, w: 1 };
+      const [val, changed] = EditorLayout.vector4Field(name, vec4Val, { speed: 0.01, tooltip });
+      if (changed) {
+        componentData.uniforms[name] = { x: val.x, y: val.y, z: val.z, w: val.w };
+      }
+    }
+  } else {
+    // Unknown type - just show the name and type
+    EditorLayout.text(`${name}:`);
+    EditorLayout.sameLine();
+    EditorLayout.textDisabled(`(${type} - unsupported)`);
+  }
 }

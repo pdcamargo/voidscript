@@ -219,8 +219,6 @@ export {
 export type {
   Sprite2DData,
 } from "./ecs/components/rendering/sprite-2d.js";
-export { Water2D } from "./ecs/components/rendering/water-2d.js";
-export type { Water2DData } from "./ecs/components/rendering/water-2d.js";
 export { SkyGradient2D } from "./ecs/components/rendering/sky-gradient.js";
 export type { SkyGradient2DData, GradientStop } from "./ecs/components/rendering/sky-gradient.js";
 export { Fog2D, FogType } from "./ecs/components/rendering/fog-2d.js";
@@ -255,10 +253,6 @@ export {
   SpriteRenderManager,
   spriteSyncSystem,
 } from "./ecs/systems/sprite-sync-system.js";
-export {
-  Water2DRenderManager,
-  water2DSyncSystem,
-} from "./ecs/systems/water-2d-system.js";
 export {
   SkyGradientRenderManager,
   skyGradient2DSystem,
@@ -334,8 +328,8 @@ export type { TextureLoadOptions } from "./loaders/texture-loader.js";
 // Rendering Utilities
 export { TextRenderer } from "./rendering/text-renderer.js";
 export type { TextOptions, TextMeasurement, TextAlign, TextBaseline } from "./rendering/text-renderer.js";
-export { createNoiseTexture, createWaterNoiseTextures } from "./rendering/noise-texture.js";
-export type { NoiseTextureOptions, WaterNoiseTextures } from "./rendering/noise-texture.js";
+export { createNoiseTexture } from "./rendering/noise-texture.js";
+export type { NoiseTextureOptions } from "./rendering/noise-texture.js";
 export { createMoonTexture, createSunTexture } from "./rendering/celestial-textures.js";
 export type { MoonTextureOptions, SunTextureOptions, RGB } from "./rendering/celestial-textures.js";
 

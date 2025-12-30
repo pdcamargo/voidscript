@@ -666,6 +666,55 @@ export class SpriteRenderManager {
       shaderManager.trackMaterial(newMaterial);
     }
 
+    // Set up onBeforeRender for MESH_SCREEN_BOUNDS if shader uses it
+    if (newMaterial.uniforms['vsl_meshScreenBounds']) {
+      // Initialize with default bounds
+      newMaterial.uniforms['vsl_meshScreenBounds'].value = new THREE.Vector4(0, 0, 1, 1);
+
+      // Store mesh reference for the callback
+      const mesh = entry.mesh;
+
+      // Corners of a 1x1 quad (PlaneGeometry centered at origin)
+      const corners = [
+        new THREE.Vector3(-0.5, -0.5, 0),  // bottom-left
+        new THREE.Vector3(0.5, -0.5, 0),   // bottom-right
+        new THREE.Vector3(-0.5, 0.5, 0),   // top-left
+        new THREE.Vector3(0.5, 0.5, 0),    // top-right
+      ];
+      const tempVec3 = new THREE.Vector3();
+
+      // Set up onBeforeRender to calculate screen-space bounds each frame
+      mesh.onBeforeRender = (_renderer: THREE.WebGLRenderer, _scene: THREE.Scene, camera: THREE.Camera) => {
+        const currentMaterial = mesh.material as THREE.ShaderMaterial;
+        const boundsUniform = currentMaterial.uniforms?.['vsl_meshScreenBounds'];
+        if (!boundsUniform) return;
+
+        // Calculate screen-space bounds by projecting all 4 corners
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+        for (const corner of corners) {
+          // Transform corner from local to world space
+          tempVec3.copy(corner);
+          mesh.localToWorld(tempVec3);
+
+          // Project to NDC (-1 to 1)
+          tempVec3.project(camera);
+
+          // Convert to screen UV (0-1 range)
+          const screenX = (tempVec3.x + 1) * 0.5;
+          const screenY = (tempVec3.y + 1) * 0.5;
+
+          minX = Math.min(minX, screenX);
+          minY = Math.min(minY, screenY);
+          maxX = Math.max(maxX, screenX);
+          maxY = Math.max(maxY, screenY);
+        }
+
+        // Update the uniform (minX, minY, maxX, maxY)
+        (boundsUniform.value as THREE.Vector4).set(minX, minY, maxX, maxY);
+      };
+    }
+
     // Update mesh and entry
     entry.mesh.material = newMaterial;
     entry.material = newMaterial;

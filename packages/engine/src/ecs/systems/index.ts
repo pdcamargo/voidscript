@@ -10,7 +10,6 @@ export * from './tween-system.js';
 
 // 2D Systems
 export * from './sprite-sync-system.js';
-export * from './water-2d-system.js';
 export * from './sky-gradient-system.js';
 
 // 3D Systems

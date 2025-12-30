@@ -379,6 +379,18 @@ export class Transpiler {
       lines.push(this.indent() + 'vec4 mvPosition = modelViewMatrix * vec4(VERTEX, 1.0);');
     }
     lines.push(this.indent() + 'gl_Position = projectionMatrix * mvPosition;');
+    lines.push('');
+    lines.push(this.indent() + '// Pass clip-space position for mesh-relative screen UV');
+    lines.push(this.indent() + 'vsl_clipPosition = gl_Position;');
+    lines.push('');
+    lines.push(this.indent() + '// Extract model world position from model matrix (translation column)');
+    lines.push(this.indent() + 'vsl_modelPosition = vec3(modelMatrix[3].xyz);');
+    lines.push('');
+    lines.push(this.indent() + '// Calculate model center screen Y position for reflection effects');
+    lines.push(this.indent() + '// Transform model center (world position) to clip space');
+    lines.push(this.indent() + 'vec4 modelCenterClip = projectionMatrix * viewMatrix * vec4(vsl_modelPosition, 1.0);');
+    lines.push(this.indent() + '// Convert to normalized screen coordinates (0 to 1)');
+    lines.push(this.indent() + 'vsl_modelCenterScreenY = (modelCenterClip.y / modelCenterClip.w) * 0.5 + 0.5;');
 
     this.indentLevel--;
     lines.push('}');
@@ -484,6 +496,9 @@ export class Transpiler {
       lines.push(this.indent() + 'vec2 TEXTURE_SIZE = vsl_textureSize;');
       lines.push(this.indent() + 'vec2 SCREEN_UV = gl_FragCoord.xy / vsl_screenSize;');
       lines.push(this.indent() + 'vec4 FRAGCOORD = gl_FragCoord;');
+      lines.push(this.indent() + 'vec4 CLIP_POSITION = vsl_clipPosition;');
+      lines.push(this.indent() + 'vec3 MODEL_POSITION = vsl_modelPosition;');
+      lines.push(this.indent() + 'float MODEL_CENTER_SCREEN_Y = vsl_modelCenterScreenY;');
     }
     lines.push('');
 

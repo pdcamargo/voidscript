@@ -181,7 +181,6 @@ export const RENDER_MODES = new Set([
  */
 export const UNIFORM_HINTS = new Set([
   'hint_range',
-  'hint_color',
   'source_color',
   'hint_texture',
   'hint_normal',

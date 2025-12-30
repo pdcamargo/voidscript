@@ -110,6 +110,12 @@ export interface Vector3FieldOptions extends BaseFieldOptions {
   max?: number;
 }
 
+export interface Vector4FieldOptions extends BaseFieldOptions {
+  speed?: number;
+  min?: number;
+  max?: number;
+}
+
 export interface ColorFieldOptions extends BaseFieldOptions {
   /** Include alpha channel */
   hasAlpha?: boolean;
@@ -547,6 +553,34 @@ export class EditorLayout {
     const max = options?.max ?? Infinity;
     const changed = ImGui.DragFloat3(id, arr, options?.speed ?? 0.1, min, max);
     return [new Vector3(arr[0], arr[1], arr[2]), changed];
+  }
+
+  /**
+   * Render a Vector4 field (x, y, z, w) with label on left
+   */
+  static vector4Field(
+    label: string,
+    value: { x: number; y: number; z: number; w: number },
+    options?: Vector4FieldOptions,
+  ): FieldResult<{ x: number; y: number; z: number; w: number }> {
+    const id = generateUniqueId(label, options?.id);
+    const arr: [number, number, number, number] = [
+      value.x,
+      value.y,
+      value.z,
+      value.w,
+    ];
+
+    EditorLayout.renderLabel(label, options?.tooltip);
+
+    if (options?.width) {
+      ImGui.SetNextItemWidth(options.width);
+    }
+
+    const min = options?.min ?? -Infinity;
+    const max = options?.max ?? Infinity;
+    const changed = ImGui.DragFloat4(id, arr, options?.speed ?? 0.1, min, max);
+    return [{ x: arr[0], y: arr[1], z: arr[2], w: arr[3] }, changed];
   }
 
   /**

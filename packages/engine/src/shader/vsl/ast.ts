@@ -72,8 +72,7 @@ export type GLSLType =
  */
 export type UniformHintType =
   | 'hint_range' // Slider with min/max
-  | 'hint_color' // Color picker (linear color)
-  | 'source_color' // Color picker (sRGB)
+  | 'source_color' // Color picker (sRGB color space)
   | 'hint_texture' // Texture picker
   | 'hint_normal' // Normal map texture
   | 'hint_white' // Default white texture

@@ -22,7 +22,6 @@ export * from "./render-object.js";
 // 2D Components
 export * from "./sprite-2d.js";
 export * from "./sprite-2d-material.js";
-export * from "./water-2d.js";
 export * from "./sky-gradient.js";
 export * from "./fog-2d.js";
 export * from "./rain-2d.js";

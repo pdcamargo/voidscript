@@ -362,5 +362,9 @@
   "test-tint-shader": {
     "type": "shader",
     "path": "/assets/shaders/test-tint.vsl"
+  },
+  "water-2d-shader": {
+    "type": "shader",
+    "path": "/assets/shaders/water-2d.vsl"
   }
 }

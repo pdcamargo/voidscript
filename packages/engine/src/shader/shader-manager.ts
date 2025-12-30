@@ -24,6 +24,7 @@
 import * as THREE from 'three';
 import { ShaderAsset } from './shader-asset.js';
 import type { TranspiledUniform } from './vsl/transpiler.js';
+import type { Renderer } from '../app/renderer.js';
 
 /**
  * Tracked material with TIME uniform for automatic updates
@@ -43,8 +44,14 @@ export class ShaderManager {
   /** Materials with TIME uniform that need per-frame updates */
   private trackedMaterials = new Set<TrackedMaterial>();
 
+  /** Materials with vsl_screenTexture uniform that need per-frame screen texture updates */
+  private screenTextureMaterials = new Set<THREE.ShaderMaterial>();
+
   /** Current elapsed time for TIME uniform */
   private elapsedTime = 0;
+
+  /** Renderer reference for screen texture access */
+  private renderer: Renderer | null = null;
 
   /** Singleton check */
   private static instance: ShaderManager | null = null;
@@ -63,6 +70,23 @@ export class ShaderManager {
    */
   static getInstance(): ShaderManager | null {
     return ShaderManager.instance;
+  }
+
+  /**
+   * Set the renderer reference for screen texture access.
+   * Must be called after both ShaderManager and Renderer are created.
+   *
+   * @param renderer - The application renderer
+   */
+  setRenderer(renderer: Renderer): void {
+    this.renderer = renderer;
+  }
+
+  /**
+   * Get the renderer reference
+   */
+  getRenderer(): Renderer | null {
+    return this.renderer;
   }
 
   // ===========================================================================
@@ -239,6 +263,11 @@ export class ShaderManager {
         uniforms: validUniforms,
       });
     }
+
+    // Also track materials that use screen texture
+    if (material.uniforms['vsl_screenTexture']) {
+      this.screenTextureMaterials.add(material);
+    }
   }
 
   /**
@@ -250,9 +279,12 @@ export class ShaderManager {
     for (const tracked of this.trackedMaterials) {
       if (tracked.material === material) {
         this.trackedMaterials.delete(tracked);
-        return;
+        break;
       }
     }
+
+    // Also remove from screen texture tracking
+    this.screenTextureMaterials.delete(material);
   }
 
   /**
@@ -277,6 +309,33 @@ export class ShaderManager {
         const uniform = tracked.material.uniforms[uniformName];
         if (uniform) {
           uniform.value = this.elapsedTime;
+        }
+      }
+    }
+
+    // Update SCREEN_TEXTURE and SCREEN_SIZE uniforms on materials that use them
+    if (this.renderer && this.screenTextureMaterials.size > 0) {
+      const screenTexture = this.renderer.getScreenTexture();
+      const threeRenderer = this.renderer.getThreeRenderer();
+      const size = threeRenderer.getSize(new THREE.Vector2());
+
+      for (const material of this.screenTextureMaterials) {
+        // Check if material is still valid
+        if (!material.uniforms || Object.keys(material.uniforms).length === 0) {
+          this.screenTextureMaterials.delete(material);
+          continue;
+        }
+
+        // Update screen texture
+        const screenTextureUniform = material.uniforms['vsl_screenTexture'];
+        if (screenTextureUniform) {
+          screenTextureUniform.value = screenTexture;
+        }
+
+        // Update screen size (needed for SCREEN_UV calculation)
+        const screenSizeUniform = material.uniforms['vsl_screenSize'];
+        if (screenSizeUniform) {
+          screenSizeUniform.value = size;
         }
       }
     }
@@ -316,6 +375,7 @@ export class ShaderManager {
    */
   clearTrackedMaterials(): void {
     this.trackedMaterials.clear();
+    this.screenTextureMaterials.clear();
   }
 
   /**
@@ -324,6 +384,7 @@ export class ShaderManager {
   dispose(): void {
     // Clear tracked materials (don't dispose them, they might be shared)
     this.trackedMaterials.clear();
+    this.screenTextureMaterials.clear();
 
     // Clear shader registry
     this.shaders.clear();
@@ -337,6 +398,13 @@ export class ShaderManager {
    */
   getTrackedMaterialCount(): number {
     return this.trackedMaterials.size;
+  }
+
+  /**
+   * Get count of materials tracking screen texture (for debugging)
+   */
+  getScreenTextureMaterialCount(): number {
+    return this.screenTextureMaterials.size;
   }
 
   /**

@@ -1,0 +1,193 @@
+/**
+ * Water 2D Effect Shader
+ *
+ * A comprehensive water shader with reflections, waves, foam, and wetness effects.
+ * Uses SCREEN_TEXTURE for real-time reflections of the scene above the water.
+ *
+ * Usage:
+ * 1. Add Sprite2D component with a texture (can be transparent)
+ * 2. Add Sprite2DMaterial component with this shader
+ * 3. Adjust uniforms via the inspector
+ */
+shader_type canvas_item;
+render_mode unshaded;
+
+// Water surface position (0 = bottom, 1 = top)
+uniform float surface_position : hint_range(0.0, 1.0) = 0.0;
+
+// Water color (RGB) and opacity (A) combined
+uniform vec4 water_color : source_color = vec4(0.0, 0.911, 1.0, 0.045);
+
+// Wave animation
+uniform float wave_speed : hint_range(0.0, 2.0) = 0.4;
+uniform float wave_distortion : hint_range(0.0, 1.0) = 0.1;
+uniform float wave_multiplier : hint_range(1.0, 50.0) = 20.0;
+
+// Water texture (foam/surface pattern)
+uniform bool enable_water_texture = true;
+uniform vec2 foam_scale = vec2(6.5, 5.4);
+uniform float foam_speed : hint_range(0.0, 0.1) = 0.001;
+uniform float foam_intensity : hint_range(0.0, 2.0) = 1.0;
+uniform float foam_threshold : hint_range(0.0, 1.0) = 0.7;
+uniform float foam_softness : hint_range(0.0, 1.0) = 0.0;
+uniform float foam_turbulence : hint_range(0.0, 50.0) = 12.0;
+uniform float foam_animation_speed : hint_range(0.0, 5.0) = 1.5;
+uniform int foam_layer_count : hint_range(1, 20) = 13;
+
+// Reflection settings
+uniform float reflection_offset_x : hint_range(-1.0, 1.0) = 0.0;
+uniform float reflection_offset_y : hint_range(-1.0, 1.0) = 0.0;
+uniform float reflection_skew_x : hint_range(-1.0, 1.0) = 0.0;
+uniform float reflection_skew_y : hint_range(-1.0, 1.0) = 0.1;
+
+// Wetness effect (caustics-like pattern on top of water)
+uniform float wetness_intensity : hint_range(0.0, 20.0) = 5.55;
+uniform float wetness_opacity : hint_range(0.0, 0.1) = 0.008;
+uniform vec2 wetness_scale = vec2(5.0, 5.0);
+uniform float wetness_speed : hint_range(0.0, 0.1) = 0.03;
+uniform vec2 wetness_detail_scale = vec2(8.6, 22.1);
+uniform float wetness_detail_speed : hint_range(0.0, 0.1) = 0.01;
+uniform float wetness_contrast : hint_range(0.0, 50.0) = 28.6;
+uniform float wetness_brightness : hint_range(0.0, 2.0) = 0.853;
+uniform vec3 wetness_color_tint = vec3(1.0, 1.0, 1.0);
+
+// Tile size for UV scaling
+uniform float tile_size : hint_range(1.0, 100.0) = 28.8;
+
+// Noise texture for distortion effects
+uniform sampler2D noise_texture : hint_texture;
+
+// Hash function for procedural noise
+float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+}
+
+// Smooth noise
+float noise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+
+    float a = hash(i);
+    float b = hash(i + vec2(1.0, 0.0));
+    float c = hash(i + vec2(0.0, 1.0));
+    float d = hash(i + vec2(1.0, 1.0));
+
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+
+// FBM (Fractal Brownian Motion)
+float fbm(vec2 p, int octaves) {
+    float value = 0.0;
+    float amplitude = 0.5;
+    float frequency = 1.0;
+
+    for (int i = 0; i < octaves; i++) {
+        value += amplitude * noise(p * frequency);
+        amplitude *= 0.5;
+        frequency *= 2.0;
+    }
+
+    return value;
+}
+
+void fragment() {
+    vec2 uv = UV;
+
+    // Calculate wave distortion using noise
+    float time_offset = TIME * wave_speed;
+    float wave = sin(uv.x * wave_multiplier + time_offset) * wave_distortion * 0.01;
+    wave += sin(uv.y * wave_multiplier * 0.7 + time_offset * 1.3) * wave_distortion * 0.005;
+
+    // Get mesh screen-space bounds (minX, minY, maxX, maxY in UV space 0-1)
+    float water_min_x = MESH_SCREEN_BOUNDS.x;
+    float water_min_y = MESH_SCREEN_BOUNDS.y;
+    float water_max_x = MESH_SCREEN_BOUNDS.z;
+    float water_max_y = MESH_SCREEN_BOUNDS.w;
+    float water_width = water_max_x - water_min_x;
+    float water_height = water_max_y - water_min_y;
+
+    // Calculate depth factor for perspective (Mode 7 style)
+    float depth_factor = 1.0 - uv.y; // 0 at top (surface), 1 at bottom (far)
+
+    // Calculate X position with perspective skew
+    float water_center_x = water_min_x + water_width * 0.5;
+    float signed_x = (uv.x - 0.5) * 2.0; // -1 on left, +1 on right
+    float skew = signed_x * depth_factor * reflection_skew_x;
+    skew += sin(TIME * 0.8 + uv.y * 6.0) * 0.005; // Subtle wave animation
+
+    float pixel_x = water_center_x + (uv.x - 0.5) * water_width * (1.0 + skew);
+
+    // For reflection: sample from ABOVE the water surface
+    // The water surface is at water_max_y (top of water mesh in screen space)
+    // A pixel at uv.y=0 (bottom of water) should sample from the highest point above
+    // A pixel at uv.y=1 (top of water) should sample from just above the surface
+    float distance_from_surface = (1.0 - uv.y) * water_height;
+    float reflected_y = water_max_y + distance_from_surface;
+
+    // Reduce wave distortion intensity near the top edge
+    // This prevents the reflection from trying to sample below the water surface
+    float surface_edge = 1.0 - surface_position;
+    float edge_factor = smoothstep(0.0, 0.15, surface_edge - uv.y);
+    float edge_adjusted_wave = wave * edge_factor;
+
+    // Apply wave distortion and manual offset
+    vec2 reflection_uv = vec2(
+        pixel_x + edge_adjusted_wave * 0.02 + reflection_offset_x,
+        reflected_y + edge_adjusted_wave * 0.02 + reflection_offset_y
+    );
+
+    // Apply vertical scaling if needed
+    if (reflection_skew_y != 0.0) {
+        float water_center_y = water_min_y + water_height * 0.5;
+        float vertical_scale = 1.0 + depth_factor * reflection_skew_y;
+        float offset_y = (reflection_uv.y - water_center_y) * (vertical_scale - 1.0);
+        reflection_uv.y += offset_y;
+    }
+
+    // Clamp to prevent sampling outside screen bounds
+    reflection_uv = clamp(reflection_uv, 0.001, 0.999);
+
+    vec4 reflection = texture(SCREEN_TEXTURE, reflection_uv);
+
+    // Blend reflection with water color using water_color.a as opacity
+    vec4 final_color = mix(reflection, vec4(water_color.rgb, 1.0), water_color.a);
+
+    // Add foam/water texture effect
+    if (enable_water_texture) {
+        vec2 foam_uv = uv * foam_scale + vec2(TIME * foam_speed);
+        float foam = fbm(foam_uv + vec2(TIME * foam_animation_speed * 0.1), foam_layer_count);
+        foam += fbm(foam_uv * 2.0 - vec2(TIME * foam_animation_speed * 0.15), foam_layer_count / 2) * 0.5;
+        foam = foam * foam_intensity;
+
+        // Apply turbulence
+        foam += sin(foam * foam_turbulence) * 0.1;
+
+        // Threshold with softness
+        float foam_edge = smoothstep(foam_threshold - foam_softness, foam_threshold + foam_softness, foam);
+        final_color = mix(final_color, vec4(1.0), foam_edge * 0.3);
+    }
+
+    // Add wetness/caustics effect
+    if (wetness_intensity > 0.0) {
+        vec2 wetness_uv = uv * wetness_scale + vec2(TIME * wetness_speed);
+        vec2 detail_uv = uv * wetness_detail_scale + vec2(TIME * wetness_detail_speed);
+
+        float wetness = fbm(wetness_uv, 4);
+        float detail = fbm(detail_uv, 3);
+
+        float caustic = wetness * detail * wetness_intensity;
+        caustic = pow(caustic, wetness_contrast * 0.1) * wetness_brightness;
+
+        vec3 wetness_color = wetness_color_tint * caustic;
+        final_color.rgb += wetness_color * wetness_opacity;
+    }
+
+    // Apply surface position masking (optional - for partial water coverage)
+    if (surface_position > 0.0) {
+        float surface_mask = smoothstep(surface_position - 0.01, surface_position + 0.01, uv.y);
+        final_color.a *= surface_mask;
+    }
+
+    COLOR = final_color;
+}

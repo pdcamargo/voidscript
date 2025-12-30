@@ -2,7 +2,7 @@
  * Noise Texture Generator
  *
  * Generates procedural noise textures using SimplexNoise.
- * Used for water effects, terrain, and other procedural patterns.
+ * Used for terrain, effects, and other procedural patterns.
  */
 
 import * as THREE from 'three';
@@ -103,61 +103,4 @@ export function createNoiseTexture(options?: NoiseTextureOptions): THREE.DataTex
   texture.needsUpdate = true;
 
   return texture;
-}
-
-/**
- * Result of creating water noise textures
- */
-export interface WaterNoiseTextures {
-  /** Noise texture for wave distortion effect */
-  distortionNoise: THREE.DataTexture;
-  /** Noise texture for foam/water texture pattern */
-  foamNoise: THREE.DataTexture;
-}
-
-/**
- * Generate the two specific noise textures required for the water shader
- *
- * Creates textures matching the Godot water shader parameters:
- * - distortionNoise: For wave animation and reflection distortion
- * - foamNoise: For the foam/water surface texture pattern
- *
- * @param seed - Random seed for reproducibility (default: 0)
- * @returns Object containing both noise textures
- *
- * @example
- * ```typescript
- * const { distortionNoise, foamNoise } = createWaterNoiseTextures(12345);
- * waterMaterial.uniforms.noiseTexture.value = distortionNoise;
- * waterMaterial.uniforms.noiseTexture2.value = foamNoise;
- * ```
- */
-export function createWaterNoiseTextures(seed: number = 0): WaterNoiseTextures {
-  // Distortion noise: Used for wave animation
-  // Godot params: octaves 3, persistence 0.5, period 0 (we use scale 4 for nice waves)
-  const distortionNoise = createNoiseTexture({
-    width: 512,
-    height: 512,
-    seed,
-    scale: 4, // Lower scale = larger features
-    octaves: 3,
-    persistence: 0.5,
-    lacunarity: 1, // Minimal frequency increase between octaves
-    wrapMode: 'repeat',
-  });
-
-  // Foam noise: Used for water surface texture
-  // Godot params: octaves 3, period 15, persistence 0.5, lacunarity 4
-  const foamNoise = createNoiseTexture({
-    width: 512,
-    height: 512,
-    seed: seed + 1, // Different seed for variety
-    scale: 15, // Higher scale = smaller, more detailed features
-    octaves: 3,
-    persistence: 0.5,
-    lacunarity: 4, // Strong frequency increase for detailed pattern
-    wrapMode: 'repeat',
-  });
-
-  return { distortionNoise, foamNoise };
 }
