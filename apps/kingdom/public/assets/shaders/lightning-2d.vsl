@@ -1,0 +1,360 @@
+/**
+ * Lightning 2D Effect Shader
+ *
+ * A procedural lightning bolt effect with midpoint displacement algorithm.
+ * Uses distance-field rendering with crisp pixel-art pixelation.
+ *
+ * Features:
+ * - Multiple simultaneous bolts (up to 5)
+ * - Procedural branching and sub-branching
+ * - Glow effect around bolts
+ * - Screen flash effect
+ * - Ground glow at impact points
+ * - Aspect ratio correction for non-square meshes
+ *
+ * Usage:
+ * 1. Add Sprite2D component (no texture needed)
+ * 2. Add Sprite2DMaterial component with this shader
+ * 3. Add LightningController component for timing control
+ * 4. Size is controlled via Transform3D.scale
+ */
+shader_type canvas_item;
+render_mode unshaded, blend_add;
+
+// Maximum values (must match shader constants)
+// Note: MAX_BOLTS = 5, MAX_SEGMENTS = 24, SUBDIVISION_LEVELS = 5
+
+// Bolt appearance
+uniform vec3 bolt_color : source_color = vec3(0.302, 0.651, 1.0);
+uniform vec3 glow_color : source_color = vec3(0.502, 0.753, 1.0);
+uniform float bolt_width : hint_range(0.1, 10.0) = 2.0;
+uniform float glow_radius : hint_range(1.0, 50.0) = 8.0;
+uniform float glow_intensity : hint_range(0.0, 2.0) = 0.8;
+uniform float pixel_size : hint_range(0.0, 16.0) = 1.0;
+
+// Procedural generation
+uniform float segments : hint_range(4.0, 24.0) = 16.0;
+uniform float displacement : hint_range(0.0, 1.0) = 0.5;
+uniform float noise_strength : hint_range(0.0, 1.0) = 0.3;
+uniform float branch_probability : hint_range(0.0, 1.0) = 0.2;
+uniform float branch_length_factor : hint_range(0.1, 0.8) = 0.4;
+uniform float sub_branch_probability : hint_range(0.0, 1.0) = 0.3;
+
+// Per-bolt data (arrays for up to 5 simultaneous bolts)
+// These are runtime-only uniforms managed by LightningController system
+uniform float bolt_seeds[5] : hint_runtime;
+uniform float bolt_progress[5] : hint_runtime;
+uniform float bolt_active[5] : hint_runtime;
+uniform float bolt_angles[5] : hint_runtime;
+
+// Effects
+uniform float flash_intensity : hint_range(0.0, 1.0) = 0.0;
+uniform bool enable_ground_glow = false;
+uniform float ground_glow_radius : hint_range(5.0, 100.0) = 20.0;
+
+// ============================================================================
+// Hash Functions for Deterministic Randomness
+// ============================================================================
+
+float hash11(float p, float seed) {
+    p = fract(p * 0.1031 + seed * 0.0317);
+    p *= p + 33.33;
+    p *= p + p;
+    return fract(p);
+}
+
+float hash12(vec2 p, float seed) {
+    vec3 p3 = fract(vec3(p.xyx) * vec3(443.897, 441.423, 437.195));
+    p3 += dot(p3, p3.yzx + 19.19 + seed);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+// ============================================================================
+// Distance Field Utilities
+// ============================================================================
+
+// Distance from point p to line segment a-b
+float distanceToSegment(vec2 p, vec2 a, vec2 b) {
+    vec2 pa = p - a;
+    vec2 ba = b - a;
+    float denom = dot(ba, ba);
+    if (denom < 0.0001) return length(pa);
+    float h = clamp(dot(pa, ba) / denom, 0.0, 1.0);
+    return length(pa - ba * h);
+}
+
+// ============================================================================
+// Midpoint Displacement Algorithm
+// ============================================================================
+
+vec2 getBoltPoint(vec2 start, vec2 end, float t, float seed, float displacementStrength) {
+    vec2 p0 = start;
+    vec2 p1 = end;
+    float tLocal = t;
+    float dispScale = displacementStrength;
+
+    // 5 subdivision levels
+    for (int level = 0; level < 5; level++) {
+        vec2 mid = (p0 + p1) * 0.5;
+        vec2 dir = p1 - p0;
+        vec2 perpendicular = vec2(-dir.y, dir.x);
+        float perpLen = length(perpendicular);
+        if (perpLen > 0.0001) {
+            perpendicular /= perpLen;
+        }
+
+        // More varied randomness using different multipliers per level
+        float levelMult = float(level) * 7.31 + 3.14;
+        float randOffset = (hash12(mid * 100.0 + levelMult, seed) - 0.5) * 2.0;
+        // Add extra variation based on position along bolt
+        randOffset += (hash12(vec2(t * 50.0, seed), seed + levelMult) - 0.5) * 0.8;
+
+        float segmentLength = length(dir);
+        vec2 displacedMid = mid + perpendicular * randOffset * dispScale * segmentLength * 0.5;
+
+        if (tLocal < 0.5) {
+            p1 = displacedMid;
+            tLocal = tLocal * 2.0;
+        } else {
+            p0 = displacedMid;
+            tLocal = (tLocal - 0.5) * 2.0;
+        }
+
+        dispScale *= 0.6;
+    }
+
+    vec2 result = mix(p0, p1, tLocal);
+
+    // Small noise for organic look
+    float noiseScale = noise_strength * 0.03;
+    result += vec2(
+        hash12(result * 80.0, seed + 100.0) - 0.5,
+        hash12(result * 80.0, seed + 101.0) - 0.5
+    ) * noiseScale;
+
+    return result;
+}
+
+// Calculate minimum distance from a point to the entire bolt path with branches
+float distanceToBolt(vec2 p, vec2 start, vec2 end, float seed, int numSegments, float boltWidthUV) {
+    float minDist = 1e10;
+    float segmentCount = float(numSegments);
+
+    // Early culling - if we're far from the bolt line, skip detailed calculation
+    float roughDist = distanceToSegment(p, start, end);
+    if (roughDist > 0.3) return roughDist;
+
+    // Main bolt segments (max 24)
+    for (int i = 0; i < 24; i++) {
+        if (i >= numSegments) break;
+
+        float t0 = float(i) / segmentCount;
+        float t1 = float(i + 1) / segmentCount;
+
+        vec2 p0 = getBoltPoint(start, end, t0, seed, displacement);
+        vec2 p1 = getBoltPoint(start, end, t1, seed, displacement);
+
+        float segDist = distanceToSegment(p, p0, p1);
+        minDist = min(minDist, segDist);
+
+        // Early exit if we're already very close
+        if (minDist < boltWidthUV * 0.5) continue;
+
+        // Branch generation - use hash to determine if this segment has a branch
+        float branchHash = hash12(vec2(float(i) * 7.3, seed * 3.7), seed + 50.0);
+        if (branchHash >= branch_probability) continue;
+        if (i < 1 || i > numSegments - 2) continue;
+
+        // Create branch with varied angle
+        vec2 mainDir = normalize(p1 - p0);
+
+        // More varied branch angles - use multiple hashes for uniqueness
+        float angleBase = hash12(vec2(float(i) * 3.7, seed * 2.1), seed + 60.0);
+        float angleMod = hash12(p0 * 30.0 + vec2(seed), seed + 65.0);
+        float positionMod = hash12(vec2(t0 * 100.0, seed * 5.3), seed + 67.0);
+        float side = hash12(p0 * 50.0 + vec2(float(i) * 11.0), seed + 70.0) > 0.5 ? 1.0 : -1.0;
+
+        // Angle ranges from 20 to 70 degrees with high variation
+        float branchAngle = side * (0.35 + angleBase * 0.7 + angleMod * 0.4 + positionMod * 0.3);
+
+        vec2 branchDir = vec2(
+            mainDir.x * cos(branchAngle) - mainDir.y * sin(branchAngle),
+            mainDir.x * sin(branchAngle) + mainDir.y * cos(branchAngle)
+        );
+
+        // Variable branch length - longer branches (0.15 to 0.35 of branch_length_factor)
+        float lengthVar = hash12(p0 + vec2(seed * 2.0), seed + 80.0);
+        float branchLen = branch_length_factor * (0.15 + lengthVar * 0.2);
+        vec2 branchEnd = p0 + branchDir * branchLen;
+
+        // Simple branch with 4 segments
+        float branchSeed = seed + float(i) * 17.3 + lengthVar * 500.0 + 1000.0;
+        float branchDisp = displacement * 0.6;
+
+        for (int j = 0; j < 4; j++) {
+            float bt0 = float(j) / 4.0;
+            float bt1 = float(j + 1) / 4.0;
+
+            vec2 bp0 = getBoltPoint(p0, branchEnd, bt0, branchSeed, branchDisp);
+            vec2 bp1 = getBoltPoint(p0, branchEnd, bt1, branchSeed, branchDisp);
+
+            float branchDist = distanceToSegment(p, bp0, bp1);
+            // Branches are slightly thinner
+            minDist = min(minDist, branchDist * 1.2);
+
+            // Sub-branch - more variation and longer
+            if (j >= 1 && j <= 3) {
+                // Different hash for each segment position
+                float subHash = hash12(vec2(float(j) * 11.0 + bt0 * 50.0, branchSeed * 1.7), branchSeed + 150.0 + float(j) * 20.0);
+                if (subHash < sub_branch_probability) {
+                    vec2 subDir = normalize(bp1 - bp0);
+
+                    // More varied sub-branch angles
+                    float subAngleBase = hash12(bp0 * 40.0 + vec2(branchSeed), branchSeed + 160.0);
+                    float subAngleMod = hash12(vec2(float(j) * 7.0, branchSeed * 3.0), branchSeed + 165.0);
+                    float subSide = hash12(bp0 * 60.0 + vec2(float(j)), branchSeed + 170.0) > 0.5 ? 1.0 : -1.0;
+                    float subAngle = subSide * (0.4 + subAngleBase * 0.6 + subAngleMod * 0.4);
+
+                    vec2 subBranchDir = vec2(
+                        subDir.x * cos(subAngle) - subDir.y * sin(subAngle),
+                        subDir.x * sin(subAngle) + subDir.y * cos(subAngle)
+                    );
+
+                    // Longer sub-branches (0.4 to 0.7 of branch length)
+                    float subLenVar = hash12(bp0 + vec2(branchSeed), branchSeed + 180.0);
+                    float subLen = branchLen * (0.4 + subLenVar * 0.3);
+                    vec2 subEnd = bp0 + subBranchDir * subLen;
+
+                    // 3 segments for sub-branch (longer)
+                    vec2 subMid1 = mix(bp0, subEnd, 0.33);
+                    vec2 subMid2 = mix(bp0, subEnd, 0.66);
+                    float subDist1 = distanceToSegment(p, bp0, subMid1);
+                    float subDist2 = distanceToSegment(p, subMid1, subMid2);
+                    float subDist3 = distanceToSegment(p, subMid2, subEnd);
+                    minDist = min(minDist, min(min(subDist1, subDist2), subDist3) * 1.4);
+                }
+            }
+        }
+    }
+
+    return minDist;
+}
+
+// ============================================================================
+// Main Shader
+// ============================================================================
+
+void fragment() {
+    vec4 color = vec4(0.0);
+
+    // Get mesh world scale from VSL built-in
+    vec2 meshWorldScale = MESH_WORLD_SCALE;
+
+    // Calculate aspect ratio - used to prevent stretching
+    float aspectRatio = meshWorldScale.x / max(meshWorldScale.y, 0.001);
+
+    // Use minimum dimension as the reference for pixel sizing
+    float minScale = min(meshWorldScale.x, meshWorldScale.y);
+
+    // Calculate pixel size in normalized space (relative to min dimension)
+    float pixelSizeNorm = pixel_size / minScale;
+
+    // Apply pixelation to UV coordinates (crisp pixel-art style)
+    vec2 uv = UV;
+
+    if (pixel_size > 0.01) {
+        // Create a pixel grid based on the smaller dimension
+        float pixelCount = minScale / pixel_size;
+        vec2 resolution = vec2(pixelCount * aspectRatio, pixelCount);
+        uv = floor(UV * resolution + 0.5) / resolution;
+    }
+
+    // Transform UV to aspect-ratio-corrected coordinates for bolt generation
+    vec2 squareUV = uv;
+    squareUV.x = (uv.x - 0.5) * aspectRatio + 0.5;
+
+    // Convert bolt_width and glow_radius to the square coordinate space
+    float boltWidthSq = bolt_width * pixelSizeNorm * 0.5;
+    float glowRadiusSq = glow_radius * pixelSizeNorm;
+
+    // Ground glow accumulator
+    float groundGlowAccum = 0.0;
+
+    // Process each active bolt (up to 5)
+    for (int i = 0; i < 5; i++) {
+        if (bolt_active[i] < 0.5) continue;
+
+        float seed = bolt_seeds[i];
+        float progress = bolt_progress[i];
+        float angle = bolt_angles[i];
+
+        // Calculate bolt start and end based on direction angle
+        vec2 dir = vec2(sin(angle), -cos(angle));
+        vec2 center = vec2(0.5, 0.5);
+
+        // Extend bolt to cover the full area
+        float extentX = aspectRatio > 1.0 ? 0.5 * aspectRatio : 0.5;
+        float extentY = aspectRatio < 1.0 ? 0.5 / aspectRatio : 0.5;
+        float extent = max(extentX, extentY);
+
+        vec2 boltStart = center - dir * extent;
+        vec2 boltEnd = center + dir * extent;
+
+        // Add randomness to start/end positions (perpendicular offset)
+        vec2 perp = vec2(-dir.y, dir.x);
+        float startOffset = (hash11(seed, 0.0) - 0.5) * extent;
+        float endOffset = (hash11(seed + 1.0, 0.0) - 0.5) * extent;
+        boltStart += perp * startOffset;
+        boltEnd += perp * endOffset;
+
+        // Calculate distance to this bolt in square space
+        int numSegs = min(int(segments), 24);
+        float dist = distanceToBolt(squareUV, boltStart, boltEnd, seed, numSegs, boltWidthSq);
+
+        // Core bolt - use step for crisp 1-pixel edges
+        float core = 1.0 - step(boltWidthSq, dist);
+
+        // Glow (soft falloff around the core)
+        float glowStart = boltWidthSq;
+        float glowEnd = boltWidthSq + glowRadiusSq;
+        float glow = 1.0 - smoothstep(glowStart, glowEnd, dist);
+        glow = glow * glow * glow_intensity;
+
+        // Apply fade based on progress
+        float fadeMultiplier = progress;
+
+        // Combine core and glow
+        vec3 coreColor = mix(bolt_color, vec3(1.0), 0.7);
+        vec3 boltResult = coreColor * core + glow_color * glow * (1.0 - core);
+        float alpha = max(core, glow * 0.6) * fadeMultiplier;
+
+        // Accumulate
+        color.rgb += boltResult * alpha;
+        color.a = max(color.a, alpha);
+
+        // Ground glow at impact point
+        if (enable_ground_glow && progress > 0.0) {
+            float groundDist = length(squareUV - boltEnd);
+            float groundGlowSq = ground_glow_radius * pixelSizeNorm;
+            float groundGlow = 1.0 - smoothstep(0.0, groundGlowSq, groundDist);
+            groundGlow = groundGlow * groundGlow * progress;
+            groundGlowAccum += groundGlow;
+        }
+    }
+
+    // Add ground glow effect
+    if (enable_ground_glow && groundGlowAccum > 0.0) {
+        color.rgb += glow_color * groundGlowAccum * 0.5;
+        color.a = max(color.a, groundGlowAccum * 0.4);
+    }
+
+    // Screen flash effect
+    if (flash_intensity > 0.0) {
+        color.rgb += vec3(1.0) * flash_intensity * 0.6;
+        color.a = max(color.a, flash_intensity * 0.4);
+    }
+
+    color.a = clamp(color.a, 0.0, 1.0);
+
+    COLOR = color;
+}

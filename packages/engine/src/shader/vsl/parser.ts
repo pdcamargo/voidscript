@@ -287,6 +287,7 @@ export class Parser {
 
   /**
    * Parse: uniform type name : hint = value;
+   * Or:    uniform type name[size];
    */
   private parseUniform(): UniformDeclaration {
     const start = this.peek().location;
@@ -304,13 +305,23 @@ export class Parser {
     }
     const name = this.advance().value;
 
-    // Optional hint
+    // Optional array size (e.g., [5])
+    let arraySize: number | undefined;
+    if (this.match(TokenType.LeftBracket)) {
+      if (!this.check(TokenType.IntLiteral)) {
+        throw this.error('Expected array size (integer)');
+      }
+      arraySize = parseInt(this.advance().value, 10);
+      this.consume(TokenType.RightBracket, 'Expected "]" after array size');
+    }
+
+    // Optional hint (not allowed for arrays, but we parse anyway for better errors)
     let hint: UniformHint | undefined;
     if (this.match(TokenType.Colon)) {
       hint = this.parseUniformHint();
     }
 
-    // Optional default value
+    // Optional default value (not allowed for arrays, but we parse anyway for better errors)
     let defaultValue: Expression | undefined;
     if (this.match(TokenType.Equals)) {
       defaultValue = this.parseExpression();
@@ -322,6 +333,7 @@ export class Parser {
       type: 'UniformDeclaration',
       uniformType,
       name,
+      arraySize,
       hint,
       defaultValue,
       location: this.makeRange(start),

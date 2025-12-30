@@ -35,6 +35,34 @@ import {
   renderKeyframeEditor,
 } from './animation-editor/keyframe-editor.js';
 import { setEditorLayoutContext } from './editor-layout-context.js';
+import { EditorLayout } from './editor-layout.js';
+
+// ============================================================================
+// Label Formatting Utilities
+// ============================================================================
+
+/**
+ * Convert camelCase or PascalCase to Title Case with spaces
+ * e.g., "minInterval" → "Min Interval"
+ *       "enableScreenFlash" → "Enable Screen Flash"
+ *       "XMLParser" → "XML Parser"
+ */
+function toTitleCase(str: string): string {
+  // Handle empty string
+  if (!str) return '';
+
+  // Insert space before uppercase letters that follow lowercase letters
+  // Also handle sequences like "XMLParser" → "XML Parser"
+  const spaced = str
+    .replace(/([a-z])([A-Z])/g, '$1 $2')  // camelCase → camel Case
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2');  // XMLParser → XML Parser
+
+  // Capitalize first letter of each word
+  return spaced
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
 
 // Selection state
 let selectedEntity: Entity | undefined = undefined;
@@ -48,6 +76,86 @@ export function setSelectedEntity(entity: Entity | undefined): void {
 
 export function getSelectedEntity(): Entity | undefined {
   return selectedEntity;
+}
+
+/**
+ * Render all default properties for a component.
+ * This can be called from custom editors to render properties automatically
+ * while still allowing custom UI to be added before or after.
+ *
+ * @param componentType - The component type
+ * @param componentData - The mutable component data
+ * @param commands - ECS commands for queries
+ */
+export function renderDefaultProperties<T>(
+  componentType: ComponentType<T>,
+  componentData: T,
+  commands: ReturnType<Application['getCommands']>,
+): void {
+  const serializationConfig = componentType.serializerConfig || {};
+
+  // Collect all title-cased labels for width calculation
+  const titleCasedLabels: string[] = [];
+  const serializableEntries: [string, PropertySerializerConfig][] = [];
+
+  for (const [propKey, propConfig] of Object.entries(serializationConfig)) {
+    const config = propConfig as PropertySerializerConfig;
+    if (config.serializable) {
+      const titleCasedLabel = toTitleCase(propKey);
+      titleCasedLabels.push(titleCasedLabel);
+      serializableEntries.push([propKey, config]);
+    }
+  }
+
+  // Use EditorLayout's label width alignment
+  EditorLayout.beginLabelsWidth(titleCasedLabels);
+
+  // Render properties with consistent label width
+  for (let i = 0; i < serializableEntries.length; i++) {
+    const [propKey, config] = serializableEntries[i]!;
+    const propValue = (componentData as any)[propKey];
+    const titleCasedLabel = titleCasedLabels[i]!;
+
+    // Check if property has custom editor
+    if (config.customEditor) {
+      try {
+        config.customEditor({
+          label: titleCasedLabel,
+          value: propValue,
+          onChange: (newValue) => {
+            (componentData as any)[propKey] = newValue;
+          },
+          config,
+          commands,
+          componentData,
+        });
+      } catch (error) {
+        ImGui.TextColored({ x: 1, y: 0, z: 0, w: 1 }, `${titleCasedLabel}: error`);
+        console.error(
+          `Error in custom editor for ${componentType.name}.${propKey}:`,
+          error,
+        );
+      }
+    } else {
+      // Use default property rendering with EditorLayout
+      const uniqueId = `${componentType.id}_${propKey}`;
+      const newValue = renderProperty(
+        titleCasedLabel,
+        propValue,
+        config,
+        uniqueId,
+        componentData,
+      );
+
+      // Update component if value changed
+      if (newValue !== undefined && newValue !== propValue) {
+        (componentData as any)[propKey] = newValue;
+      }
+    }
+  }
+
+  // End label width scope
+  EditorLayout.endLabelsWidth();
 }
 
 export function renderImGuiInspector(app: Application, entity?: Entity): void {
@@ -226,19 +334,33 @@ function renderComponentSection(
       // Render each serializable property (default behavior)
       const serializationConfig = componentType.serializerConfig || {};
 
+      // Collect all title-cased labels for width calculation
+      const titleCasedLabels: string[] = [];
+      const serializableEntries: [string, PropertySerializerConfig][] = [];
+
       for (const [propKey, propConfig] of Object.entries(serializationConfig)) {
         const config = propConfig as PropertySerializerConfig;
+        if (config.serializable) {
+          const titleCasedLabel = toTitleCase(propKey);
+          titleCasedLabels.push(titleCasedLabel);
+          serializableEntries.push([propKey, config]);
+        }
+      }
 
-        // Skip non-serializable fields
-        if (!config.serializable) continue;
+      // Use EditorLayout's label width alignment
+      EditorLayout.beginLabelsWidth(titleCasedLabels);
 
+      // Render properties with consistent label width
+      for (let i = 0; i < serializableEntries.length; i++) {
+        const [propKey, config] = serializableEntries[i]!;
         const propValue = componentData[propKey];
+        const titleCasedLabel = titleCasedLabels[i]!;
 
         // Check if property has custom editor
         if (config.customEditor) {
           try {
             config.customEditor({
-              label: propKey,
+              label: titleCasedLabel, // Use title-cased label for custom editors too
               value: propValue,
               onChange: (newValue) => {
                 componentData[propKey] = newValue;
@@ -248,18 +370,18 @@ function renderComponentSection(
               componentData, // Pass entire component data for custom editors that need it
             });
           } catch (error) {
-            ImGui.TextColored({ x: 1, y: 0, z: 0, w: 1 }, `${propKey}: error`);
+            ImGui.TextColored({ x: 1, y: 0, z: 0, w: 1 }, `${titleCasedLabel}: error`);
             console.error(
               `Error in custom editor for ${componentType.name}.${propKey}:`,
               error,
             );
           }
         } else {
-          // Use default property rendering
+          // Use default property rendering with EditorLayout
           // Create unique ID by combining component type ID and property key
           const uniqueId = `${componentType.id}_${propKey}`;
           const newValue = renderProperty(
-            propKey,
+            titleCasedLabel,  // Use title-cased label
             propValue,
             config,
             uniqueId,
@@ -273,6 +395,9 @@ function renderComponentSection(
           }
         }
       }
+
+      // End label width scope
+      EditorLayout.endLabelsWidth();
     }
 
     // Remove component button
@@ -301,9 +426,15 @@ function renderProperty(
     return renderRuntimeAssetPicker(label, value, uniqueId, componentData, config.assetTypes);
   }
 
-  // Handle enum types
+  // Handle enum types - use EditorLayout.enumField
   if (config.type === 'enum' && config.enum) {
-    return renderEnumProperty(label, value, config.enum, uniqueId);
+    const [newValue, changed] = EditorLayout.enumField(
+      label,
+      value,
+      config.enum as Record<string, string | number>,
+      { tooltip: config.tooltip, id: uniqueId },
+    );
+    return changed ? newValue : undefined;
   }
 
   // Handle null/undefined for other types
@@ -311,138 +442,122 @@ function renderProperty(
     return renderNullProperty(label, value, config, uniqueId);
   }
 
-  // Detect type and render appropriate control
-
-  // Helper to render label with tooltip
-  const renderLabel = () => {
-    ImGui.Text(`${label}:`);
-    if (config.tooltip && ImGui.IsItemHovered()) {
-      ImGui.SetTooltip(config.tooltip);
-    }
-    ImGui.SameLine();
-  };
-
-  // 1. Vector3 (instanceType check)
+  // 1. Vector3 (instanceType check) - use EditorLayout.vector3Field
   if (config.instanceType === Vector3 || value instanceof Vector3) {
-    const vec: [number, number, number] = [value.x, value.y, value.z];
-
-    renderLabel();
-    if (ImGui.DragFloat3(`##${uniqueId}`, vec, 0.1)) {
-      return new Vector3(vec[0], vec[1], vec[2]);
-    }
-    return undefined; // No change
+    const [newValue, changed] = EditorLayout.vector3Field(label, value, {
+      tooltip: config.tooltip,
+      id: uniqueId,
+    });
+    return changed ? newValue : undefined;
   }
 
   // 2. Color objects (detect by properties or THREE.Color instance)
   if (isColorObject(value)) {
     const isThreeColor = value instanceof THREE.Color;
+    const hasAlpha = value.a !== undefined;
 
-    renderLabel();
-    if (value.a !== undefined) {
-      // RGBA (plain object with alpha)
-      const arr: [number, number, number, number] = [
-        value.r,
-        value.g,
-        value.b,
-        value.a,
-      ];
-      if (ImGui.ColorEdit4(`##${uniqueId}`, arr)) {
-        return { r: arr[0], g: arr[1], b: arr[2], a: arr[3] };
+    const [newValue, changed] = EditorLayout.colorField(label, value, {
+      tooltip: config.tooltip,
+      id: uniqueId,
+      hasAlpha,
+    });
+
+    if (changed) {
+      // Return same type as input - THREE.Color or plain object
+      if (isThreeColor && !hasAlpha) {
+        return new THREE.Color(newValue.r, newValue.g, newValue.b);
       }
-    } else {
-      // RGB (THREE.Color or plain object)
-      const arr: [number, number, number] = [value.r, value.g, value.b];
-      if (ImGui.ColorEdit3(`##${uniqueId}`, arr)) {
-        // Return same type as input - THREE.Color or plain object
-        if (isThreeColor) {
-          return new THREE.Color(arr[0], arr[1], arr[2]);
-        }
-        return { r: arr[0], g: arr[1], b: arr[2] };
-      }
+      return newValue;
     }
     return undefined;
   }
 
-  // 3. Nested objects (like { x, y })
+  // 3. Nested objects (like { x, y }) - use EditorLayout.vector2Field for 2D vectors
   if (typeof value === 'object' && !Array.isArray(value)) {
-    ImGui.Text(`${label}:`);
-    if (config.tooltip && ImGui.IsItemHovered()) {
-      ImGui.SetTooltip(config.tooltip);
+    const keys = Object.keys(value);
+
+    // Check if it's a 2D vector-like object { x, y }
+    if (keys.length === 2 && 'x' in value && 'y' in value &&
+        typeof value.x === 'number' && typeof value.y === 'number') {
+      const [newValue, changed] = EditorLayout.vector2Field(label, value, {
+        tooltip: config.tooltip,
+        id: uniqueId,
+      });
+      return changed ? newValue : undefined;
     }
-    ImGui.Indent();
+
+    // For other objects, render nested fields
+    EditorLayout.text(`${label}:`);
+    EditorLayout.beginIndent();
     let changed = false;
     const newObj = { ...value };
 
-    for (const [key, val] of Object.entries(value)) {
+    // Collect and title-case nested keys for alignment
+    const nestedEntries = Object.entries(value).filter(([, val]) => typeof val === 'number');
+    const nestedLabels = nestedEntries.map(([key]) => toTitleCase(key));
+
+    // Use EditorLayout's label width for nested fields
+    EditorLayout.beginLabelsWidth(nestedLabels);
+
+    for (let i = 0; i < nestedEntries.length; i++) {
+      const [key, val] = nestedEntries[i]!;
+      const nestedLabel = nestedLabels[i]!;
+
       if (typeof val === 'number') {
-        ImGui.Text(`${key}:`);
-        ImGui.SameLine();
-        const arr: [number] = [val];
-        if (ImGui.DragFloat(`##${uniqueId}_${key}`, arr, 0.1)) {
-          newObj[key] = arr[0];
+        const [newVal, fieldChanged] = EditorLayout.numberField(nestedLabel, val, {
+          id: `${uniqueId}_${key}`,
+        });
+        if (fieldChanged) {
+          newObj[key] = newVal;
           changed = true;
         }
       }
-      // Add more nested type support as needed
     }
 
-    ImGui.Unindent();
+    EditorLayout.endLabelsWidth();
+    EditorLayout.endIndent();
     return changed ? newObj : undefined;
   }
 
-  // 4. Primitives
+  // 4. Primitives - use EditorLayout field methods
   if (typeof value === 'number') {
-    renderLabel();
-    const arr: [number] = [value];
-    if (ImGui.DragFloat(`##${uniqueId}`, arr, 0.1)) {
-      return arr[0];
-    }
-  } else if (typeof value === 'boolean') {
-    // Checkbox: label naturally goes on the right in ImGui
-    const arr: [boolean] = [value];
-    if (ImGui.Checkbox(`${label}##${uniqueId}`, arr)) {
-      if (config.tooltip && ImGui.IsItemHovered()) {
-        ImGui.SetTooltip(config.tooltip);
-      }
-      return arr[0];
-    }
-    if (config.tooltip && ImGui.IsItemHovered()) {
-      ImGui.SetTooltip(config.tooltip);
-    }
-  } else if (typeof value === 'string') {
-    try {
-      renderLabel();
-      // String input using InputText
-      const bufferSize = 256; // Max string length
-      const buffer: [string] = [value];
-
-      ImGui.InputText(`##${uniqueId}`, buffer, bufferSize);
-
-      // Only commit changes when user finishes editing (press Enter or click away)
-      // This prevents disrupting the game view while typing
-      if (ImGui.IsItemDeactivatedAfterEdit()) {
-        return buffer[0];
-      }
-
-      // While actively editing, don't update the component
-      return undefined;
-    } catch (error) {
-      console.error(`Error in string input for ${label}:`, error);
-      ImGui.TextColored({ x: 1, y: 0, z: 0, w: 1 }, `${label}: error`);
-      return undefined;
-    }
+    const [newValue, changed] = EditorLayout.numberField(label, value, {
+      tooltip: config.tooltip,
+      id: uniqueId,
+    });
+    return changed ? newValue : undefined;
   }
 
-  // 5. Entity reference
+  if (typeof value === 'boolean') {
+    const [newValue, changed] = EditorLayout.checkboxField(label, value, {
+      tooltip: config.tooltip,
+      id: uniqueId,
+    });
+    return changed ? newValue : undefined;
+  }
+
+  if (typeof value === 'string') {
+    const [newValue, changed] = EditorLayout.stringField(label, value, {
+      tooltip: config.tooltip,
+      id: uniqueId,
+    });
+    return changed ? newValue : undefined;
+  }
+
+  // 5. Entity reference - use EditorLayout.entityField
   if (config.type === 'entity') {
-    ImGui.Text(`${label}: Entity #${value}`);
+    const [newValue, changed] = EditorLayout.entityField(label, value, {
+      tooltip: config.tooltip,
+      id: uniqueId,
+    });
+    return changed ? newValue : undefined;
   }
 
-  // 6. Collections (arrays/sets)
+  // 6. Collections (arrays/sets) - display info only
   if (config.collectionType === 'array' && Array.isArray(value)) {
-    ImGui.Text(`${label}: [${value.length} items]`);
+    EditorLayout.text(`${label}: [${value.length} items]`);
   } else if (config.collectionType === 'set' && value instanceof Set) {
-    ImGui.Text(`${label}: {${value.size} items}`);
+    EditorLayout.text(`${label}: {${value.size} items}`);
   }
 
   return undefined; // No change
@@ -454,71 +569,22 @@ function renderNullProperty(
   config: PropertySerializerConfig,
   uniqueId: string,
 ): any {
+  // Use EditorLayout's text method for the label, then show null value
+  EditorLayout.text(`${label}:`);
+  EditorLayout.sameLine();
+
   // Special handling for Vector3
   if (config.instanceType === Vector3) {
-    ImGui.Text(`${label}: null`);
-    ImGui.SameLine();
-    if (ImGui.SmallButton(`Create##${uniqueId}`)) {
+    EditorLayout.textDisabled('null');
+    EditorLayout.sameLine();
+    if (EditorLayout.smallButton(`Create##${uniqueId}`)) {
       return new Vector3(0, 0, 0);
     }
   } else {
-    ImGui.Text(`${label}: null`);
+    EditorLayout.textDisabled('null');
   }
 
   return undefined;
-}
-
-/**
- * Format enum key to human-readable label
- * e.g., "COLLISION_EVENTS" -> "Collision Events"
- *       "ALL" -> "All"
- *       "NONE" -> "None"
- */
-function formatEnumLabel(key: string): string {
-  return key
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
-}
-
-/**
- * Render an enum property as a dropdown
- */
-function renderEnumProperty(
-  label: string,
-  value: any,
-  enumObj: Record<string, string | number>,
-  uniqueId: string,
-): any {
-  // Get enum entries - for numeric enums, filter out reverse mappings (where key is a number)
-  // TypeScript numeric enums create: { A: 0, B: 1, 0: "A", 1: "B" }
-  // We only want the string keys that map to numbers
-  const entries = Object.entries(enumObj).filter(([key, val]) => {
-    // For numeric enums: keep only entries where key is NOT a number and value IS a number
-    // For string enums: keep only entries where value is a string
-    const keyIsNumeric = !isNaN(Number(key));
-    return !keyIsNumeric && typeof val === 'number';
-  });
-
-  // Extract keys and create formatted labels
-  const enumKeys = entries.map(([key]) => key);
-  const enumLabels = enumKeys.map(formatEnumLabel);
-
-  // Find current selection index by matching the current value
-  let currentIndex = entries.findIndex(([_key, val]) => val === value);
-  if (currentIndex === -1) currentIndex = 0;
-
-  // Render combo box - ImGui.Combo expects a single concatenated string with \0 separators
-  const itemsString = enumLabels.join('\0') + '\0';
-  const arr: [number] = [currentIndex];
-  if (ImGui.Combo(`${label}##${uniqueId}`, arr, itemsString)) {
-    const selectedKey = enumKeys[arr[0]];
-    if (selectedKey !== undefined) {
-      return enumObj[selectedKey]; // Return the numeric value
-    }
-  }
-
-  return undefined; // No change
 }
 
 // Track pending asset array additions
@@ -547,11 +613,11 @@ function renderRuntimeAssetArray(
     pendingAssetArrayAdditions.delete(addPopupId);
   }
 
-  ImGui.Text(`${label}: [${array.length} items]`);
+  EditorLayout.text(`${label}: [${array.length} items]`);
 
   // Add button
-  ImGui.SameLine();
-  if (ImGui.SmallButton(`+##${uniqueId}`)) {
+  EditorLayout.sameLine();
+  if (EditorLayout.smallButton(`+##${uniqueId}`)) {
     openAssetPicker(addPopupId);
   }
 
@@ -575,23 +641,23 @@ function renderRuntimeAssetArray(
   });
 
   // Render each item in the array
-  ImGui.Indent();
+  EditorLayout.beginIndent();
   for (let i = 0; i < array.length; i++) {
     const item = array[i];
     if (!item) continue;
 
     const assetName = item.path?.split('/').pop() || item.guid || 'Unknown';
 
-    ImGui.Text(`[${i}] ${assetName}`);
-    ImGui.SameLine();
+    EditorLayout.text(`[${i}] ${assetName}`);
+    EditorLayout.sameLine();
 
     // Remove button
-    if (ImGui.SmallButton(`X##remove_${uniqueId}_${i}`)) {
+    if (EditorLayout.smallButton(`X##remove_${uniqueId}_${i}`)) {
       newArray.splice(i, 1);
       changed = true;
     }
   }
-  ImGui.Unindent();
+  EditorLayout.endIndent();
 
   return changed ? newArray : undefined;
 }
@@ -626,21 +692,21 @@ function renderRuntimeAssetPicker(
   }
 
   // Display current asset
-  ImGui.Text(`${label}:`);
-  ImGui.SameLine();
+  EditorLayout.text(`${label}:`);
+  EditorLayout.sameLine();
 
   if (value && value.path) {
     // Show asset name (last part of path)
     const assetName = value.path.split('/').pop() || value.path;
-    ImGui.Text(assetName);
+    EditorLayout.text(assetName);
   } else {
-    ImGui.TextDisabled('None');
+    EditorLayout.textDisabled('(None)');
   }
 
-  ImGui.SameLine();
+  EditorLayout.sameLine();
 
   // Button to open asset picker
-  if (ImGui.Button(`Pick##${uniqueId}`)) {
+  if (EditorLayout.button(`Pick##${uniqueId}`)) {
     openAssetPicker(popupId);
     // Store componentData for when selection is made
     pendingAssetSelections.set(popupId, { result: undefined, componentData });
@@ -648,8 +714,8 @@ function renderRuntimeAssetPicker(
 
   // Clear button
   if (value) {
-    ImGui.SameLine();
-    if (ImGui.Button(`Clear##${uniqueId}`)) {
+    EditorLayout.sameLine();
+    if (EditorLayout.button(`Clear##${uniqueId}`)) {
       return null; // Clear the asset
     }
   }

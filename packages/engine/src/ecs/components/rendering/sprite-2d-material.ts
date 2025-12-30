@@ -593,7 +593,13 @@ function renderUniformEditor(
   componentData: Sprite2DMaterialData,
   uniform: TranspiledUniform,
 ): void {
-  const { name, type, defaultValue, hint, noiseParams } = uniform;
+  const { name, type, defaultValue, hint, noiseParams, isRuntime } = uniform;
+
+  // Skip runtime uniforms - these are managed by systems, not user-editable
+  // Use hint_runtime in VSL to mark uniforms as runtime-only
+  if (isRuntime) {
+    return;
+  }
 
   // Handle hint_default_texture specially - render noise params editor
   if (noiseParams && type === 'sampler2D') {

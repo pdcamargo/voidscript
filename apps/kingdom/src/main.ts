@@ -55,6 +55,10 @@ import './components/villager.js';
 import './components/homeless.js';
 import './components/building.js';
 import './components/camp-fire.js';
+import './components/lightning-controller.js';
+
+// Import systems
+import { lightningControllerSystem } from './systems/lightning-controller-system.js';
 
 async function main() {
   const app = new Application({
@@ -181,6 +185,9 @@ async function main() {
       }
     }).runIf(isGameplayActive()),
   );
+
+  // Register lightning controller system
+  app.addUpdateSystem(lightningControllerSystem);
 
   // Push game-specific layer for custom gameplay systems
   app.pushLayer(new GameLayer());

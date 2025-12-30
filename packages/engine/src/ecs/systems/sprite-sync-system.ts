@@ -865,6 +865,16 @@ export class SpriteRenderManager {
       return value;
     }
 
+    // Check for arrays - convert to Float32Array for THREE.js uniform1fv
+    if (Array.isArray(value)) {
+      // Check if it's an array of numbers
+      if (value.length > 0 && typeof value[0] === 'number') {
+        return new Float32Array(value as number[]);
+      }
+      // For other array types, return as-is (might need further handling)
+      return value;
+    }
+
     // Check for NoiseTextureParams - generate texture from params
     if (this.isNoiseTextureParams(value)) {
       return DefaultTextureGenerator.generate(value);

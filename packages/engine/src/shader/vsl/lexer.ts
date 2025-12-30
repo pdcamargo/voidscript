@@ -188,6 +188,7 @@ export const UNIFORM_HINTS = new Set([
   'hint_black',
   'hint_aniso',
   'hint_default_texture',
+  'hint_runtime',
 ]);
 
 /**

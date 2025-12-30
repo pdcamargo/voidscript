@@ -60,10 +60,6 @@ import {
   Rain2DRenderManager,
   rain2DSyncSystem,
 } from '../ecs/systems/rain-2d-system.js';
-import {
-  LightningField2DRenderManager,
-  lightningField2DSyncSystem,
-} from '../ecs/systems/lightning-field-2d-system.js';
 import { TiledAssetRegistry } from '../tiled/tiled-asset-registry.js';
 import { TilemapRenderManager } from '../tiled/tilemap-render-manager.js';
 import {
@@ -1276,11 +1272,6 @@ export class Application {
     // - render: Create and update pixel-art rain droplets with weather effects
     this.insertResource(new Rain2DRenderManager(this.renderer));
     this.addRenderSystem(rain2DSyncSystem);
-
-    // Lightning Field 2D rendering system
-    // - render: Create and update procedural lightning bolts with glow effects
-    this.insertResource(new LightningField2DRenderManager(this.renderer));
-    this.addRenderSystem(lightningField2DSyncSystem);
 
     // Tiled map integration
     // - startup: Load maps and spawn layers/objects/collisions

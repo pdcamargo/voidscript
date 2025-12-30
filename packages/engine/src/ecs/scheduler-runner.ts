@@ -2,9 +2,9 @@
  * Scheduler Runner - Manages game loop with FPS detection and fixed timestep
  */
 
-import type { Scheduler } from "./scheduler.js";
-import type { Command } from "./command.js";
-import type { World } from "./world.js";
+import type { Scheduler } from './scheduler.js';
+import type { Command } from './command.js';
+import type { World } from './world.js';
 
 /**
  * Scheduler Runner - Executes scheduler systems in game loop
@@ -45,7 +45,8 @@ export class SchedulerRunner {
           requestAnimationFrame(measureFrame);
         } else {
           // Calculate average FPS
-          const avgDelta = frameTimes.reduce((a, b) => a + b) / frameTimes.length;
+          const avgDelta =
+            frameTimes.reduce((a, b) => a + b) / frameTimes.length;
           const avgFPS = 1000 / avgDelta;
           resolve(Math.round(avgFPS));
         }
@@ -63,16 +64,16 @@ export class SchedulerRunner {
    */
   async run(commands: Command, world: World): Promise<void> {
     // Detect target FPS (minimum 60)
-    console.log("Detecting target FPS...");
+    console.log('Detecting target FPS...');
     const detectedFPS = await this.detectTargetFPS();
     this.targetFPS = Math.max(detectedFPS, 60);
     this.fixedDeltaTime = 1 / this.targetFPS;
     console.log(`Target FPS: ${this.targetFPS} (detected: ${detectedFPS})`);
 
     // Run startup systems once
-    this.scheduler.executeSystems("earlyStartup", { commands });
-    this.scheduler.executeSystems("startup", { commands });
-    this.scheduler.executeSystems("lateStartup", { commands });
+    this.scheduler.executeSystems('earlyStartup', { commands });
+    this.scheduler.executeSystems('startup', { commands });
+    this.scheduler.executeSystems('lateStartup', { commands });
 
     // Flush events from startup (if any)
     world.flushEvents();
@@ -112,23 +113,25 @@ export class SchedulerRunner {
     // Update FPS every 500ms
     if (currentTime - this.lastFPSUpdate >= 500) {
       if (this.fpsFrameTimes.length > 0) {
-        const avgDelta = this.fpsFrameTimes.reduce((a, b) => a + b, 0) / this.fpsFrameTimes.length;
+        const avgDelta =
+          this.fpsFrameTimes.reduce((a, b) => a + b, 0) /
+          this.fpsFrameTimes.length;
         this.currentFPS = Math.round(1000 / avgDelta);
       }
       this.lastFPSUpdate = currentTime;
     }
 
     // Run update systems
-    this.scheduler.executeSystems("earlyUpdate", { commands });
-    this.scheduler.executeSystems("update", { commands });
-    this.scheduler.executeSystems("lateUpdate", { commands });
+    this.scheduler.executeSystems('earlyUpdate', { commands });
+    this.scheduler.executeSystems('update', { commands });
+    this.scheduler.executeSystems('lateUpdate', { commands });
 
     // Fixed update with accumulator
     this.accumulator += deltaTime;
     while (this.accumulator >= this.fixedDeltaTime) {
-      this.scheduler.executeSystems("earlyFixedUpdate", { commands });
-      this.scheduler.executeSystems("fixedUpdate", { commands });
-      this.scheduler.executeSystems("lateFixedUpdate", { commands });
+      this.scheduler.executeSystems('earlyFixedUpdate', { commands });
+      this.scheduler.executeSystems('fixedUpdate', { commands });
+      this.scheduler.executeSystems('lateFixedUpdate', { commands });
       this.accumulator -= this.fixedDeltaTime;
     }
 
@@ -136,12 +139,12 @@ export class SchedulerRunner {
     world.flushEvents();
 
     // Run render systems
-    this.scheduler.executeSystems("earlyRender", { commands });
-    this.scheduler.executeSystems("render", { commands });
-    this.scheduler.executeSystems("lateRender", { commands });
+    this.scheduler.executeSystems('earlyRender', { commands });
+    this.scheduler.executeSystems('render', { commands });
+    this.scheduler.executeSystems('lateRender', { commands });
 
     // After render
-    this.scheduler.executeSystems("afterRender", { commands });
+    this.scheduler.executeSystems('afterRender', { commands });
 
     // Schedule next frame
     requestAnimationFrame(() => this.gameLoop(commands, world));

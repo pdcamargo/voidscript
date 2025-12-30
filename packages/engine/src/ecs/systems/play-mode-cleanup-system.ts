@@ -22,7 +22,6 @@ import { Render3DManager } from './renderer-sync-system.js';
 import { SpriteRenderManager } from './sprite-sync-system.js';
 import { SkyGradientRenderManager } from './sky-gradient-system.js';
 import { Rain2DRenderManager } from './rain-2d-system.js';
-import { LightningField2DRenderManager } from './lightning-field-2d-system.js';
 import { PostProcessingManager } from '../../post-processing/managers/post-processing-manager.js';
 import { AudioManager } from './audio-manager.js';
 import { Physics2DContext } from '../../physics/2d/physics-2d-context.js';
@@ -58,12 +57,6 @@ function disposeAllRenderManagers(commands: Command): void {
   const rainManager = commands.tryGetResource(Rain2DRenderManager);
   if (rainManager) {
     rainManager.dispose();
-  }
-
-  // LightningField2DRenderManager - Lightning effects
-  const lightningManager = commands.tryGetResource(LightningField2DRenderManager);
-  if (lightningManager) {
-    lightningManager.dispose();
   }
 
   // PostProcessingManager - Post-processing effects

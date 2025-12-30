@@ -61,7 +61,7 @@ componentRegistry:
   - id: 29
     name: Rain2D
   - id: 30
-    name: LightningField2D
+    name: LightningController
   - id: 31
     name: FogSkySync
 entities:
@@ -1121,7 +1121,7 @@ entities:
       - typeId: 1
         typeName: Name
         data:
-          name: Lightining Field
+          name: Lightning Field
       - typeId: 2
         typeName: Transform3D
         data:
@@ -1134,49 +1134,73 @@ entities:
             y: 0
             z: 0
           scale:
-            x: 1
-            y: 1
-            z: 1
-      - typeId: 30
-        typeName: LightningField2D
-        data:
-          baseSize:
             x: 3000
             y: 12
-          visible: false
+            z: 1
+      - typeId: 15
+        typeName: Sprite2D
+        data:
+          texture: null
+          color:
+            r: 1
+            g: 1
+            b: 1
+            a: 1
+          tileIndex: null
+          tileSize: null
+          tilesetSize: null
+          pixelsPerUnit: 100
+          flipX: false
+          flipY: false
           sortingLayer: 0
           sortingOrder: 0
+          anchor:
+            x: 0.5
+            y: 0.5
+          visible: false
+          isLit: false
+          spriteRect: null
+      - typeId: 16
+        typeName: Sprite2DMaterial
+        data:
+          shader:
+            guid: lightning-2d-shader
+          uniforms:
+            bolt_color:
+              x: 1
+              y: 1
+              z: 1
+            glow_color:
+              x: 0.502
+              y: 0.753
+              z: 1
+            bolt_width: 1.0119999647140503
+            glow_radius: 28.96500015258789
+            glow_intensity: 1
+            pixel_size: 0.10000000149011612
+            segments: 21
+            displacement: 1
+            noise_strength: 1
+            branch_probability: 0.4099999964237213
+            branch_length_factor: 0.4880000054836273
+            sub_branch_probability: 0.6050000190734863
+            enable_ground_glow: false
+            ground_glow_radius: 20
+          uniqueInstance: true
+          enabled: true
+      - typeId: 30
+        typeName: LightningController
+        data:
           minInterval: 3.617000102996826
           maxInterval: 22.33799934387207
           strikeDuration: 0.5
           simultaneousStrikes: 1
-          boltColor:
-            r: 1
-            g: 1
-            b: 1
-          glowColor:
-            r: 0.502
-            g: 0.753
-            b: 1
-          boltWidth: 1.0119999647140503
-          glowRadius: 28.96500015258789
-          glowIntensity: 1
-          pixelSize: 0.10000000149011612
-          segments: 21
-          displacement: 1
-          noiseStrength: 1
-          branchProbability: 0.4099999964237213
-          branchLengthFactor: 0.4880000054836273
-          subBranchProbability: 0.6050000190734863
-          seed: 210
           fadeMode: fade
           flickerSpeed: 5
           strikeDirection: top-down
           angleVariation: 0.5
           enableScreenFlash: true
           flashIntensity: 0.671999990940094
-          enableGroundGlow: false
-          groundGlowRadius: 20
   - id: 19
     generation: 0
     components:

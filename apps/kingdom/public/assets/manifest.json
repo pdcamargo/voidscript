@@ -370,5 +370,9 @@
   "e28c58cf-fa71-4825-9ecc-16c1f0ecd1ce": {
     "type": "prefab",
     "path": "/prefabs/water.prefab.yaml"
+  },
+  "lightning-2d-shader": {
+    "type": "shader",
+    "path": "/assets/shaders/lightning-2d.vsl"
   }
 }

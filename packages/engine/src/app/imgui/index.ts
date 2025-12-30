@@ -2,7 +2,8 @@ export { renderImGuiHierarchy } from './hierarchy-viewer.js';
 export {
   renderImGuiInspector,
   setSelectedEntity,
-  getSelectedEntity
+  getSelectedEntity,
+  renderDefaultProperties,
 } from './inspector.js';
 export { renderMainMenuBar } from './menu-bar.js';
 export type { MenuBarCallbacks, CustomMenuItem, CustomMenu } from './menu-bar.js';

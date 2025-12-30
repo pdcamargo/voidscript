@@ -78,7 +78,8 @@ export type UniformHintType =
   | 'hint_white' // Default white texture
   | 'hint_black' // Default black texture
   | 'hint_aniso' // Anisotropy hint
-  | 'hint_default_texture'; // Auto-generated noise texture
+  | 'hint_default_texture' // Auto-generated noise texture
+  | 'hint_runtime'; // Runtime-only uniform (managed by system, not shown in editor)
 
 /**
  * Noise texture types for hint_default_texture
@@ -401,6 +402,7 @@ export type Statement =
  * Uniform variable declaration
  *
  * Example: uniform float speed : hint_range(0.0, 10.0) = 1.0;
+ * Example with array: uniform float bolt_seeds[5];
  */
 export interface UniformDeclaration extends ASTNode {
   type: 'UniformDeclaration';
@@ -408,6 +410,8 @@ export interface UniformDeclaration extends ASTNode {
   uniformType: GLSLType;
   /** Uniform name */
   name: string;
+  /** Array size if this is an array uniform (e.g., 5 for `float myArray[5]`) */
+  arraySize?: number;
   /** Optional hint for editor UI */
   hint?: UniformHint;
   /** Optional default value */

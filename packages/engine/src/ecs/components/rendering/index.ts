@@ -24,8 +24,6 @@ export * from "./sprite-2d.js";
 export * from "./sprite-2d-material.js";
 export * from "./sky-gradient.js";
 export * from "./rain-2d.js";
-export * from "./lightning-field-2d.js";
-
 // Post-Processing
 export * from "./post-processing.js";
 

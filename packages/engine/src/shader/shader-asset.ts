@@ -243,6 +243,11 @@ export class ShaderAsset {
   }
 
   private getDefaultUniformValue(uniform: TranspiledUniform): unknown {
+    // Handle array uniforms - THREE.js requires Float32Array for uniform arrays
+    if (uniform.arraySize && uniform.arraySize > 0) {
+      return this.getArrayDefault(uniform.type, uniform.arraySize);
+    }
+
     // Parse default value if provided
     if (uniform.defaultValue) {
       return this.parseDefaultValue(uniform.type, uniform.defaultValue);
@@ -266,6 +271,29 @@ export class ShaderAsset {
     }
 
     return this.getTypeDefault(uniform.type);
+  }
+
+  private getArrayDefault(type: string, size: number): unknown {
+    // THREE.js requires Float32Array for float array uniforms
+    switch (type) {
+      case 'float':
+        return new Float32Array(size);
+      case 'int':
+      case 'uint':
+        return new Int32Array(size);
+      case 'vec2':
+        // Array of vec2 = size * 2 floats
+        return new Float32Array(size * 2);
+      case 'vec3':
+        // Array of vec3 = size * 3 floats
+        return new Float32Array(size * 3);
+      case 'vec4':
+        // Array of vec4 = size * 4 floats
+        return new Float32Array(size * 4);
+      default:
+        // Fallback to Float32Array for unknown types
+        return new Float32Array(size);
+    }
   }
 
   private getTypeDefault(type: string): unknown {

@@ -64,6 +64,8 @@ export interface TranspiledUniform {
   name: string;
   /** GLSL type */
   type: GLSLType;
+  /** Array size if this is an array uniform (e.g., 5 for `float myArray[5]`) */
+  arraySize?: number;
   /** Default value expression (for initialization) */
   defaultValue?: string;
   /** Hint for editor UI */
@@ -75,6 +77,8 @@ export interface TranspiledUniform {
   noiseParams?: NoiseTextureParams;
   /** Whether this is a VSL built-in uniform (TIME, etc.) */
   isBuiltIn: boolean;
+  /** Whether this uniform is runtime-only (not shown in editor, managed by systems) */
+  isRuntime: boolean;
 }
 
 /**
@@ -165,6 +169,7 @@ export class Transpiler {
         name: builtin.uniformName || builtin.name,
         type: builtin.type,
         isBuiltIn: true,
+        isRuntime: false,
       });
     }
 
@@ -173,6 +178,7 @@ export class Transpiler {
       uniforms.push({
         name: uniform.name,
         type: uniform.uniformType,
+        arraySize: uniform.arraySize,
         defaultValue: uniform.defaultValue
           ? this.transpileExpression(uniform.defaultValue)
           : undefined,
@@ -184,6 +190,7 @@ export class Transpiler {
           : undefined,
         noiseParams: uniform.hint?.noiseParams,
         isBuiltIn: false,
+        isRuntime: uniform.hint?.type === 'hint_runtime',
       });
     }
 
@@ -259,7 +266,8 @@ export class Transpiler {
     if (this.ast.uniforms.length > 0) {
       lines.push('// User Uniforms');
       for (const uniform of this.ast.uniforms) {
-        lines.push(`uniform ${uniform.uniformType} ${uniform.name};`);
+        const arraySuffix = uniform.arraySize ? `[${uniform.arraySize}]` : '';
+        lines.push(`uniform ${uniform.uniformType} ${uniform.name}${arraySuffix};`);
       }
       lines.push('');
     }
@@ -450,7 +458,8 @@ export class Transpiler {
     if (this.ast.uniforms.length > 0) {
       lines.push('// User Uniforms');
       for (const uniform of this.ast.uniforms) {
-        lines.push(`uniform ${uniform.uniformType} ${uniform.name};`);
+        const arraySuffix = uniform.arraySize ? `[${uniform.arraySize}]` : '';
+        lines.push(`uniform ${uniform.uniformType} ${uniform.name}${arraySuffix};`);
       }
       lines.push('');
     }
