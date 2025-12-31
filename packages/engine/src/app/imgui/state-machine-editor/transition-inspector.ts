@@ -4,7 +4,7 @@
  * Panel for editing a selected transition's properties and conditions.
  */
 
-import { ImGui } from '@mori2003/jsimgui';
+import { ImGui } from '@voidscript/imgui';
 import { EditorLayout } from '../editor-layout.js';
 import { EDITOR_ICONS } from '../editor-icons.js';
 import type {

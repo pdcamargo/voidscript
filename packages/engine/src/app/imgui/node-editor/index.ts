@@ -164,7 +164,7 @@ export {
 // High-Level Render Function
 // ============================================================================
 
-import { ImGui } from '@mori2003/jsimgui';
+import { ImGui } from '@voidscript/imgui';
 import { type NodeEditorState, deleteSelected, clearNodeEditor } from './node-editor-state.js';
 import { beginCanvas, endCanvas, type CanvasContext } from './node-editor-canvas.js';
 import { renderAllNodes, renderBoxSelection } from './node-renderer.js';

@@ -48,7 +48,7 @@
  * ```
  */
 
-import { ImGui } from '@mori2003/jsimgui';
+import { ImGui } from '@voidscript/imgui';
 import { component } from '../../ecs/component.js';
 import { Events } from '../../ecs/events.js';
 import { renderEventNamePicker } from '../../app/imgui/event-name-picker.js';

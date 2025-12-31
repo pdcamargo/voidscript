@@ -5,7 +5,7 @@
  * Uses the generic node editor framework for graph visualization.
  */
 
-import { ImGui } from '@mori2003/jsimgui';
+import { ImGui } from '@voidscript/imgui';
 import type { EditorPlatform } from '../../../editor/editor-platform.js';
 import type { Command } from '../../../ecs/command.js';
 import { AssetDatabase } from '../../../ecs/asset-database.js';

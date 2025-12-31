@@ -20,7 +20,7 @@ import * as THREE from 'three';
 import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import { Layer } from '../app/layer.js';
-import { ImGui, ImGuiImplWeb, ImTextureRef } from '@mori2003/jsimgui';
+import { ImGui, ImGuiImplWeb, ImTextureRef } from '@voidscript/imgui';
 import type { Application } from '../app/application.js';
 import type { EditorPlatform } from './editor-platform.js';
 import { EditorManager } from './editor-manager.js';

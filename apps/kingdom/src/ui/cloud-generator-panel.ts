@@ -4,7 +4,7 @@
  * ImGui panel for generating pixel art cloud textures with real-time preview.
  */
 
-import { ImGui, ImVec4, ImVec2, ImTextureRef, ImGuiImplWeb } from '@mori2003/jsimgui';
+import { ImGui, ImVec4, ImVec2, ImTextureRef, ImGuiImplWeb } from '@voidscript/imgui';
 import * as THREE from 'three';
 import type { Application } from '@voidscript/engine';
 import {

@@ -50,13 +50,13 @@ importers:
         version: 5.9.3
       vite:
         specifier: npm:rolldown-vite@7.2.5
-        version: rolldown-vite@7.2.5(@types/node@22.19.1)(esbuild@0.25.12)(jiti@2.6.1)(sass@1.90.0)(terser@5.44.1)(yaml@2.8.2)
+        version: rolldown-vite@7.2.5(@types/node@25.0.3)(esbuild@0.25.12)(jiti@2.6.1)(sass@1.90.0)(terser@5.44.1)(yaml@2.8.2)
       vite-plugin-top-level-await:
         specifier: ^1.6.0
-        version: 1.6.0(rolldown-vite@7.2.5(@types/node@22.19.1)(esbuild@0.25.12)(jiti@2.6.1)(sass@1.90.0)(terser@5.44.1)(yaml@2.8.2))(rollup@4.53.2)
+        version: 1.6.0(rolldown-vite@7.2.5(@types/node@25.0.3)(esbuild@0.25.12)(jiti@2.6.1)(sass@1.90.0)(terser@5.44.1)(yaml@2.8.2))(rollup@4.53.2)
       vite-plugin-wasm:
         specifier: ^3.5.0
-        version: 3.5.0(rolldown-vite@7.2.5(@types/node@22.19.1)(esbuild@0.25.12)(jiti@2.6.1)(sass@1.90.0)(terser@5.44.1)(yaml@2.8.2))
+        version: 3.5.0(rolldown-vite@7.2.5(@types/node@25.0.3)(esbuild@0.25.12)(jiti@2.6.1)(sass@1.90.0)(terser@5.44.1)(yaml@2.8.2))
 
   apps/voidscript-editor:
     dependencies:
@@ -81,6 +81,9 @@ importers:
       '@tauri-apps/plugin-os':
         specifier: ~2.3.2
         version: 2.3.2
+      '@voidscript/editor':
+        specifier: workspace:*
+        version: link:../../packages/editor
     devDependencies:
       '@tauri-apps/cli':
         specifier: ^2
@@ -90,7 +93,20 @@ importers:
         version: 5.6.3
       vite:
         specifier: ^6.0.3
-        version: 6.4.1(@types/node@22.19.1)(jiti@2.6.1)(lightningcss@1.30.2)(sass@1.90.0)(terser@5.44.1)(yaml@2.8.2)
+        version: 6.4.1(@types/node@25.0.3)(jiti@2.6.1)(lightningcss@1.30.2)(sass@1.90.0)(terser@5.44.1)(yaml@2.8.2)
+
+  packages/editor:
+    dependencies:
+      '@voidscript/imgui':
+        specifier: workspace:*
+        version: link:../jsimgui
+    devDependencies:
+      '@workspace/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      typescript:
+        specifier: ^5.6.0
+        version: 5.9.3
 
   packages/engine:
     dependencies:
@@ -103,9 +119,9 @@ importers:
       '@kayahr/tiled':
         specifier: ^0.0.1
         version: 0.0.1
-      '@mori2003/jsimgui':
-        specifier: ^0.11.0
-        version: 0.11.0
+      '@voidscript/imgui':
+        specifier: workspace:*
+        version: link:../jsimgui
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -186,6 +202,21 @@ importers:
         specifier: ^8.39.0
         version: 8.47.0(eslint@9.39.1(jiti@2.6.1))(typescript@5.9.3)
 
+  packages/jsimgui:
+    devDependencies:
+      '@biomejs/biome':
+        specifier: latest
+        version: 2.3.10
+      '@types/node':
+        specifier: latest
+        version: 25.0.3
+      '@webgpu/types':
+        specifier: latest
+        version: 0.1.68
+      typescript:
+        specifier: latest
+        version: 5.9.3
+
   packages/typescript-config: {}
 
 packages:
@@ -197,6 +228,59 @@ packages:
   '@babel/runtime-corejs3@7.28.4':
     resolution: {integrity: sha512-h7iEYiW4HebClDEhtvFObtPmIvrd1SSfpI9EhOeKk4CtIK/ngBWFpuhCzhdmRKtg71ylcue+9I6dv54XYO1epQ==}
     engines: {node: '>=6.9.0'}
+
+  '@biomejs/biome@2.3.10':
+    resolution: {integrity: sha512-/uWSUd1MHX2fjqNLHNL6zLYWBbrJeG412/8H7ESuK8ewoRoMPUgHDebqKrPTx/5n6f17Xzqc9hdg3MEqA5hXnQ==}
+    engines: {node: '>=14.21.3'}
+    hasBin: true
+
+  '@biomejs/cli-darwin-arm64@2.3.10':
+    resolution: {integrity: sha512-M6xUjtCVnNGFfK7HMNKa593nb7fwNm43fq1Mt71kpLpb+4mE7odO8W/oWVDyBVO4ackhresy1ZYO7OJcVo/B7w==}
+    engines: {node: '>=14.21.3'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@biomejs/cli-darwin-x64@2.3.10':
+    resolution: {integrity: sha512-Vae7+V6t/Avr8tVbFNjnFSTKZogZHFYl7MMH62P/J1kZtr0tyRQ9Fe0onjqjS2Ek9lmNLmZc/VR5uSekh+p1fg==}
+    engines: {node: '>=14.21.3'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@biomejs/cli-linux-arm64-musl@2.3.10':
+    resolution: {integrity: sha512-B9DszIHkuKtOH2IFeeVkQmSMVUjss9KtHaNXquYYWCjH8IstNgXgx5B0aSBQNr6mn4RcKKRQZXn9Zu1rM3O0/A==}
+    engines: {node: '>=14.21.3'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@biomejs/cli-linux-arm64@2.3.10':
+    resolution: {integrity: sha512-hhPw2V3/EpHKsileVOFynuWiKRgFEV48cLe0eA+G2wO4SzlwEhLEB9LhlSrVeu2mtSn205W283LkX7Fh48CaxA==}
+    engines: {node: '>=14.21.3'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@biomejs/cli-linux-x64-musl@2.3.10':
+    resolution: {integrity: sha512-QTfHZQh62SDFdYc2nfmZFuTm5yYb4eO1zwfB+90YxUumRCR171tS1GoTX5OD0wrv4UsziMPmrePMtkTnNyYG3g==}
+    engines: {node: '>=14.21.3'}
+    cpu: [x64]
+    os: [linux]
+
+  '@biomejs/cli-linux-x64@2.3.10':
+    resolution: {integrity: sha512-wwAkWD1MR95u+J4LkWP74/vGz+tRrIQvr8kfMMJY8KOQ8+HMVleREOcPYsQX82S7uueco60L58Wc6M1I9WA9Dw==}
+    engines: {node: '>=14.21.3'}
+    cpu: [x64]
+    os: [linux]
+
+  '@biomejs/cli-win32-arm64@2.3.10':
+    resolution: {integrity: sha512-o7lYc9n+CfRbHvkjPhm8s9FgbKdYZu5HCcGVMItLjz93EhgJ8AM44W+QckDqLA9MKDNFrR8nPbO4b73VC5kGGQ==}
+    engines: {node: '>=14.21.3'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@biomejs/cli-win32-x64@2.3.10':
+    resolution: {integrity: sha512-pHEFgq7dUEsKnqG9mx9bXihxGI49X+ar+UBrEIj3Wqj3UCZp1rNgV+OoyjFgcXsjCWpuEAF4VJdkZr3TrWdCbQ==}
+    engines: {node: '>=14.21.3'}
+    cpu: [x64]
+    os: [win32]
 
   '@cspotcode/source-map-support@0.8.1':
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
@@ -471,9 +555,6 @@ packages:
 
   '@kayahr/tiled@0.0.1':
     resolution: {integrity: sha512-qyarJBzrVr5sod/+iSHNSE9SpSFQzNAVa7MHb5CACGhoBci8BF1JklQuXh9gv4d4e/JHzK50Nbv25deSKtmY8g==}
-
-  '@mori2003/jsimgui@0.11.0':
-    resolution: {integrity: sha512-UN6LHuQoQqDgM2X94nnruLL4XJSvxf8YZJ0yrhV1sJVKNbWrxXxFO9jC3rkFU5mr3d43VryO+2m3ioMg7O0Fiw==}
 
   '@napi-rs/wasm-runtime@1.1.0':
     resolution: {integrity: sha512-Fq6DJW+Bb5jaWE69/qOE0D1TUN9+6uWhCeZpdnSBk14pjLcCWR7Q8n49PTSPHazM37JqrsdpEthXy2xn6jWWiA==}
@@ -1102,8 +1183,8 @@ packages:
   '@types/node@20.19.25':
     resolution: {integrity: sha512-ZsJzA5thDQMSQO788d7IocwwQbI8B5OPzmqNvpf3NY/+MHDAS759Wo0gd2WQeXYt5AAAQjzcrTVC6SKCuYgoCQ==}
 
-  '@types/node@22.19.1':
-    resolution: {integrity: sha512-LCCV0HdSZZZb34qifBsyWlUmok6W7ouER+oQIGBScS8EsZsQbrtFTUrDX4hOl+CS6p7cnNC4td+qrSVGSCTUfQ==}
+  '@types/node@25.0.3':
+    resolution: {integrity: sha512-W609buLVRVmeW693xKfzHeIV6nJGGz98uCPfeXI1ELMLXVeKYZ9m15fAMSaUPBHYLGFsVRcMmSCksQOrZV9BYA==}
 
   '@types/stats.js@0.17.4':
     resolution: {integrity: sha512-jIBvWWShCvlBqBNIZt0KAshWpvSjhkwkEu4ZUcASoAvhmrgAUI2t1dXrjSL4xXVLB4FznPrIsX3nKXFl/Dt4vA==}
@@ -1210,6 +1291,9 @@ packages:
 
   '@webgpu/types@0.1.67':
     resolution: {integrity: sha512-uk53+2ECGUkWoDFez/hymwpRfdgdIn6y1ref70fEecGMe5607f4sozNFgBk0oxlr7j2CRGWBEc3IBYMmFdGGTQ==}
+
+  '@webgpu/types@0.1.68':
+    resolution: {integrity: sha512-3ab1B59Ojb6RwjOspYLsTpCzbNB3ZaamIAxBMmvnNkiDoLTZUOBXZ9p5nAYVEkQlDdf6qAZWi1pqj9+ypiqznA==}
 
   acorn-jsx@5.3.2:
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
@@ -2934,6 +3018,9 @@ packages:
   undici-types@6.21.0:
     resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
 
+  undici-types@7.16.0:
+    resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
+
   universalify@2.0.1:
     resolution: {integrity: sha512-gptHNQghINnc/vTGIk0SOFGFNXw7JVrlRUtConJRlvaw6DuX0wO5Jeko9sWrMBhh+PsYAZ7oXAiOnf/UKogyiw==}
     engines: {node: '>= 10.0.0'}
@@ -3114,6 +3201,41 @@ snapshots:
   '@babel/runtime-corejs3@7.28.4':
     dependencies:
       core-js-pure: 3.46.0
+
+  '@biomejs/biome@2.3.10':
+    optionalDependencies:
+      '@biomejs/cli-darwin-arm64': 2.3.10
+      '@biomejs/cli-darwin-x64': 2.3.10
+      '@biomejs/cli-linux-arm64': 2.3.10
+      '@biomejs/cli-linux-arm64-musl': 2.3.10
+      '@biomejs/cli-linux-x64': 2.3.10
+      '@biomejs/cli-linux-x64-musl': 2.3.10
+      '@biomejs/cli-win32-arm64': 2.3.10
+      '@biomejs/cli-win32-x64': 2.3.10
+
+  '@biomejs/cli-darwin-arm64@2.3.10':
+    optional: true
+
+  '@biomejs/cli-darwin-x64@2.3.10':
+    optional: true
+
+  '@biomejs/cli-linux-arm64-musl@2.3.10':
+    optional: true
+
+  '@biomejs/cli-linux-arm64@2.3.10':
+    optional: true
+
+  '@biomejs/cli-linux-x64-musl@2.3.10':
+    optional: true
+
+  '@biomejs/cli-linux-x64@2.3.10':
+    optional: true
+
+  '@biomejs/cli-win32-arm64@2.3.10':
+    optional: true
+
+  '@biomejs/cli-win32-x64@2.3.10':
+    optional: true
 
   '@cspotcode/source-map-support@0.8.1':
     dependencies:
@@ -3325,8 +3447,6 @@ snapshots:
       fzstd: 0.1.1
       pako: 2.1.0
       tslib: 2.8.1
-
-  '@mori2003/jsimgui@0.11.0': {}
 
   '@napi-rs/wasm-runtime@1.1.0':
     dependencies:
@@ -3812,10 +3932,9 @@ snapshots:
     dependencies:
       undici-types: 6.21.0
 
-  '@types/node@22.19.1':
+  '@types/node@25.0.3':
     dependencies:
-      undici-types: 6.21.0
-    optional: true
+      undici-types: 7.16.0
 
   '@types/stats.js@0.17.4': {}
 
@@ -3970,6 +4089,8 @@ snapshots:
       tinyrainbow: 3.0.3
 
   '@webgpu/types@0.1.67': {}
+
+  '@webgpu/types@0.1.68': {}
 
   acorn-jsx@5.3.2(acorn@8.15.0):
     dependencies:
@@ -5508,7 +5629,7 @@ snapshots:
     dependencies:
       glob: 7.2.3
 
-  rolldown-vite@7.2.5(@types/node@22.19.1)(esbuild@0.25.12)(jiti@2.6.1)(sass@1.90.0)(terser@5.44.1)(yaml@2.8.2):
+  rolldown-vite@7.2.5(@types/node@25.0.3)(esbuild@0.25.12)(jiti@2.6.1)(sass@1.90.0)(terser@5.44.1)(yaml@2.8.2):
     dependencies:
       '@oxc-project/runtime': 0.97.0
       fdir: 6.5.0(picomatch@4.0.3)
@@ -5518,7 +5639,7 @@ snapshots:
       rolldown: 1.0.0-beta.50
       tinyglobby: 0.2.15
     optionalDependencies:
-      '@types/node': 22.19.1
+      '@types/node': 25.0.3
       esbuild: 0.25.12
       fsevents: 2.3.3
       jiti: 2.6.1
@@ -5985,6 +6106,8 @@ snapshots:
 
   undici-types@6.21.0: {}
 
+  undici-types@7.16.0: {}
+
   universalify@2.0.1: {}
 
   update-check@1.5.4:
@@ -6010,20 +6133,20 @@ snapshots:
 
   validate-npm-package-name@5.0.1: {}
 
-  vite-plugin-top-level-await@1.6.0(rolldown-vite@7.2.5(@types/node@22.19.1)(esbuild@0.25.12)(jiti@2.6.1)(sass@1.90.0)(terser@5.44.1)(yaml@2.8.2))(rollup@4.53.2):
+  vite-plugin-top-level-await@1.6.0(rolldown-vite@7.2.5(@types/node@25.0.3)(esbuild@0.25.12)(jiti@2.6.1)(sass@1.90.0)(terser@5.44.1)(yaml@2.8.2))(rollup@4.53.2):
     dependencies:
       '@rollup/plugin-virtual': 3.0.2(rollup@4.53.2)
       '@swc/core': 1.15.4
       '@swc/wasm': 1.15.4
       uuid: 10.0.0
-      vite: rolldown-vite@7.2.5(@types/node@22.19.1)(esbuild@0.25.12)(jiti@2.6.1)(sass@1.90.0)(terser@5.44.1)(yaml@2.8.2)
+      vite: rolldown-vite@7.2.5(@types/node@25.0.3)(esbuild@0.25.12)(jiti@2.6.1)(sass@1.90.0)(terser@5.44.1)(yaml@2.8.2)
     transitivePeerDependencies:
       - '@swc/helpers'
       - rollup
 
-  vite-plugin-wasm@3.5.0(rolldown-vite@7.2.5(@types/node@22.19.1)(esbuild@0.25.12)(jiti@2.6.1)(sass@1.90.0)(terser@5.44.1)(yaml@2.8.2)):
+  vite-plugin-wasm@3.5.0(rolldown-vite@7.2.5(@types/node@25.0.3)(esbuild@0.25.12)(jiti@2.6.1)(sass@1.90.0)(terser@5.44.1)(yaml@2.8.2)):
     dependencies:
-      vite: rolldown-vite@7.2.5(@types/node@22.19.1)(esbuild@0.25.12)(jiti@2.6.1)(sass@1.90.0)(terser@5.44.1)(yaml@2.8.2)
+      vite: rolldown-vite@7.2.5(@types/node@25.0.3)(esbuild@0.25.12)(jiti@2.6.1)(sass@1.90.0)(terser@5.44.1)(yaml@2.8.2)
 
   vite@6.4.1(@types/node@20.19.25)(jiti@2.6.1)(lightningcss@1.30.2)(sass@1.90.0)(terser@5.44.1)(yaml@2.8.2):
     dependencies:
@@ -6042,7 +6165,7 @@ snapshots:
       terser: 5.44.1
       yaml: 2.8.2
 
-  vite@6.4.1(@types/node@22.19.1)(jiti@2.6.1)(lightningcss@1.30.2)(sass@1.90.0)(terser@5.44.1)(yaml@2.8.2):
+  vite@6.4.1(@types/node@25.0.3)(jiti@2.6.1)(lightningcss@1.30.2)(sass@1.90.0)(terser@5.44.1)(yaml@2.8.2):
     dependencies:
       esbuild: 0.25.12
       fdir: 6.5.0(picomatch@4.0.3)
@@ -6051,7 +6174,7 @@ snapshots:
       rollup: 4.53.2
       tinyglobby: 0.2.15
     optionalDependencies:
-      '@types/node': 22.19.1
+      '@types/node': 25.0.3
       fsevents: 2.3.3
       jiti: 2.6.1
       lightningcss: 1.30.2

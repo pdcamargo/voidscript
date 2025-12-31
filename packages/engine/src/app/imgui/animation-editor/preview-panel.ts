@@ -5,7 +5,7 @@
  * Shows sprites from any texture using the self-contained sprite system.
  */
 
-import { ImGui, ImGuiImplWeb, ImTextureRef } from '@mori2003/jsimgui';
+import { ImGui, ImGuiImplWeb, ImTextureRef } from '@voidscript/imgui';
 import * as THREE from 'three';
 import {
   type AnimationEditorState,

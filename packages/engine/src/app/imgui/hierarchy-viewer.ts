@@ -10,7 +10,7 @@ import type { Entity } from '../../ecs/entity.js';
 import { Parent, Children, Name, Transform3D, LocalTransform3D } from '../../ecs/components/index.js';
 import { PrefabInstance } from '../../ecs/components/prefab-instance.js';
 import { Vector3 } from '../../math/index.js';
-import { ImGui } from '@mori2003/jsimgui';
+import { ImGui } from '@voidscript/imgui';
 import { setSelectedEntity, getSelectedEntity } from './inspector.js';
 import { duplicateEntity } from '../../ecs/entity-utils.js';
 import { globalBundleRegistry } from '../../ecs/bundle-registry.js';

@@ -26,7 +26,7 @@
 import { component } from "../../component.js";
 import type { Command } from "../../command.js";
 import type { Entity } from "../../entity.js";
-import { ImGui } from "@mori2003/jsimgui";
+import { ImGui } from "@voidscript/imgui";
 import { entityPicker } from "../../../app/imgui/entity-picker.js";
 import { Name } from "../name.js";
 

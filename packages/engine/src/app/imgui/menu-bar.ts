@@ -5,7 +5,7 @@
  * Platform-specific implementations (Tauri, Electron, etc.) provide the callbacks.
  */
 
-import { ImGui } from '@mori2003/jsimgui';
+import { ImGui } from '@voidscript/imgui';
 
 /**
  * Custom menu item definition

@@ -12,7 +12,7 @@
     "@dimforge/rapier2d": "^0.19.3",
     "@dimforge/rapier3d": "^0.19.3",
     "@kayahr/tiled": "^0.0.1",
-    "@mori2003/jsimgui": "^0.11.0",
+    "@voidscript/imgui": "workspace:*",
     "reflect-metadata": "^0.2.2",
     "three": "^0.181.0",
     "three-mesh-ui": "^6.5.4",

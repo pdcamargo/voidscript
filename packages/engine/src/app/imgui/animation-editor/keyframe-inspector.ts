@@ -4,7 +4,7 @@
  * Popup window for editing keyframe values, time, and easing.
  */
 
-import { ImGui, ImGuiImplWeb, ImTextureRef } from '@mori2003/jsimgui';
+import { ImGui, ImGuiImplWeb, ImTextureRef } from '@voidscript/imgui';
 import * as THREE from 'three';
 import {
   type AnimationEditorState,

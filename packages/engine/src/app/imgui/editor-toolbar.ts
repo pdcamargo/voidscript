@@ -6,7 +6,7 @@
  * - Helpers: Toggle debug helper visibility
  */
 
-import { ImGui } from '@mori2003/jsimgui';
+import { ImGui } from '@voidscript/imgui';
 import type { EditorCameraManager } from '../editor-camera-manager.js';
 import type { EditorManager } from '../../editor/editor-manager.js';
 import type { HelperManager } from '../helper-manager.js';

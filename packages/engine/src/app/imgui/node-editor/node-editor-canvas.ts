@@ -5,7 +5,7 @@
  * transformations between screen space and canvas space.
  */
 
-import { ImGui } from '@mori2003/jsimgui';
+import { ImGui } from '@voidscript/imgui';
 import type { NodeEditorState } from './node-editor-state.js';
 import type { Vec2, Size } from './node-editor-types.js';
 

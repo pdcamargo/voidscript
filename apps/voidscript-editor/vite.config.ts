@@ -27,4 +27,27 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
   },
+  // Handle jsimgui dynamic imports - ignore missing variants we don't use
+  build: {
+    rollupOptions: {
+      onwarn(warning, warn) {
+        // Suppress warnings about jsimgui variants we don't build
+        if (warning.code === 'UNRESOLVED_IMPORT' &&
+            warning.exporter?.includes('jsimgui')) {
+          return;
+        }
+        warn(warning);
+      },
+    },
+  },
+  // Optimize jsimgui dependencies
+  optimizeDeps: {
+    include: ['@voidscript/imgui'],
+    esbuildOptions: {
+      // Ignore dynamic imports to missing jsimgui variants
+      logOverride: {
+        'ignored-bare-import': 'silent',
+      },
+    },
+  },
 }));

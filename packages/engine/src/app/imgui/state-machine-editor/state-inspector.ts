@@ -4,7 +4,7 @@
  * Panel for editing a selected animation state's properties.
  */
 
-import { ImGui } from '@mori2003/jsimgui';
+import { ImGui } from '@voidscript/imgui';
 import type { Command } from '../../../ecs/command.js';
 import { EditorLayout } from '../editor-layout.js';
 import type {

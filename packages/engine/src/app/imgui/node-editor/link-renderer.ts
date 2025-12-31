@@ -5,7 +5,7 @@
  * Since we don't have ImDrawList, we use thin colored buttons to draw lines.
  */
 
-import { ImGui } from '@mori2003/jsimgui';
+import { ImGui } from '@voidscript/imgui';
 import type { NodeEditorState } from './node-editor-state.js';
 import type { LinkState, Vec2 } from './node-editor-types.js';
 import type { CanvasContext } from './node-editor-canvas.js';

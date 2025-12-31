@@ -18,7 +18,7 @@ import type {
 import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 import { openAssetPicker, renderAssetPickerModal } from '../../../app/imgui/asset-picker.js';
 import { tryGetEditorLayoutContext } from '../../../app/imgui/editor-layout-context.js';
-import { ImGui } from '@mori2003/jsimgui';
+import { ImGui } from '@voidscript/imgui';
 import { EDITOR_ICONS } from '../../../app/imgui/editor-icons.js';
 
 // ============================================================================

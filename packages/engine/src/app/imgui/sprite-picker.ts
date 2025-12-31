@@ -8,7 +8,7 @@
  * - Type indicators (Tile vs Rect sprites)
  */
 
-import { ImGui, ImGuiImplWeb, ImTextureRef } from '@mori2003/jsimgui';
+import { ImGui, ImGuiImplWeb, ImTextureRef } from '@voidscript/imgui';
 import { AssetDatabase } from '../../ecs/asset-database.js';
 import {
   isTextureMetadata,

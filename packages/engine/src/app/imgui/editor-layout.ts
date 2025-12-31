@@ -14,7 +14,7 @@
  * ```
  */
 
-import { ImGui, ImGuiImplWeb, ImTextureRef } from '@mori2003/jsimgui';
+import { ImGui, ImGuiImplWeb, ImTextureRef } from '@voidscript/imgui';
 import * as THREE from 'three';
 import type { Entity } from '../../ecs/entity.js';
 import type { RuntimeAsset } from '../../ecs/runtime-asset.js';

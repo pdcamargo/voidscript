@@ -21,7 +21,7 @@
  */
 
 import { Layer } from '../layer.js';
-import { ImGui, ImGuiImplWeb, ImVec2, ImVec4, ImFontConfig } from '@mori2003/jsimgui';
+import { ImGui, ImGuiImplWeb, ImVec2, ImVec4, ImFontConfig } from '@voidscript/imgui';
 import type { AppEvent } from '../events.js';
 import { EventType, EventDispatcher } from '../events.js';
 import {

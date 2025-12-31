@@ -4,7 +4,7 @@
  * Renders the timeline grid, keyframes, and playhead for the animation editor.
  */
 
-import { ImGui, ImGuiImplWeb, ImTextureRef } from '@mori2003/jsimgui';
+import { ImGui, ImGuiImplWeb, ImTextureRef } from '@voidscript/imgui';
 import type * as THREE from 'three';
 import {
   type AnimationEditorState,

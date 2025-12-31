@@ -21,7 +21,7 @@
  * ```
  */
 
-import { ImGui } from "@mori2003/jsimgui";
+import { ImGui } from "@voidscript/imgui";
 import type { Command } from "../../ecs/command.js";
 import type { Entity } from "../../ecs/entity.js";
 import type { ComponentType } from "../../ecs/component.js";

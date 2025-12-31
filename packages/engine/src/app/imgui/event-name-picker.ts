@@ -1,4 +1,4 @@
-import { ImGui, ImVec2 } from '@mori2003/jsimgui';
+import { ImGui, ImVec2 } from '@voidscript/imgui';
 import type { Events } from '../../ecs/events.js';
 
 export interface EventNamePickerOptions {

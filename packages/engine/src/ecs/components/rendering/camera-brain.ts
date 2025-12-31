@@ -23,7 +23,7 @@
 import { component } from "../../component.js";
 import type { Entity } from "../../entity.js";
 import { EditorLayout } from '../../../app/imgui/editor-layout.js';
-import { ImGui } from "@mori2003/jsimgui";
+import { ImGui } from "@voidscript/imgui";
 
 export type BlendCurve = "linear" | "easeIn" | "easeOut" | "easeInOut";
 export type CameraBrainUpdateMode = "update" | "fixedUpdate" | "lateUpdate";

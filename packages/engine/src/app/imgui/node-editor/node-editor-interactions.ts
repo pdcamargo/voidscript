@@ -5,7 +5,7 @@
  * selection, deletion, and context menus.
  */
 
-import { ImGui } from '@mori2003/jsimgui';
+import { ImGui } from '@voidscript/imgui';
 import {
   type NodeEditorState,
   selectNode,

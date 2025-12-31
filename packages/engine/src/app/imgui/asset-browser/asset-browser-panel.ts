@@ -9,7 +9,7 @@
  * - Thumbnail size slider
  */
 
-import { ImGui, ImTextureRef } from '@mori2003/jsimgui';
+import { ImGui, ImTextureRef } from '@voidscript/imgui';
 import { AssetDatabase } from '../../../ecs/asset-database.js';
 import { AssetType, isTextureMetadata } from '../../../ecs/asset-metadata.js';
 import { RuntimeAssetManager } from '../../../ecs/runtime-asset-manager.js';

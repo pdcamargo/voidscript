@@ -6,7 +6,7 @@
  * - Performance: Large FPS display
  */
 
-import { ImGui } from '@mori2003/jsimgui';
+import { ImGui } from '@voidscript/imgui';
 import type { Application } from '../application.js';
 import {
   ConsoleLogger,

@@ -8,7 +8,7 @@
  * Only entities with AnimationController component are shown in the picker.
  */
 
-import { ImGui } from '@mori2003/jsimgui';
+import { ImGui } from '@voidscript/imgui';
 import type * as THREE from 'three';
 import { AnimationClip, LoopMode } from '../../../animation/animation-clip.js';
 import { PropertyTrack } from '../../../animation/property-track.js';

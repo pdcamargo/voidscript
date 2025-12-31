@@ -572,7 +572,7 @@ export type { Vector3JSON } from './math/vector3.js';
 export type { FBMOptions } from './math/noise.js';
 
 // Re-export ImGui for convenience (also available from app module)
-export { ImGui, ImGuiImplWeb } from '@mori2003/jsimgui';
+export { ImGui, ImGuiImplWeb } from '@voidscript/imgui';
 
 // Editor module - tools for building game editors
 export {

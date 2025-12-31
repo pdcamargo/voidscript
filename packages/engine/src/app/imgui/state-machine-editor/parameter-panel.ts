@@ -4,7 +4,7 @@
  * Panel for managing animation state machine parameters.
  */
 
-import { ImGui } from '@mori2003/jsimgui';
+import { ImGui } from '@voidscript/imgui';
 import type { Command } from '../../../ecs/command.js';
 import { EditorLayout } from '../editor-layout.js';
 import { EDITOR_ICONS } from '../editor-icons.js';

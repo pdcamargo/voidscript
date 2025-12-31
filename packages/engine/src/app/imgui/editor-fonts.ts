@@ -20,8 +20,8 @@
  * ```
  */
 
-import type { ImFont } from '@mori2003/jsimgui';
-import { ImGui } from '@mori2003/jsimgui';
+import type { ImFont } from '@voidscript/imgui';
+import { ImGui } from '@voidscript/imgui';
 
 // Font sizes in pixels
 export const ICON_SMALL_SIZE = 16;

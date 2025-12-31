@@ -9,7 +9,7 @@
  * 2. Select an animatable property from that component
  */
 
-import { ImGui } from '@mori2003/jsimgui';
+import { ImGui } from '@voidscript/imgui';
 import {
   type AnimationEditorState,
   type EditorTrack,

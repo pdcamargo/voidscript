@@ -12,7 +12,7 @@ import type { Application } from '../application.js';
 import type { ResourceType } from '../../ecs/resource.js';
 import type { PropertySerializerConfig } from '../../ecs/serialization/types.js';
 import { globalResourceRegistry } from '../../ecs/resource.js';
-import { ImGui } from '@mori2003/jsimgui';
+import { ImGui } from '@voidscript/imgui';
 import { setEditorLayoutContext } from './editor-layout-context.js';
 import { EditorLayout } from './editor-layout.js';
 

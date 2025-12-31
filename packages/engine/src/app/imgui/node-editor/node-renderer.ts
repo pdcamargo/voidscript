@@ -5,7 +5,7 @@
  * body, and pins since we don't have access to ImDrawList primitives.
  */
 
-import { ImGui } from '@mori2003/jsimgui';
+import { ImGui } from '@voidscript/imgui';
 import type { NodeEditorState } from './node-editor-state.js';
 import type { NodeState, PinState, Vec2 } from './node-editor-types.js';
 import type { CanvasContext } from './node-editor-canvas.js';

@@ -16,7 +16,7 @@ import {
 import { AssetDatabase } from '../../../ecs/asset-database.js';
 import { RuntimeAssetManager } from '../../../ecs/runtime-asset-manager.js';
 import type { EditorPlatform } from '../../../editor/editor-platform.js';
-import { ImGuiImplWeb } from '@mori2003/jsimgui';
+import { ImGuiImplWeb } from '@voidscript/imgui';
 import * as THREE from 'three';
 import { parseAssetQuery, evaluateAssetQuery } from './asset-query-parser.js';
 

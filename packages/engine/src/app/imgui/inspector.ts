@@ -12,7 +12,7 @@ import type { ComponentType } from '../../ecs/component.js';
 import type { PropertySerializerConfig } from '../../ecs/serialization/types.js';
 import { globalComponentRegistry } from '../../ecs/component.js';
 import { Vector3 } from '../../math/vector3.js';
-import { ImGui } from '@mori2003/jsimgui';
+import { ImGui } from '@voidscript/imgui';
 import { Name } from '../../ecs/components/index.js';
 import { AssetDatabase } from '../../ecs/asset-database.js';
 import { RuntimeAssetManager } from '../../ecs/runtime-asset-manager.js';

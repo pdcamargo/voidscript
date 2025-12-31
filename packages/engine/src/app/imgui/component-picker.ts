@@ -18,7 +18,7 @@
  * ```
  */
 
-import { ImGui } from "@mori2003/jsimgui";
+import { ImGui } from "@voidscript/imgui";
 import type { ComponentType } from "../../ecs/component.js";
 import { globalComponentRegistry } from "../../ecs/component.js";
 

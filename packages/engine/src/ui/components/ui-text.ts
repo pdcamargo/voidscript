@@ -8,7 +8,7 @@
  */
 
 import * as THREE from 'three';
-import { ImGui } from '@mori2003/jsimgui';
+import { ImGui } from '@voidscript/imgui';
 import { component } from '../../ecs/component.js';
 import type { RuntimeAsset } from '../../ecs/runtime-asset.js';
 import type ThreeMeshUI from 'three-mesh-ui';

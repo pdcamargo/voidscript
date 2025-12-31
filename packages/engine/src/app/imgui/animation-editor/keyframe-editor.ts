@@ -6,7 +6,7 @@
  * automatically switches to show keyframe editing UI.
  */
 
-import { ImGui, ImGuiImplWeb, ImTextureRef } from '@mori2003/jsimgui';
+import { ImGui, ImGuiImplWeb, ImTextureRef } from '@voidscript/imgui';
 import * as THREE from 'three';
 import {
   type AnimationEditorState,
