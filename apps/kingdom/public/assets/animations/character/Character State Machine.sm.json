@@ -1,0 +1,87 @@
+{
+  "id": "sm_1767163857318",
+  "name": "Character State Machine",
+  "states": [
+    {
+      "id": "state_1767163930518_5azkuvqu4",
+      "name": "Idle",
+      "animationClipId": "e7c34b63-64f4-4ebe-89aa-65682b9d84e9"
+    },
+    {
+      "id": "state_1767163982769_86riznkda",
+      "name": "Run",
+      "animationClipId": "e904d730-96f8-4927-ab7c-52ad46b36cfc"
+    },
+    {
+      "id": "state_1767164033717_tis012fa2",
+      "name": "Die",
+      "animationClipId": ""
+    }
+  ],
+  "transitions": [
+    {
+      "id": "transition_1767163985969_72tgbfzyy",
+      "fromStateId": "state_1767163930518_5azkuvqu4",
+      "toStateId": "state_1767163982769_86riznkda",
+      "conditions": [
+        {
+          "parameterName": "Speed",
+          "operator": "greater",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "transition_1767164049250_iooqg3h9x",
+      "fromStateId": "*",
+      "toStateId": "state_1767164033717_tis012fa2",
+      "conditions": [
+        {
+          "parameterName": "Death",
+          "operator": "equals",
+          "value": true
+        }
+      ],
+      "exitTime": 1
+    },
+    {
+      "id": "transition_1767165983795_s8uh37pjm",
+      "fromStateId": "state_1767163982769_86riznkda",
+      "toStateId": "state_1767163930518_5azkuvqu4",
+      "conditions": [
+        {
+          "parameterName": "Speed",
+          "operator": "equals",
+          "value": 0
+        }
+      ]
+    }
+  ],
+  "parameters": [
+    {
+      "name": "Speed",
+      "type": "float",
+      "defaultValue": 0
+    },
+    {
+      "name": "Death",
+      "type": "trigger",
+      "defaultValue": false
+    }
+  ],
+  "defaultStateId": "state_1767163930518_5azkuvqu4",
+  "nodePositions": {
+    "state_1767163930518_5azkuvqu4": {
+      "x": 440,
+      "y": 40
+    },
+    "state_1767163982769_86riznkda": {
+      "x": 680,
+      "y": 140
+    },
+    "state_1767164033717_tis012fa2": {
+      "x": 360,
+      "y": 160
+    }
+  }
+}

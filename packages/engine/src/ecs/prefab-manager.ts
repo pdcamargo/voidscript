@@ -270,6 +270,7 @@ export class PrefabManager {
             serializedComponent.data,
             componentType.serializerConfig,
             context,
+            componentType,
           );
         } else {
           componentData = serializedComponent.data;

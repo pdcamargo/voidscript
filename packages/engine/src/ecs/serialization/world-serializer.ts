@@ -544,13 +544,33 @@ export class WorldSerializer {
 
   /**
    * Deserialize component data using property-level config
+   * Also merges with component's defaultValue to ensure non-serializable fields have proper defaults
    */
   private deserializeWithPropertyConfig(
     data: any,
     config: ComponentSerializerConfig<any>,
     context: DeserializationContext,
+    componentType?: ComponentType<any>,
   ): any {
-    const result: any = {};
+    // Start with default values if component type provides them
+    let result: any = {};
+
+    if (componentType?.metadata?.defaultValue) {
+      const defaultVal = componentType.metadata.defaultValue;
+      const defaults = typeof defaultVal === 'function' ? defaultVal() : defaultVal;
+      // Deep clone defaults to avoid reference sharing
+      result = structuredClone(defaults);
+
+      // Handle non-cloneable values (like Set) that get converted to empty objects
+      // Re-initialize them from the original defaults
+      for (const [key, value] of Object.entries(defaults)) {
+        if (value instanceof Set) {
+          result[key] = new Set(value);
+        } else if (value instanceof Map) {
+          result[key] = new Map(value);
+        }
+      }
+    }
 
     for (const [propertyKey, propertyConfig] of Object.entries(config)) {
       if (!propertyConfig || !propertyConfig.serializable) {
@@ -1306,6 +1326,7 @@ export class WorldSerializer {
                 entityMapping,
                 assetMetadataResolver: options.assetMetadataResolver,
               },
+              transformType,
             );
             const existingTransform = commands.tryGetComponent(
               result.rootEntity,
@@ -1335,6 +1356,7 @@ export class WorldSerializer {
                 entityMapping,
                 assetMetadataResolver: options.assetMetadataResolver,
               },
+              localTransformType,
             );
             const existingLocalTransform = commands.tryGetComponent(
               result.rootEntity,
@@ -1452,6 +1474,7 @@ export class WorldSerializer {
                 entityMapping,
                 assetMetadataResolver: options.assetMetadataResolver,
               },
+              componentType,
             );
           } else {
             // For components without property config, add raw data

@@ -82,6 +82,12 @@ import {
   openSpriteEditor,
   closeSpriteEditor,
 } from '../app/imgui/sprite-editor/index.js';
+import {
+  renderStateMachineEditorWindow,
+  isStateMachineEditorOpen,
+  openStateMachineEditor,
+  closeStateMachineEditor,
+} from '../app/imgui/state-machine-editor/index.js';
 import { renderAssetBrowserPanel } from '../app/imgui/asset-browser/index.js';
 import { renderImGuiResourceViewer } from '../app/imgui/resource-viewer.js';
 import { Input, KeyCode } from '../app/input.js';
@@ -1329,6 +1335,18 @@ export class EditorLayer extends Layer {
           : '   Asset Browser',
         onClick: () => togglePanelVisibility('assetBrowser'),
       },
+      {
+        label: isStateMachineEditorOpen()
+          ? '✓ State Machine Editor'
+          : '   State Machine Editor',
+        onClick: () => {
+          if (isStateMachineEditorOpen()) {
+            closeStateMachineEditor();
+          } else {
+            openStateMachineEditor();
+          }
+        },
+      },
     ];
     const userWindowMenuItems =
       this.config.menuCallbacks?.windowMenuItems ?? [];
@@ -1786,6 +1804,16 @@ export class EditorLayer extends Layer {
           () => this.getEntitiesForAnimationPreview(app),
           app.world,
           app.getCommands(),
+          app.getAssetsManifestPath(),
+        );
+      }
+
+      // Render state machine editor window if open
+      if (isStateMachineEditorOpen() && this.config.platform) {
+        renderStateMachineEditorWindow(
+          this.config.platform,
+          app.getCommands(),
+          () => this.getEntitiesForAnimationPreview(app),
           app.getAssetsManifestPath(),
         );
       }

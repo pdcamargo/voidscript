@@ -38,6 +38,7 @@ import { AnimationManager } from '../animation/animation-manager.js';
 import { ShaderManager } from '../shader/shader-manager.js';
 import { tweenUpdateSystem } from '../ecs/systems/tween-system.js';
 import { animationUpdateSystem } from '../ecs/systems/animation-system.js';
+import { animationStateMachineSystem } from '../ecs/systems/animation-state-machine-system.js';
 import { shaderUpdateSystem } from '../ecs/systems/shader-system.js';
 import {
   SpriteRenderManager,
@@ -1248,6 +1249,9 @@ export class Application {
 
     // Animation system
     this.insertResource(new AnimationManager());
+    // State machine system runs first to set currentAnimationId
+    this.addUpdateSystem(animationStateMachineSystem);
+    // Then animation update system applies the animation
     this.addUpdateSystem(animationUpdateSystem);
 
     // Shader system (for VSL shader management and TIME/SCREEN_TEXTURE uniform updates)

@@ -294,3 +294,49 @@ AssetLoaderRegistry.register(AssetType.Shader, async (asset) => {
 
   return shaderAsset;
 });
+
+/**
+ * Default loader for StateMachine assets (.sm.json files)
+ * Fetches JSON and parses into AnimationStateMachine
+ * Also updates asset metadata with state machine information
+ */
+AssetLoaderRegistry.register(AssetType.StateMachine, async (asset) => {
+  const url = asset.getLoadableUrl();
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`[StateMachineLoader] Failed to load state machine from "${url}": ${response.statusText}`);
+  }
+
+  // Get text first to provide better error messages
+  const text = await response.text();
+
+  let json;
+  try {
+    json = JSON.parse(text);
+  } catch (parseError) {
+    // Provide helpful error message with preview of what was received
+    const preview = text.slice(0, 200);
+    throw new Error(
+      `[StateMachineLoader] Failed to parse state machine JSON from "${url}". ` +
+        `Expected JSON but received: ${preview}${text.length > 200 ? '...' : ''}`
+    );
+  }
+
+  // Dynamically import to avoid circular dependencies
+  const { parseStateMachineJson } = await import('../animation/state-machine/state-machine-parser.js');
+  const { isStateMachineMetadata } = await import('./asset-metadata.js');
+
+  const stateMachine = parseStateMachineJson(json);
+
+  // Update the asset metadata with state machine information
+  if (isStateMachineMetadata(asset.metadata)) {
+    const metadata = asset.metadata;
+    metadata.stateCount = stateMachine.states.length;
+    metadata.transitionCount = stateMachine.transitions.length;
+    metadata.parameterCount = stateMachine.parameters.length;
+    metadata.defaultStateId = stateMachine.defaultStateId;
+  }
+
+  return stateMachine;
+});

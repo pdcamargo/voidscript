@@ -393,6 +393,21 @@ export {
 } from "./ecs/components/animation/animation-controller.js";
 export type { AnimationControllerData } from "./ecs/components/animation/animation-controller.js";
 
+// Animation - State Machine Controller Component
+export {
+  AnimationStateMachineController,
+  setStateMachineParameter,
+  getStateMachineParameter,
+  triggerStateMachine,
+  consumeTrigger,
+  getCurrentStateName,
+  getCurrentAnimationClipId,
+  forceStateTransition,
+  initializeStateMachine,
+  resetStateMachine,
+} from "./ecs/components/animation/animation-state-machine-controller.js";
+export type { AnimationStateMachineControllerData } from "./ecs/components/animation/animation-state-machine-controller.js";
+
 // Animation - JSON Parser
 export {
   parseAnimationClipJson,

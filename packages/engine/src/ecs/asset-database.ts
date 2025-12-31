@@ -36,6 +36,7 @@ import type {
   AudioAssetMetadata,
   PrefabMetadata,
   ShaderMetadata,
+  StateMachineMetadata,
   SpriteDefinition,
   VSLShaderType,
 } from './asset-metadata.js';
@@ -151,6 +152,17 @@ export interface ShaderAssetConfig extends BaseAssetConfig {
 }
 
 /**
+ * Animation State Machine asset configuration
+ * Used in ApplicationConfig.assets
+ */
+export interface StateMachineAssetConfig extends BaseAssetConfig {
+  type: AssetType.StateMachine;
+  path: string;
+  /** State machine description/documentation */
+  description?: string;
+}
+
+/**
  * Discriminated union of all asset configs
  */
 export type AssetConfig =
@@ -160,7 +172,8 @@ export type AssetConfig =
   | AnimationAssetConfig
   | AudioAssetConfig
   | PrefabAssetConfig
-  | ShaderAssetConfig;
+  | ShaderAssetConfig
+  | StateMachineAssetConfig;
 
 /**
  * Assets configuration for ApplicationConfig
@@ -474,6 +487,16 @@ export class AssetDatabase {
           break;
         }
 
+        case AssetType.StateMachine: {
+          const stateMachineConfig: StateMachineAssetConfig = {
+            type: AssetType.StateMachine,
+            path: config['path'] as string,
+            description: config['description'] as string | undefined,
+          };
+          result[guid] = stateMachineConfig;
+          break;
+        }
+
         default:
           console.warn(`[AssetDatabase] Unsupported asset type "${type}" for ${guid}, skipping`);
       }
@@ -685,6 +708,20 @@ export class AssetDatabase {
         return config;
       }
 
+      case AssetType.StateMachine: {
+        const stateMachineMetadata = metadata as StateMachineMetadata;
+        const config: Record<string, unknown> = {
+          type: 'statemachine',
+          path: metadata.path,
+        };
+
+        if (stateMachineMetadata.description) {
+          config['description'] = stateMachineMetadata.description;
+        }
+
+        return config;
+      }
+
       default:
         // Fallback for unknown types
         return {
@@ -822,6 +859,14 @@ export class AssetDatabase {
           shaderType: config.shaderType ?? 'canvas_item',
           description: config.description,
         } satisfies ShaderMetadata;
+      }
+
+      case AssetType.StateMachine: {
+        return {
+          ...base,
+          type: AssetType.StateMachine,
+          description: config.description,
+        } satisfies StateMachineMetadata;
       }
 
       default:

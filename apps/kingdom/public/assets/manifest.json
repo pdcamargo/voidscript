@@ -730,5 +730,9 @@
   "b51b1bb3-3541-4439-8640-47823e94bb42": {
     "type": "animation",
     "path": "/assets/animations/character/Character Stop Run.anim.json"
+  },
+  "620f856b-7bad-405f-b051-09a5990cbd0b": {
+    "type": "statemachine",
+    "path": "/assets/animations/character/Character State Machine.sm.json"
   }
 }

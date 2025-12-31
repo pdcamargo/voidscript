@@ -24,6 +24,7 @@ export enum AssetType {
   Animation = 'animation',
   Audio = 'audio',
   Shader = 'shader',
+  StateMachine = 'statemachine',
   BlueprintScript = 'blueprint-script',
   BlueprintShader = 'blueprint-shader',
   BlueprintAnimation = 'blueprint-animation',
@@ -528,6 +529,29 @@ export interface ShaderMetadata extends BaseAssetMetadata {
 }
 
 /**
+ * Animation State Machine asset metadata interface
+ * Supports .sm.json files (Unity Animator-style state machines)
+ */
+export interface StateMachineMetadata extends BaseAssetMetadata {
+  type: AssetType.StateMachine;
+
+  /** Number of states in the state machine */
+  stateCount?: number;
+
+  /** Number of transitions in the state machine */
+  transitionCount?: number;
+
+  /** Number of parameters in the state machine */
+  parameterCount?: number;
+
+  /** ID of the default/entry state */
+  defaultStateId?: string;
+
+  /** State machine description/documentation */
+  description?: string;
+}
+
+/**
  * Unknown asset metadata (fallback for unsupported types)
  */
 export interface UnknownAssetMetadata extends BaseAssetMetadata {
@@ -546,6 +570,7 @@ export type AssetMetadata =
   | AnimationMetadata
   | AudioAssetMetadata
   | ShaderMetadata
+  | StateMachineMetadata
   | BlueprintScriptMetadata
   | BlueprintShaderMetadata
   | BlueprintAnimationMetadata
@@ -658,6 +683,15 @@ export function isShaderMetadata(
   metadata: AssetMetadata,
 ): metadata is ShaderMetadata {
   return metadata.type === AssetType.Shader;
+}
+
+/**
+ * Type guard for StateMachineMetadata
+ */
+export function isStateMachineMetadata(
+  metadata: AssetMetadata,
+): metadata is StateMachineMetadata {
+  return metadata.type === AssetType.StateMachine;
 }
 
 /**

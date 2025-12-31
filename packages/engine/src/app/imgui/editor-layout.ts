@@ -358,6 +358,14 @@ export class EditorLayout {
     ImGui.TextColored({ x: 0.7, y: 0.7, z: 0.7, w: 1 }, text);
   }
 
+  /**
+   * Display a section header (bold, slightly larger appearance via color)
+   * Used to separate logical sections within a component editor
+   */
+  static sectionHeader(text: string): void {
+    ImGui.TextColored({ x: 0.9, y: 0.9, z: 0.9, w: 1.0 }, text);
+  }
+
   // ==========================================================================
   // Icon Buttons
   // ==========================================================================

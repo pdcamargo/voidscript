@@ -432,22 +432,26 @@ export function playAnimation(
     speed?: number;
   }
 ): boolean {
-  // Find the animation by clip ID
-  const clip = controller.animations.find(
-    (asset) => asset.isLoaded && asset.data?.id === animationId
+  // Find the animation by clip ID or asset GUID
+  const asset = controller.animations.find(
+    (a) => a.isLoaded && (a.data?.id === animationId || a.guid === animationId)
   );
-  if (!clip) return false;
+  if (!asset || !asset.data) return false;
+
+  // Always use the clip's internal ID for currentAnimationId
+  // This ensures getCurrentClip can find it consistently
+  const clipId = asset.data.id;
 
   // If already playing this clip and not restarting, do nothing
   if (
-    controller.currentAnimationId === animationId &&
+    controller.currentAnimationId === clipId &&
     controller.isPlaying &&
     !options?.restart
   ) {
     return true;
   }
 
-  controller.currentAnimationId = animationId;
+  controller.currentAnimationId = clipId;
   controller.isPlaying = true;
   controller.currentTime = 0;
   controller.loopCount = 0;

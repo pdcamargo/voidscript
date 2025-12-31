@@ -438,6 +438,7 @@ function renderAssetPlaceholder(assetType: AssetType, size: number): void {
     [AssetType.Model3D]: { x: 0.2, y: 0.4, z: 0.8, w: 1 }, // Blue
     [AssetType.Animation]: { x: 0.8, y: 0.4, z: 0.2, w: 1 }, // Orange
     [AssetType.Shader]: { x: 0.4, y: 0.8, z: 0.4, w: 1 }, // Light green
+    [AssetType.StateMachine]: { x: 0.8, y: 0.5, z: 0.2, w: 1 }, // Dark orange
     [AssetType.TiledMap]: { x: 0.6, y: 0.6, z: 0.2, w: 1 }, // Yellow
     [AssetType.Prefab]: { x: 0.4, y: 0.4, z: 0.8, w: 1 }, // Light blue
     [AssetType.Material]: { x: 0.7, y: 0.3, z: 0.3, w: 1 }, // Red
