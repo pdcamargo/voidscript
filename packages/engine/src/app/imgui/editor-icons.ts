@@ -19,6 +19,10 @@ export const EDITOR_ICONS = {
   STOP: '\uE047', // stop
   SKIP_NEXT: '\uE044', // skip_next
   SKIP_PREVIOUS: '\uE045', // skip_previous
+  FIRST_PAGE: '\uE5DC', // first_page (go to start)
+  LAST_PAGE: '\uE5DD', // last_page (go to end)
+  NAVIGATE_BEFORE: '\uE408', // navigate_before (previous keyframe)
+  NAVIGATE_NEXT: '\uE409', // navigate_next (next keyframe)
 
   // File operations
   SAVE: '\uE161', // save

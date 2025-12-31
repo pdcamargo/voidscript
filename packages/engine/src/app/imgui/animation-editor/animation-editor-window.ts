@@ -10,11 +10,18 @@
 
 import { ImGui } from '@mori2003/jsimgui';
 import type * as THREE from 'three';
-import { LoopMode } from '../../../animation/animation-clip.js';
+import { AnimationClip, LoopMode } from '../../../animation/animation-clip.js';
+import { PropertyTrack } from '../../../animation/property-track.js';
+import { getEasingFunction } from '../../../animation/property-track.js';
 import type { Entity } from '../../../ecs/entity.js';
 import type { EditorPlatform } from '../../../editor/editor-platform.js';
 import { AssetDatabase } from '../../../ecs/asset-database.js';
 import { AssetType } from '../../../ecs/asset-metadata.js';
+import { RuntimeAsset } from '../../../ecs/runtime-asset.js';
+import { RuntimeAssetManager } from '../../../ecs/runtime-asset-manager.js';
+import { AnimationController } from '../../../ecs/components/animation/animation-controller.js';
+import { EditorLayout } from '../editor-layout.js';
+import { EDITOR_ICONS } from '../editor-icons.js';
 import {
   getAnimationEditorState,
   isAnimationEditorOpen,
@@ -37,6 +44,10 @@ import {
   addKeyframe,
   selectKeyframe,
   selectTrack,
+  updateFocusState,
+  isEditorFocused as isEditorFocusedState,
+  loadState,
+  getRawState,
 } from './animation-editor-state.js';
 import {
   loadAnimationFromJson,
@@ -62,8 +73,10 @@ import {
 import type { World } from '../../../ecs/world.js';
 import type { Command } from '../../../ecs/command.js';
 
-// Module-level state to pass assetsManifest to async handlers
+// Module-level state to pass context to async handlers
 let currentAssetsManifest: string | undefined;
+let currentCommands: Command | undefined;
+let currentPlatform: EditorPlatform | undefined;
 
 /**
  * Render the animation editor window
@@ -86,6 +99,8 @@ export function renderAnimationEditorWindow(
 ): void {
   // Store for async handlers
   currentAssetsManifest = assetsManifest;
+  currentCommands = commands;
+  currentPlatform = platform;
   if (!isAnimationEditorOpen()) return;
 
   const state = getAnimationEditorState();
@@ -106,15 +121,21 @@ export function renderAnimationEditorWindow(
   const windowFlags = ImGui.WindowFlags.MenuBar;
 
   if (ImGui.Begin(windowTitle, isOpenRef, windowFlags)) {
+    // Track window focus state for preview control
+    if (commands) {
+      const windowFocused = ImGui.IsWindowFocused(ImGui.FocusedFlags.RootAndChildWindows);
+      updateFocusState(windowFocused, commands);
+    }
+
     // Menu bar
     renderMenuBar(platform, state);
 
     // Check if entity is selected - show entity selector first if not
     if (state.selectedEntity === null) {
-      renderEntitySelector(getEntitiesWithAnimationController);
+      renderEntitySelector(getEntitiesWithAnimationController, commands);
     } else {
-      // Toolbar with entity info
-      renderToolbar(state, getEntitiesWithAnimationController);
+      // Toolbar with entity info and animation selector
+      renderToolbar(state, getEntitiesWithAnimationController, commands, platform);
 
       // Main content area
       const contentHeight = ImGui.GetWindowHeight() - TOOLBAR_HEIGHT - PLAYBACK_CONTROLS_HEIGHT - 60;
@@ -153,6 +174,7 @@ export function renderAnimationEditorWindow(
  */
 function renderEntitySelector(
   getEntitiesWithAnimationController?: () => Array<{ entity: Entity; name: string }>,
+  commands?: Command,
 ): void {
   const availableHeight = ImGui.GetWindowHeight() - 40;
   const availableWidth = ImGui.GetWindowWidth();
@@ -204,7 +226,7 @@ function renderEntitySelector(
       ImGui.PushStyleColorImVec4(ImGui.Col.ButtonActive, COLORS.trackRowSelected);
 
       if (ImGui.Button(label, { x: contentWidth - 16, y: 28 })) {
-        selectEntity(entity);
+        selectEntity(entity, commands);
       }
 
       ImGui.PopStyleColor(3);
@@ -287,16 +309,22 @@ function renderMenuBar(platform: EditorPlatform, state: ReturnType<typeof getAni
 // Toolbar
 // ============================================================================
 
+// Track pending save confirmation state
+let pendingSaveConfirmPopupId: string | null = null;
+let pendingAnimationToLoad: { asset: RuntimeAsset<AnimationClip>; filePath: string | null } | null = null;
+
 function renderToolbar(
   state: ReturnType<typeof getAnimationEditorState>,
-  getEntitiesWithAnimationController?: () => Array<{ entity: Entity; name: string }>
+  getEntitiesWithAnimationController?: () => Array<{ entity: Entity; name: string }>,
+  commands?: Command,
+  platform?: EditorPlatform,
 ): void {
   if (!state) return;
 
   ImGui.PushStyleColorImVec4(ImGui.Col.ChildBg, { x: 0.15, y: 0.15, z: 0.17, w: 1.0 });
   ImGui.BeginChild('##Toolbar', { x: 0, y: TOOLBAR_HEIGHT }, 1, ImGui.WindowFlags.None);
 
-  // Row 1: Entity selector and animation properties
+  // Row 1: Entity selector and Animation selector
   ImGui.SetCursorPos({ x: 8, y: 8 });
 
   // Current entity
@@ -314,7 +342,7 @@ function renderToolbar(
         const isSelected = selectedEntity === entity;
         const label = name || `Entity #${entity}`;
         if (ImGui.Selectable(label, isSelected)) {
-          selectEntity(entity);
+          selectEntity(entity, commands);
         }
       }
     }
@@ -322,6 +350,87 @@ function renderToolbar(
   }
 
   ImGui.SameLine(180);
+
+  // Animation selector dropdown (from entity's AnimationController)
+  ImGui.Text('Animation:');
+  ImGui.SameLine();
+
+  // Get animations from selected entity's AnimationController
+  const animationOptions = getEntityAnimationOptions(selectedEntity, commands);
+  const currentAnimId = state.animationId;
+
+  // Find current animation label
+  const currentAnimOption = animationOptions.find((opt) => opt.value === currentAnimId);
+  const currentAnimLabel = currentAnimOption?.label ?? '(New Animation)';
+
+  // Track if we need to open a popup after the combo closes
+  // (ImGui.OpenPopup() doesn't work inside BeginCombo/EndCombo)
+  let shouldOpenNewAnimPopup = false;
+  let shouldOpenSwitchPopup = false;
+  let switchToAsset: { asset: RuntimeAsset<AnimationClip>; filePath: string | null } | null = null;
+
+  ImGui.SetNextItemWidth(150);
+  if (ImGui.BeginCombo('##animationSelector', currentAnimLabel)) {
+    // Option to create new animation
+    if (ImGui.Selectable('+ New Animation', false)) {
+      // Check if dirty and prompt save
+      if (state.isDirty && platform) {
+        shouldOpenNewAnimPopup = true;
+      } else {
+        handleNewAnimation();
+      }
+    }
+
+    ImGui.Separator();
+
+    // List existing animations
+    for (const opt of animationOptions) {
+      // Skip __editor_preview__
+      if (opt.value === '__editor_preview__') continue;
+
+      const isSelected = currentAnimId === opt.value;
+      if (ImGui.Selectable(opt.label, isSelected)) {
+        // Check if dirty and prompt save before switching
+        if (state.isDirty && platform && opt.asset) {
+          shouldOpenSwitchPopup = true;
+          switchToAsset = { asset: opt.asset, filePath: opt.filePath ?? null };
+        } else if (opt.asset) {
+          loadAnimationFromAsset(opt.asset, opt.filePath ?? null, platform);
+        }
+      }
+    }
+    ImGui.EndCombo();
+  }
+
+  // Open popup after combo is closed (if needed)
+  if (shouldOpenNewAnimPopup) {
+    pendingSaveConfirmPopupId = 'SaveBeforeNew##animEditor';
+    pendingAnimationToLoad = null;
+    ImGui.OpenPopup(pendingSaveConfirmPopupId);
+  } else if (shouldOpenSwitchPopup && switchToAsset) {
+    pendingSaveConfirmPopupId = 'SaveBeforeSwitch##animEditor';
+    pendingAnimationToLoad = switchToAsset;
+    ImGui.OpenPopup(pendingSaveConfirmPopupId);
+  }
+
+  ImGui.SameLine();
+
+  // New animation button (icon)
+  if (EditorLayout.iconButton(EDITOR_ICONS.ADD, {
+    size: 'small',
+    tooltip: 'Create new animation',
+    id: 'newAnim',
+  })) {
+    if (state.isDirty && platform) {
+      pendingSaveConfirmPopupId = 'SaveBeforeNew##animEditor';
+      pendingAnimationToLoad = null;
+      ImGui.OpenPopup(pendingSaveConfirmPopupId);
+    } else {
+      handleNewAnimation();
+    }
+  }
+
+  ImGui.SameLine(420);
 
   // Animation Name
   ImGui.Text('Name:');
@@ -346,7 +455,8 @@ function renderToolbar(
     markDirty();
   }
 
-  ImGui.SameLine();
+  // Row 2: Loop mode, speed, and info
+  ImGui.SetCursorPos({ x: 8, y: 34 });
 
   // Loop Mode
   ImGui.Text('Loop:');
@@ -372,12 +482,151 @@ function renderToolbar(
     markDirty();
   }
 
-  // Row 2: Info about preview mode
-  ImGui.SetCursorPos({ x: 8, y: 34 });
-  ImGui.TextDisabled('Animation preview is applied directly to the selected entity in the scene.');
+  ImGui.SameLine(300);
+  ImGui.TextDisabled('Preview is applied to the selected entity in the scene.');
 
   ImGui.EndChild();
   ImGui.PopStyleColor();
+
+  // Render save confirmation modal if pending
+  if (pendingSaveConfirmPopupId && platform) {
+    renderSaveConfirmModal(platform, state);
+  }
+}
+
+/**
+ * Get animation options from an entity's AnimationController
+ */
+function getEntityAnimationOptions(
+  entity: Entity | null,
+  commands?: Command,
+): Array<{ value: string; label: string; asset?: RuntimeAsset<AnimationClip>; filePath?: string }> {
+  if (!entity || !commands) return [];
+
+  const controller = commands.getComponent(entity, AnimationController);
+  if (!controller) return [];
+
+  const options: Array<{ value: string; label: string; asset?: RuntimeAsset<AnimationClip>; filePath?: string }> = [];
+
+  for (const asset of controller.animations) {
+    if (!asset.isLoaded || !asset.data) continue;
+
+    // Skip editor preview animation
+    if (asset.data.id === '__editor_preview__') continue;
+
+    const clipName = asset.data.name || asset.data.id || 'Unnamed';
+    options.push({
+      value: asset.data.id,
+      label: clipName,
+      asset,
+      filePath: asset.path ?? undefined,
+    });
+  }
+
+  return options;
+}
+
+/**
+ * Load an animation from a RuntimeAsset into the editor
+ *
+ * @param asset - The RuntimeAsset containing the AnimationClip
+ * @param webPath - The web-relative path (e.g., /assets/animations/file.anim.json)
+ * @param platform - Optional platform for converting web path to absolute path
+ */
+function loadAnimationFromAsset(
+  asset: RuntimeAsset<AnimationClip>,
+  webPath: string | null,
+  platform?: EditorPlatform,
+): void {
+  if (!asset.isLoaded || !asset.data) {
+    console.warn('[AnimationEditor] Cannot load animation - asset not loaded');
+    return;
+  }
+
+  const clip = asset.data;
+
+  // Convert to editor state using the serializer
+  // Use the AnimationClipJson format expected by loadAnimationFromJson
+  const jsonStr = JSON.stringify({
+    id: clip.id,
+    name: clip.name,
+    duration: clip.duration,
+    loopMode: clip.loopMode === LoopMode.Once ? 'once' : clip.loopMode === LoopMode.Loop ? 'loop' : 'pingpong',
+    speed: clip.speed,
+    tracks: clip.getTracks().map((track) => ({
+      propertyPath: track.fullPropertyPath, // Use fullPropertyPath, not propertyPath
+      interpolationMode: track.interpolationMode === 'discrete' ? 'discrete' : 'smooth',
+      keyframes: track.keyframes.map((kf) => ({
+        time: kf.time,
+        value: kf.value,
+        // kf.easing is a function, we need to get the name - but the JSON parser doesn't need it for loading
+        // The serializer will re-infer from the easing function when saving
+      })),
+    })),
+  });
+
+  // Convert web path to absolute path for saving
+  // The web path is like /assets/animations/file.anim.json
+  // The absolute path is like /Users/.../public/assets/animations/file.anim.json
+  let absolutePath: string | null = null;
+  const effectiveWebPath = webPath ?? asset.path ?? '';
+  if (effectiveWebPath && platform) {
+    absolutePath = convertToAbsolutePath(effectiveWebPath, platform);
+  }
+
+  // Use the absolute path if available, otherwise fall back to the web path
+  // (web path won't work for saving but at least the animation can be edited)
+  const effectivePath = absolutePath ?? effectiveWebPath;
+  loadAnimationFromJson(jsonStr, effectivePath, asset.guid);
+}
+
+/**
+ * Render save confirmation modal
+ */
+function renderSaveConfirmModal(
+  platform: EditorPlatform,
+  state: ReturnType<typeof getAnimationEditorState>,
+): void {
+  if (!pendingSaveConfirmPopupId || !state) return;
+
+  const result = EditorLayout.confirmModal(
+    pendingSaveConfirmPopupId,
+    'Unsaved Changes',
+    'You have unsaved changes. Would you like to save before continuing?',
+    {
+      confirmLabel: 'Save',
+      cancelLabel: 'Cancel',
+      showDiscard: true,
+      discardLabel: 'Discard',
+    },
+  );
+
+  if (result === 'confirm') {
+    // Save and then proceed
+    handleSaveAnimation(platform, false).then(() => {
+      if (pendingAnimationToLoad) {
+        loadAnimationFromAsset(pendingAnimationToLoad.asset, pendingAnimationToLoad.filePath, currentPlatform);
+      } else {
+        handleNewAnimation();
+      }
+      pendingSaveConfirmPopupId = null;
+      pendingAnimationToLoad = null;
+    });
+  } else if (result === 'discard') {
+    // Discard changes and proceed
+    if (pendingAnimationToLoad) {
+      loadAnimationFromAsset(pendingAnimationToLoad.asset, pendingAnimationToLoad.filePath, currentPlatform);
+    } else {
+      handleNewAnimation();
+    }
+    pendingSaveConfirmPopupId = null;
+    pendingAnimationToLoad = null;
+  } else if (result === 'cancel') {
+    // Cancel - do nothing
+    pendingSaveConfirmPopupId = null;
+    pendingAnimationToLoad = null;
+  }
+  // 'none' means modal is still open, keep waiting
 }
 
 /**
@@ -407,81 +656,82 @@ function renderPlaybackControls(state: ReturnType<typeof getAnimationEditorState
   ImGui.PushStyleColorImVec4(ImGui.Col.ChildBg, { x: 0.12, y: 0.12, z: 0.14, w: 1.0 });
   ImGui.BeginChild('##PlaybackControls', { x: 0, y: PLAYBACK_CONTROLS_HEIGHT }, 1, ImGui.WindowFlags.None);
 
-  ImGui.SetCursorPos({ x: 8, y: 6 });
+  ImGui.SetCursorPos({ x: 8, y: 4 });
 
   // Go to start
-  if (ImGui.Button('|<##goStart', { x: 24, y: 20 })) {
+  if (EditorLayout.iconButton(EDITOR_ICONS.FIRST_PAGE, {
+    size: 'small',
+    tooltip: 'Go to Start (Home)',
+    id: 'goStart',
+  })) {
     goToStart();
-  }
-  if (ImGui.IsItemHovered()) {
-    ImGui.SetTooltip('Go to Start (Home)');
   }
 
   ImGui.SameLine();
 
   // Previous keyframe
-  if (ImGui.Button('<##prevKf', { x: 24, y: 20 })) {
+  if (EditorLayout.iconButton(EDITOR_ICONS.NAVIGATE_BEFORE, {
+    size: 'small',
+    tooltip: 'Previous Keyframe (,)',
+    id: 'prevKf',
+  })) {
     goToPreviousKeyframe();
-  }
-  if (ImGui.IsItemHovered()) {
-    ImGui.SetTooltip('Previous Keyframe (,)');
   }
 
   ImGui.SameLine();
 
   // Play/Pause button
-  const playLabel = state.isPlaying ? 'II##play' : '>##play';
-  const playColor = state.isPlaying ? COLORS.playButtonPlaying : COLORS.playButtonStopped;
+  const playIcon = state.isPlaying ? EDITOR_ICONS.PAUSE : EDITOR_ICONS.PLAY;
+  const playTooltip = state.isPlaying ? 'Pause (Space)' : 'Play (Space)';
+  const playColor = state.isPlaying
+    ? { r: COLORS.playButtonPlaying.x, g: COLORS.playButtonPlaying.y, b: COLORS.playButtonPlaying.z }
+    : { r: COLORS.playButtonStopped.x, g: COLORS.playButtonStopped.y, b: COLORS.playButtonStopped.z };
 
-  ImGui.PushStyleColorImVec4(ImGui.Col.Button, playColor);
-  ImGui.PushStyleColorImVec4(ImGui.Col.ButtonHovered, {
-    x: playColor.x + 0.1,
-    y: playColor.y + 0.1,
-    z: playColor.z + 0.1,
-    w: 1.0,
-  });
-
-  if (ImGui.Button(playLabel, { x: 30, y: 20 })) {
+  if (EditorLayout.iconButton(playIcon, {
+    size: 'small',
+    tooltip: playTooltip,
+    id: 'playPause',
+    color: playColor,
+    hoverColor: { r: playColor.r + 0.1, g: playColor.g + 0.1, b: playColor.b + 0.1 },
+  })) {
     togglePlayback();
   }
-  if (ImGui.IsItemHovered()) {
-    ImGui.SetTooltip(state.isPlaying ? 'Pause (Space)' : 'Play (Space)');
-  }
-
-  ImGui.PopStyleColor(2);
 
   ImGui.SameLine();
 
   // Stop button
-  if (ImGui.Button('[]##stop', { x: 24, y: 20 })) {
+  if (EditorLayout.iconButton(EDITOR_ICONS.STOP, {
+    size: 'small',
+    tooltip: 'Stop',
+    id: 'stop',
+  })) {
     stopPlayback();
     goToStart();
-  }
-  if (ImGui.IsItemHovered()) {
-    ImGui.SetTooltip('Stop');
   }
 
   ImGui.SameLine();
 
   // Next keyframe
-  if (ImGui.Button('>##nextKf', { x: 24, y: 20 })) {
+  if (EditorLayout.iconButton(EDITOR_ICONS.NAVIGATE_NEXT, {
+    size: 'small',
+    tooltip: 'Next Keyframe (.)',
+    id: 'nextKf',
+  })) {
     goToNextKeyframe();
-  }
-  if (ImGui.IsItemHovered()) {
-    ImGui.SetTooltip('Next Keyframe (.)');
   }
 
   ImGui.SameLine();
 
   // Go to end
-  if (ImGui.Button('>|##goEnd', { x: 24, y: 20 })) {
+  if (EditorLayout.iconButton(EDITOR_ICONS.LAST_PAGE, {
+    size: 'small',
+    tooltip: 'Go to End (End)',
+    id: 'goEnd',
+  })) {
     goToEnd();
   }
-  if (ImGui.IsItemHovered()) {
-    ImGui.SetTooltip('Go to End (End)');
-  }
 
-  ImGui.SameLine(200);
+  ImGui.SameLine(180);
 
   // Time display
   const timeInSeconds = state.playheadTime * state.duration;
@@ -557,6 +807,7 @@ async function handleSaveAnimation(platform: EditorPlatform, saveAs: boolean): P
 
   let filePath = state.currentFilePath;
   let assetGuid = state.assetGuid;
+  const isNewAnimation = !assetGuid; // Track if this is a new animation
 
   // If Save As or no current path, show save dialog
   if (saveAs || !filePath) {
@@ -621,12 +872,143 @@ async function handleSaveAnimation(platform: EditorPlatform, saveAs: boolean): P
 
       // Save manifest if available
       await saveManifestIfAvailable(platform, currentAssetsManifest);
+
+      // If this was a new animation and we have a selected entity, add it to the AnimationController
+      if (isNewAnimation && state.selectedEntity !== null && currentCommands) {
+        addAnimationToController(assetGuid, state.selectedEntity, currentCommands);
+      } else if (!isNewAnimation && state.selectedEntity !== null && currentCommands) {
+        // Update the existing animation in the controller with the new data
+        updateAnimationInController(assetGuid, state.selectedEntity, currentCommands);
+      }
     }
 
     markClean();
   } catch (error) {
     console.error('Failed to save animation file:', error);
   }
+}
+
+/**
+ * Add a newly saved animation to the selected entity's AnimationController.
+ *
+ * This builds the AnimationClip directly from the current editor state rather than
+ * loading from disk, which ensures the animation is immediately available without
+ * any fetch/cache delays.
+ */
+function addAnimationToController(
+  assetGuid: string,
+  entity: Entity,
+  commands: Command,
+): void {
+  const controller = commands.tryGetComponent(entity, AnimationController);
+  if (!controller) {
+    console.warn('[AnimationEditor] Cannot add animation - entity has no AnimationController');
+    return;
+  }
+
+  // Check if animation is already in the controller
+  const alreadyExists = controller.animations.some((a) => a.guid === assetGuid);
+  if (alreadyExists) {
+    return; // Already added
+  }
+
+  // Get the current editor state to build the AnimationClip
+  const state = getAnimationEditorState();
+  if (!state) {
+    console.warn('[AnimationEditor] Cannot add animation - no editor state');
+    return;
+  }
+
+  // Build the AnimationClip from the current editor state
+  const clip = AnimationClip.create(state.animationId)
+    .setName(state.animationName)
+    .setDuration(state.duration)
+    .setLoopMode(state.loopMode)
+    .setSpeed(state.speed);
+
+  for (const editorTrack of state.tracks) {
+    const track = new PropertyTrack<unknown>(editorTrack.fullPropertyPath);
+
+    for (const kf of editorTrack.keyframes) {
+      const easing = getEasingFunction(kf.easingName);
+      track.keyframe(kf.time, kf.value, easing);
+    }
+
+    clip.addTrack(track);
+  }
+
+  // Create a pre-loaded RuntimeAsset with the in-memory clip
+  // This avoids needing to fetch from disk (which may have caching issues)
+  const runtimeAsset = RuntimeAsset.createLoaded<AnimationClip>(
+    assetGuid,
+    AssetType.Animation,
+    clip,
+  );
+
+  // Register with RuntimeAssetManager so lookups work correctly
+  // Note: We use a workaround since getOrCreate would return an unloaded asset
+  // We check if it's already registered first
+  if (!RuntimeAssetManager.get().has(assetGuid)) {
+    // Register our pre-loaded asset
+    // RuntimeAssetManager doesn't have a direct "set" method for existing assets,
+    // but we can use the internal map via getOrCreate then overwrite
+    // Actually, let's just add to the controller directly - the asset manager
+    // will get the metadata-based version if needed later
+  }
+
+  // Add to the controller's animations array
+  controller.animations.push(runtimeAsset);
+}
+
+/**
+ * Update an existing animation in the controller with new data from the editor.
+ *
+ * This is called when saving changes to an existing animation, so the in-memory
+ * RuntimeAsset reflects the saved data without needing to reload from disk.
+ */
+function updateAnimationInController(
+  assetGuid: string,
+  entity: Entity,
+  commands: Command,
+): void {
+  const controller = commands.tryGetComponent(entity, AnimationController);
+  if (!controller) {
+    return;
+  }
+
+  // Find the existing animation asset
+  const existingAsset = controller.animations.find((a) => a.guid === assetGuid);
+  if (!existingAsset) {
+    return; // Not in this controller
+  }
+
+  // Get the current editor state to build the updated AnimationClip
+  const state = getAnimationEditorState();
+  if (!state) {
+    return;
+  }
+
+  // Build the updated AnimationClip from the current editor state
+  const clip = AnimationClip.create(state.animationId)
+    .setName(state.animationName)
+    .setDuration(state.duration)
+    .setLoopMode(state.loopMode)
+    .setSpeed(state.speed);
+
+  for (const editorTrack of state.tracks) {
+    const track = new PropertyTrack<unknown>(editorTrack.fullPropertyPath);
+
+    for (const kf of editorTrack.keyframes) {
+      const easing = getEasingFunction(kf.easingName);
+      track.keyframe(kf.time, kf.value, easing);
+    }
+
+    clip.addTrack(track);
+  }
+
+  // Update the in-memory data of the existing RuntimeAsset
+  // We access the private _data field to update it
+  (existingAsset as unknown as { _data: AnimationClip })._data = clip;
 }
 
 function handleAddKeyframeAtPlayhead(state: ReturnType<typeof getAnimationEditorState>): void {
@@ -735,6 +1117,19 @@ function convertToWebPath(absolutePath: string, platform: EditorPlatform): strin
 
   const relative = absolutePath.slice(platform.sourceAssetsDir.length);
   return relative.startsWith('/') ? relative : '/' + relative;
+}
+
+/**
+ * Convert a web-relative path to an absolute file path.
+ * Returns null if conversion is not possible.
+ */
+function convertToAbsolutePath(webPath: string, platform: EditorPlatform): string | null {
+  if (!platform.sourceAssetsDir) return null;
+  if (!webPath) return null;
+
+  // Remove leading slash if present for joining
+  const relativePath = webPath.startsWith('/') ? webPath.slice(1) : webPath;
+  return `${platform.sourceAssetsDir}/${relativePath}`;
 }
 
 /**

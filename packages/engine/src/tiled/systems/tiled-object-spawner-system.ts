@@ -178,9 +178,10 @@ function spawnTiledObject(
         builder.with(AnimationController, {
           animations: [clipAsset],
           currentAnimationId: null,
+          playOnStart: true,
+          speed: 1.0,
           isPlaying: false,
           currentTime: 0,
-          speed: 1.0,
           loopCount: 0,
         });
       }

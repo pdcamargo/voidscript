@@ -1141,7 +1141,7 @@ entities:
         typeName: Sprite2D
         data:
           texture:
-            guid: character-idle-mjtakht8
+            guid: character-stop-run-mjtal8oq
           color:
             r: 1
             g: 1
@@ -1161,7 +1161,7 @@ entities:
           visible: true
           isLit: true
           spriteRect:
-            x: 576
+            x: 144
             y: 0
             width: 144
             height: 112
@@ -1213,11 +1213,12 @@ entities:
         data:
           animations:
             - guid: e7c34b63-64f4-4ebe-89aa-65682b9d84e9
-          currentAnimationId: 76aaf793-c7a2-4ed5-8fbd-3903b0b7ac99
-          isPlaying: true
-          currentTime: 2.1509999999999994
+            - guid: 91025652-5c64-4d1d-9c8f-13d23aba1694
+            - guid: e904d730-96f8-4927-ab7c-52ad46b36cfc
+            - guid: b51b1bb3-3541-4439-8640-47823e94bb42
+          currentAnimationId: null
+          playOnStart: true
           speed: 1
-          loopCount: 0
       - typeId: 25
         typeName: DesiredMovement2D
         data:
@@ -1444,7 +1445,7 @@ entities:
           lightningIntensity: 0.9959999918937683
           stormIntensity: 0.8500000238418579
 metadata:
-  createdAt: 2025-12-31T01:44:40.618Z
-  modifiedAt: 2025-12-31T01:44:40.618Z
+  createdAt: 2025-12-31T02:54:02.700Z
+  modifiedAt: 2025-12-31T02:54:02.700Z
   entityCount: 22
   archetypeCount: 59

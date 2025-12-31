@@ -718,5 +718,17 @@
   "e7c34b63-64f4-4ebe-89aa-65682b9d84e9": {
     "type": "animation",
     "path": "/assets/animations/character/Character Idle.anim.json"
+  },
+  "91025652-5c64-4d1d-9c8f-13d23aba1694": {
+    "type": "animation",
+    "path": "/assets/animations/character/Character Start Run.anim.json"
+  },
+  "e904d730-96f8-4927-ab7c-52ad46b36cfc": {
+    "type": "animation",
+    "path": "/assets/animations/character/Character Run.anim.json"
+  },
+  "b51b1bb3-3541-4439-8640-47823e94bb42": {
+    "type": "animation",
+    "path": "/assets/animations/character/Character Stop Run.anim.json"
   }
 }

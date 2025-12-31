@@ -72,6 +72,10 @@ export function jsonToEditorState(
 
     inspectorKeyframeId: null,
     previewTextureGuid: null,
+
+    // Focus-based preview control
+    previousAnimationId: null,
+    isEditorFocused: false,
   };
 }
 

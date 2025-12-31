@@ -112,6 +112,12 @@ export interface AnimationEditorState {
 
   // Preview panel texture (for sprite preview)
   previewTextureGuid: string | null;
+
+  // Focus-based preview control
+  /** Previous animation ID before preview started (for restoration on unfocus) */
+  previousAnimationId: string | null;
+  /** Whether the editor window is currently focused */
+  isEditorFocused: boolean;
 }
 
 // ============================================================================
@@ -365,14 +371,20 @@ export function closeAnimationEditor(): void {
 // ============================================================================
 
 /**
- * Create a new empty animation
+ * Create a new empty animation.
+ * Preserves the currently selected entity so users don't have to re-select it.
  */
 export function createNewAnimation(): void {
-  // Clear any existing preview
+  // Preserve the selected entity and focus state
+  const previousSelectedEntity = editorState?.selectedEntity ?? null;
+  const previousIsEditorFocused = editorState?.isEditorFocused ?? false;
+  const previousPreviousAnimationId = editorState?.previousAnimationId ?? null;
+
+  // Clear any existing preview temporarily
   setAnimationPreviewEntity(null);
 
   editorState = {
-    selectedEntity: null,
+    selectedEntity: previousSelectedEntity,
 
     animationId: crypto.randomUUID(),
     animationName: '',
@@ -397,7 +409,17 @@ export function createNewAnimation(): void {
 
     inspectorKeyframeId: null,
     previewTextureGuid: null,
+
+    // Focus-based preview control - preserve these
+    previousAnimationId: previousPreviousAnimationId,
+    isEditorFocused: previousIsEditorFocused,
   };
+
+  // Re-establish preview if entity was selected
+  if (previousSelectedEntity !== null) {
+    setAnimationPreviewEntity(previousSelectedEntity);
+    rebuildPreviewClip();
+  }
 }
 
 /**
@@ -454,8 +476,11 @@ export function getCachedFilePath(): string | null {
 /**
  * Select an entity for animation editing.
  * The entity must have an AnimationController component.
+ *
+ * @param entity - The entity to select, or null to clear selection
+ * @param commands - Optional ECS commands to capture the entity's current animation state
  */
-export function selectEntity(entity: Entity | null): void {
+export function selectEntity(entity: Entity | null, commands?: Command): void {
   if (!editorState) return;
 
   // Clear previous preview
@@ -464,9 +489,19 @@ export function selectEntity(entity: Entity | null): void {
   }
 
   editorState.selectedEntity = entity;
+  // Reset previousAnimationId when selecting a new entity
+  editorState.previousAnimationId = null;
 
   // Set up preview for the new entity
   if (entity !== null) {
+    // Capture the entity's current animation ID before we start previewing
+    if (commands) {
+      const controller = commands.tryGetComponent(entity, AnimationController);
+      if (controller && controller.currentAnimationId !== '__editor_preview__') {
+        editorState.previousAnimationId = controller.currentAnimationId;
+      }
+    }
+
     setAnimationPreviewEntity(entity);
     rebuildPreviewClip();
   }
@@ -920,12 +955,16 @@ export function goToPreviousKeyframe(): void {
  * This updates the playhead time and syncs with the AnimationController
  * for preview mode. The actual animation application is handled by
  * the animation system running in preview mode.
+ *
+ * IMPORTANT: Only syncs preview to controller when the editor is focused.
+ * When unfocused, the entity's normal animation should play instead.
  */
 export function updatePlayback(commands?: Command): void {
   if (!editorState) return;
 
-  // Sync preview clip with AnimationController if we have an entity
-  if (commands && editorState.selectedEntity !== null && previewClip) {
+  // Only sync preview clip when the editor is focused
+  // This prevents the editor from stealing control of the AnimationController when unfocused
+  if (commands && editorState.selectedEntity !== null && previewClip && editorState.isEditorFocused) {
     syncPreviewToController(commands);
   }
 
@@ -1025,6 +1064,118 @@ export function getPreviewClip(): AnimationClip | null {
 }
 
 // ============================================================================
+// Focus-Based Preview Control
+// ============================================================================
+
+/**
+ * Called when the animation editor window gains focus.
+ * Stores the current animation ID and enables preview mode.
+ */
+export function onEditorFocus(commands: Command): void {
+  if (!editorState) return;
+
+  editorState.isEditorFocused = true;
+
+  // If we have a selected entity, store its current animation and switch to preview
+  if (editorState.selectedEntity !== null) {
+    const controller = commands.tryGetComponent(editorState.selectedEntity, AnimationController);
+    if (controller) {
+      // Only store if it's not already the preview animation AND we don't already have a stored value
+      // This prevents overwriting the original animation ID when rapidly focusing/unfocusing
+      if (controller.currentAnimationId !== '__editor_preview__' && editorState.previousAnimationId === null) {
+        editorState.previousAnimationId = controller.currentAnimationId;
+      }
+      // Enable preview mode
+      setAnimationPreviewEntity(editorState.selectedEntity);
+      rebuildPreviewClip();
+    }
+  }
+}
+
+/**
+ * Called when the animation editor window loses focus.
+ * Restores the previous animation state.
+ */
+export function onEditorUnfocus(commands: Command): void {
+  if (!editorState) return;
+
+  editorState.isEditorFocused = false;
+
+  // Stop playback when losing focus
+  editorState.isPlaying = false;
+
+  // Restore the previous animation state
+  if (editorState.selectedEntity !== null) {
+    const controller = commands.tryGetComponent(editorState.selectedEntity, AnimationController);
+    if (controller) {
+      // Remove the preview clip from loadedClips
+      if (controller.loadedClips) {
+        controller.loadedClips.delete('__editor_preview__');
+      }
+
+      // Only restore if we have a previous animation ID to restore to
+      // If previousAnimationId is null, we need to figure out the correct animation:
+      // 1. If controller already has a non-preview animation set, keep it
+      // 2. Otherwise, leave it as null (no animation)
+      if (editorState.previousAnimationId !== null) {
+        controller.currentAnimationId = editorState.previousAnimationId;
+
+        // If there was a previous animation and playOnStart is true, resume playback
+        if (controller.playOnStart) {
+          controller.isPlaying = true;
+          controller.currentTime = 0;
+        } else {
+          controller.isPlaying = false;
+        }
+      } else if (controller.currentAnimationId === '__editor_preview__') {
+        // Was previewing but no previous animation stored - clear the preview
+        controller.currentAnimationId = null;
+        controller.isPlaying = false;
+      }
+      // Else: controller has a non-preview animation ID, keep it as-is
+
+      // Clear the stored previous animation ID so next focus stores fresh
+      editorState.previousAnimationId = null;
+    }
+
+    // Clear the preview entity
+    setAnimationPreviewEntity(null);
+  }
+}
+
+/**
+ * Update focus state - call each frame with the current focus state.
+ * Handles transitions between focused and unfocused states.
+ */
+export function updateFocusState(isFocused: boolean, commands: Command): void {
+  if (!editorState) return;
+
+  const wasFocused = editorState.isEditorFocused;
+
+  if (isFocused && !wasFocused) {
+    // Transitioning from unfocused to focused
+    onEditorFocus(commands);
+  } else if (!isFocused && wasFocused) {
+    // Transitioning from focused to unfocused
+    onEditorUnfocus(commands);
+  }
+}
+
+/**
+ * Check if the editor is currently focused
+ */
+export function isEditorFocused(): boolean {
+  return editorState?.isEditorFocused ?? false;
+}
+
+/**
+ * Get the previous animation ID (before preview started)
+ */
+export function getPreviousAnimationId(): string | null {
+  return editorState?.previousAnimationId ?? null;
+}
+
+// ============================================================================
 // Keyframe Inspector
 // ============================================================================
 
@@ -1087,10 +1238,33 @@ export function setScrollX(scroll: number): void {
 // ============================================================================
 
 /**
- * Load state from external data (used by serializer)
+ * Load a new animation state.
+ * Preserves the currently selected entity so users don't have to re-select it.
  */
 export function loadState(state: AnimationEditorState): void {
-  editorState = state;
+  // Preserve the selected entity and focus state from the current state
+  const previousSelectedEntity = editorState?.selectedEntity ?? null;
+  const previousIsEditorFocused = editorState?.isEditorFocused ?? false;
+  const previousPreviousAnimationId = editorState?.previousAnimationId ?? null;
+
+  // Clear any existing preview temporarily
+  if (previousSelectedEntity !== null) {
+    setAnimationPreviewEntity(null);
+  }
+
+  // Load the new state but preserve entity selection
+  editorState = {
+    ...state,
+    selectedEntity: previousSelectedEntity,
+    isEditorFocused: previousIsEditorFocused,
+    previousAnimationId: previousPreviousAnimationId,
+  };
+
+  // Re-establish preview if entity was selected
+  if (previousSelectedEntity !== null) {
+    setAnimationPreviewEntity(previousSelectedEntity);
+  }
+
   rebuildPreviewClip();
 }
 

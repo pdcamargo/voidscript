@@ -1105,6 +1105,337 @@ export class EditorLayout {
   }
 
   // ==========================================================================
+  // Select/Dropdown Field
+  // ==========================================================================
+
+  /**
+   * Options for selectField
+   */
+  static selectFieldOptions: {
+    allowNone?: boolean;
+    noneLabel?: string;
+  } = {};
+
+  /**
+   * Render a select/dropdown field (like HTML <select>)
+   * More flexible than comboField - supports objects with value/label pairs and nullable values
+   *
+   * @param label - Label displayed on left
+   * @param currentValue - Currently selected value (can be null)
+   * @param options - Array of options with value and label
+   * @param fieldOptions - Additional field configuration
+   * @returns [selectedValue, hasChanged]
+   *
+   * @example
+   * ```typescript
+   * const [selected, changed] = EditorLayout.selectField(
+   *   'Animation',
+   *   currentAnimationId,
+   *   animations.map(a => ({ value: a.id, label: a.name })),
+   *   { allowNone: true, noneLabel: '(None)' }
+   * );
+   * if (changed) setAnimation(selected);
+   * ```
+   */
+  static selectField<T extends string | number | null>(
+    label: string,
+    currentValue: T,
+    options: Array<{ value: T; label: string }>,
+    fieldOptions?: BaseFieldOptions & {
+      /** If true, adds a (None) option that returns null */
+      allowNone?: boolean;
+      /** Label for the none option (default: "(None)") */
+      noneLabel?: string;
+    },
+  ): FieldResult<T> {
+    const id = generateUniqueId(label, fieldOptions?.id);
+    const allowNone = fieldOptions?.allowNone ?? false;
+    const noneLabel = fieldOptions?.noneLabel ?? '(None)';
+
+    // Find current option for display
+    const currentOption = options.find((opt) => opt.value === currentValue);
+    const displayText = currentOption?.label ?? (currentValue === null ? noneLabel : String(currentValue));
+
+    // Only render label if it's not empty
+    if (label) {
+      EditorLayout.renderLabel(label, fieldOptions?.tooltip);
+    }
+
+    if (fieldOptions?.width) {
+      ImGui.SetNextItemWidth(fieldOptions.width);
+    }
+
+    if (ImGui.BeginCombo(id, displayText)) {
+      // Render "(None)" option if allowed
+      if (allowNone) {
+        const isSelected = currentValue === null;
+        if (ImGui.Selectable(noneLabel, isSelected)) {
+          ImGui.EndCombo();
+          return [null as T, true];
+        }
+        if (isSelected) {
+          ImGui.SetItemDefaultFocus();
+        }
+      }
+
+      // Render all options
+      for (const option of options) {
+        const isSelected = option.value === currentValue;
+        if (ImGui.Selectable(option.label, isSelected)) {
+          ImGui.EndCombo();
+          return [option.value, true];
+        }
+        if (isSelected) {
+          ImGui.SetItemDefaultFocus();
+        }
+      }
+      ImGui.EndCombo();
+    }
+
+    return [currentValue, false];
+  }
+
+  // ==========================================================================
+  // List Section (Modern Styled List with Add/Remove)
+  // ==========================================================================
+
+  /**
+   * Render a modern styled list section with add/remove controls
+   * Displays items in a collapsible section with a clean, dark-themed appearance
+   *
+   * @param label - Section header label
+   * @param items - Array of items to display
+   * @param onAdd - Callback when add button is clicked
+   * @param onRemove - Callback when remove button is clicked (receives item id)
+   * @param options - Display options
+   *
+   * @example
+   * ```typescript
+   * EditorLayout.listSection(
+   *   'Animations',
+   *   controller.animations.map(a => ({
+   *     id: a.guid,
+   *     displayName: a.data?.name || 'Unknown',
+   *     data: a,
+   *   })),
+   *   () => openAddAnimationDialog(),
+   *   (id) => removeAnimation(id),
+   *   { defaultOpen: true, emptyMessage: 'No animations added' }
+   * );
+   * ```
+   */
+  static listSection<T>(
+    label: string,
+    items: Array<{ id: string; displayName: string; data: T }>,
+    onAdd: () => void,
+    onRemove: (id: string) => void,
+    options?: {
+      /** Whether the section starts expanded (default: true) */
+      defaultOpen?: boolean;
+      /** Message shown when list is empty (default: "(Empty)") */
+      emptyMessage?: string;
+      /** Whether to show the add button (default: true) */
+      showAddButton?: boolean;
+      /** Whether to show remove buttons (default: true) */
+      showRemoveButtons?: boolean;
+      /** Tooltip for the add button */
+      addTooltip?: string;
+      /** Custom ID suffix */
+      id?: string;
+    },
+  ): void {
+    const id = generateUniqueId(label, options?.id);
+    const defaultOpen = options?.defaultOpen ?? true;
+    const emptyMessage = options?.emptyMessage ?? '(Empty)';
+    const showAddButton = options?.showAddButton ?? true;
+    const showRemoveButtons = options?.showRemoveButtons ?? true;
+
+    // Collapsible header
+    const headerFlags = defaultOpen
+      ? ImGui.TreeNodeFlags.DefaultOpen
+      : ImGui.TreeNodeFlags.None;
+
+    if (ImGui.CollapsingHeader(`${label}${id}`, headerFlags)) {
+      EditorLayout.beginIndent();
+
+      // Empty state
+      if (items.length === 0) {
+        EditorLayout.textDisabled(emptyMessage);
+      } else {
+        // Render each item with clean styling (no child windows/scroll)
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i]!;
+          const itemId = `${id}_item_${item.id}`;
+
+          // Simple row: bullet + name + X button
+          ImGui.Text(`• ${item.displayName}`);
+
+          // Remove button on the same line
+          if (showRemoveButtons) {
+            ImGui.SameLine();
+
+            // Style the X button
+            ImGui.PushStyleColorImVec4(ImGui.Col.Button, { x: 0.4, y: 0.15, z: 0.15, w: 1.0 });
+            ImGui.PushStyleColorImVec4(ImGui.Col.ButtonHovered, { x: 0.6, y: 0.25, z: 0.25, w: 1.0 });
+            ImGui.PushStyleColorImVec4(ImGui.Col.ButtonActive, { x: 0.7, y: 0.3, z: 0.3, w: 1.0 });
+
+            if (ImGui.SmallButton(`X##remove_${itemId}`)) {
+              onRemove(item.id);
+            }
+
+            ImGui.PopStyleColor(3);
+          }
+        }
+      }
+
+      // Add button at bottom
+      if (showAddButton) {
+        ImGui.Spacing();
+        if (EditorLayout.iconButton(EDITOR_ICONS.ADD, {
+          size: 'small',
+          tooltip: options?.addTooltip ?? `Add ${label.replace(/s$/, '')}`,
+          id: `add_${id}`,
+        })) {
+          onAdd();
+        }
+      }
+
+      EditorLayout.endIndent();
+    }
+  }
+
+  // ==========================================================================
+  // Confirm Modal Dialog
+  // ==========================================================================
+
+  /**
+   * Result of a confirm modal
+   */
+  static readonly ConfirmResult = {
+    None: 'none',
+    Confirm: 'confirm',
+    Discard: 'discard',
+    Cancel: 'cancel',
+  } as const;
+
+  /**
+   * Render a confirmation modal dialog
+   * Call this every frame - it will only show when the popup is open
+   * Use ImGui.OpenPopup(popupId) to open the modal
+   *
+   * @param popupId - Unique popup identifier
+   * @param title - Modal title
+   * @param message - Message to display
+   * @param options - Button configuration
+   * @returns 'confirm', 'discard', 'cancel', or 'none' if no action taken
+   *
+   * @example
+   * ```typescript
+   * // To open the modal:
+   * if (shouldShowSavePrompt) {
+   *   ImGui.OpenPopup('SaveChanges');
+   * }
+   *
+   * // Call every frame:
+   * const result = EditorLayout.confirmModal(
+   *   'SaveChanges',
+   *   'Save Changes?',
+   *   'Do you want to save changes before switching?',
+   *   {
+   *     confirmLabel: 'Save',
+   *     showDiscard: true,
+   *     discardLabel: 'Discard',
+   *     cancelLabel: 'Cancel',
+   *   }
+   * );
+   *
+   * if (result === EditorLayout.ConfirmResult.Confirm) saveAndSwitch();
+   * else if (result === EditorLayout.ConfirmResult.Discard) discardAndSwitch();
+   * ```
+   */
+  static confirmModal(
+    popupId: string,
+    title: string,
+    message: string,
+    options?: {
+      /** Label for confirm button (default: "OK") */
+      confirmLabel?: string;
+      /** Label for cancel button (default: "Cancel") */
+      cancelLabel?: string;
+      /** Whether to show a discard button (default: false) */
+      showDiscard?: boolean;
+      /** Label for discard button (default: "Discard") */
+      discardLabel?: string;
+      /** Width of the modal (default: 300) */
+      width?: number;
+    },
+  ): 'confirm' | 'discard' | 'cancel' | 'none' {
+    const confirmLabel = options?.confirmLabel ?? 'OK';
+    const cancelLabel = options?.cancelLabel ?? 'Cancel';
+    const discardLabel = options?.discardLabel ?? 'Discard';
+    const showDiscard = options?.showDiscard ?? false;
+    const modalWidth = options?.width ?? 300;
+
+    let result: 'confirm' | 'discard' | 'cancel' | 'none' = 'none';
+
+    // Center the modal
+    const mainViewport = ImGui.GetMainViewport();
+    ImGui.SetNextWindowPos(
+      {
+        x: mainViewport.Pos.x + mainViewport.Size.x * 0.5,
+        y: mainViewport.Pos.y + mainViewport.Size.y * 0.5,
+      },
+      ImGui.Cond.Appearing,
+      { x: 0.5, y: 0.5 },
+    );
+    ImGui.SetNextWindowSize({ x: modalWidth, y: 0 }, ImGui.Cond.Appearing);
+
+    if (ImGui.BeginPopupModal(title, undefined, ImGui.WindowFlags.AlwaysAutoResize)) {
+      // Message
+      ImGui.TextWrapped(message);
+      ImGui.Spacing();
+      ImGui.Separator();
+      ImGui.Spacing();
+
+      // Buttons
+      const buttonWidth = showDiscard ? 80 : 100;
+
+      // Confirm button (styled as primary)
+      ImGui.PushStyleColorImVec4(ImGui.Col.Button, { x: 0.2, y: 0.5, z: 0.2, w: 1.0 });
+      ImGui.PushStyleColorImVec4(ImGui.Col.ButtonHovered, { x: 0.3, y: 0.6, z: 0.3, w: 1.0 });
+      if (ImGui.Button(confirmLabel, { x: buttonWidth, y: 0 })) {
+        result = 'confirm';
+        ImGui.CloseCurrentPopup();
+      }
+      ImGui.PopStyleColor(2);
+
+      ImGui.SameLine();
+
+      // Discard button (styled as warning)
+      if (showDiscard) {
+        ImGui.PushStyleColorImVec4(ImGui.Col.Button, { x: 0.6, y: 0.4, z: 0.1, w: 1.0 });
+        ImGui.PushStyleColorImVec4(ImGui.Col.ButtonHovered, { x: 0.7, y: 0.5, z: 0.2, w: 1.0 });
+        if (ImGui.Button(discardLabel, { x: buttonWidth, y: 0 })) {
+          result = 'discard';
+          ImGui.CloseCurrentPopup();
+        }
+        ImGui.PopStyleColor(2);
+        ImGui.SameLine();
+      }
+
+      // Cancel button
+      if (ImGui.Button(cancelLabel, { x: buttonWidth, y: 0 })) {
+        result = 'cancel';
+        ImGui.CloseCurrentPopup();
+      }
+
+      ImGui.EndPopup();
+    }
+
+    return result;
+  }
+
+  // ==========================================================================
   // Button
   // ==========================================================================
 

@@ -101,6 +101,18 @@ function updateAnimationController(
   // Skip if no animation selected
   if (!controller.currentAnimationId) return;
 
+  // Handle playOnStart: if playOnStart is true, not playing, and time is at 0, start playing
+  // This ensures animations start automatically when gameplay begins
+  if (
+    !isPreviewMode &&
+    controller.playOnStart &&
+    !controller.isPlaying &&
+    controller.currentTime === 0 &&
+    controller.loopCount === 0
+  ) {
+    controller.isPlaying = true;
+  }
+
   // In preview mode, we always evaluate at the current time (managed by editor)
   // In normal mode, we only update if playing
   if (!isPreviewMode && !controller.isPlaying) return;

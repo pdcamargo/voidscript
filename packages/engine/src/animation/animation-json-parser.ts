@@ -173,6 +173,7 @@ export function parseAnimationClipJson(json: AnimationClipJson): AnimationClip {
   }
 
   const clip = AnimationClip.create(json.id)
+    .setName(json.name ?? '')
     .setDuration(json.duration)
     .setLoopMode(loopModeFromString(json.loopMode))
     .setSpeed(json.speed ?? 1.0);

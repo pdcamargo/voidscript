@@ -661,6 +661,140 @@ data.myValue = value[0];
 
 Always use unique `##hiddenLabel` identifiers for each control to avoid ImGui ID conflicts.
 
+### EditorLayout Static Methods
+
+**CRITICAL**: All custom editors MUST use `EditorLayout` methods instead of raw ImGui calls. EditorLayout provides consistent styling, proper layout, and handles label positioning automatically.
+
+**Key File:** `packages/engine/src/app/imgui/editor-layout.ts`
+
+**Available Methods:**
+
+#### Basic Field Methods
+
+```typescript
+// Number field with drag control
+const [value, changed] = EditorLayout.numberField('Speed', data.speed, {
+  min: 0.1, max: 10.0, speed: 0.01, tooltip: 'Playback speed multiplier'
+});
+if (changed) data.speed = value;
+
+// Checkbox field
+const [checked, changed] = EditorLayout.checkboxField('Play On Start', data.playOnStart, {
+  tooltip: 'Start playing when gameplay begins'
+});
+if (changed) data.playOnStart = checked;
+
+// Vector3 field
+const [vec, changed] = EditorLayout.vector3Field('Position', data.position);
+if (changed) { data.position.x = vec.x; data.position.y = vec.y; data.position.z = vec.z; }
+
+// Color field
+const [color, changed] = EditorLayout.colorField('Tint', data.color);
+if (changed) { data.color.r = color.r; /* etc */ }
+```
+
+#### Select/Dropdown Field
+
+```typescript
+// Simple dropdown with value/label pairs
+const options = [
+  { value: 'once', label: 'Once' },
+  { value: 'loop', label: 'Loop' },
+  { value: 'pingpong', label: 'Ping Pong' },
+];
+const [selected, changed] = EditorLayout.selectField('Loop Mode', data.loopMode, options, {
+  allowNone: false,
+  tooltip: 'How the animation loops',
+});
+if (changed) data.loopMode = selected;
+
+// Nullable dropdown
+const [animId, changed] = EditorLayout.selectField('Animation', data.currentAnimationId, animOptions, {
+  allowNone: true,
+  noneLabel: '(None)',
+});
+```
+
+#### List Section (for arrays/collections)
+
+```typescript
+// Modern styled list with add/remove controls
+const listItems = data.animations.map(asset => ({
+  id: asset.guid,
+  displayName: asset.data?.name || 'Unnamed',
+  data: asset,
+}));
+
+EditorLayout.listSection(
+  'Animations',           // Section label
+  listItems,              // Items array
+  () => { /* onAdd */ },  // Add callback
+  (id) => { /* onRemove */ }, // Remove callback (receives item id)
+  {
+    defaultOpen: true,
+    emptyMessage: 'No animations added',
+    addTooltip: 'Add Animation',
+  }
+);
+```
+
+#### Confirmation Modal
+
+```typescript
+// Show save confirmation modal
+const result = EditorLayout.confirmModal(
+  'SaveChanges##editor',
+  'Unsaved Changes',
+  'You have unsaved changes. Would you like to save before continuing?',
+  {
+    confirmLabel: 'Save',
+    cancelLabel: 'Cancel',
+    showDiscard: true,
+    discardLabel: 'Discard',
+  }
+);
+
+if (result === 'confirm') {
+  // User clicked Save
+} else if (result === 'discard') {
+  // User clicked Discard
+} else if (result === 'cancel') {
+  // User clicked Cancel
+}
+// result === 'none' means modal still open
+```
+
+#### Icon Buttons
+
+```typescript
+import { EDITOR_ICONS } from '../editor-icons.js';
+
+// Icon button with tooltip
+if (EditorLayout.iconButton(EDITOR_ICONS.PLAY, {
+  size: 'small',  // 'small' | 'medium' | 'big'
+  tooltip: 'Play animation',
+  id: 'playBtn',  // Unique ID suffix
+  color: { r: 0.2, g: 0.6, b: 0.3 },
+})) {
+  startPlayback();
+}
+```
+
+#### Spacing and Layout
+
+```typescript
+EditorLayout.spacing();        // Add vertical spacing
+EditorLayout.hint('Some hint text');  // Gray hint text
+EditorLayout.sectionHeader('Section Title');  // Bold section header
+```
+
+**Best Practices:**
+- Always use EditorLayout methods, never raw ImGui calls in custom editors
+- Use `selectField` instead of `ImGui.BeginCombo()`
+- Use `listSection` for array/collection properties
+- Use `confirmModal` for save/discard prompts
+- Use `iconButton` for all icon buttons (consistent sizing and styling)
+
 ### Animation System
 
 The engine has a keyframe-based animation system supporting multiple property types, easing functions, and loop modes.
