@@ -19,7 +19,7 @@
 |---------|-----------|--------|
 | **0.1.0** | Editor separated from engine, external projects possible | Planned |
 | **0.2.0** | Can export playable desktop/web games | Planned |
-| **0.3.0** | Save/load, scenes, input actions working | Planned |
+| **0.3.0** | Save/load, input actions working | Planned |
 | **0.4.0** | Standalone editor, undo/redo, profiler | Planned |
 | **1.0.0** | Production-ready, particle system, localization | Planned |
 
@@ -32,21 +32,23 @@
 - [x] 2D Sprite Rendering (sprites, VSL shaders, 19 post-processing effects)
 - [x] Editor (play/pause/stop, hierarchy, inspector, animation/sprite/state-machine editors)
 - [x] Asset System (lazy loading, JSON manifest, 13+ asset types)
-- [x] World Serialization (snapshots, entity ID remapping)
+- [x] Scene Serialization (snapshots, entity ID remapping) - currently called "World"
 - [x] Basic Tauri Integration (apps/kingdom/src-tauri)
 
 ### Critical Gaps
 - [ ] Build/Export Pipeline
 - [ ] Asset Packing
 - [ ] Editor/Engine Separation
+- [ ] Project Settings System
 - [ ] Save/Load System
-- [ ] Scene Management
+- [ ] File Browser (separate from Asset Browser)
 - [ ] Test Coverage (currently 3 test files)
 
 ---
 
 ## Target Architecture
 
+### Package Structure
 ```
 packages/
   @voidscript/core/         # ECS, math, utilities
@@ -61,6 +63,67 @@ apps/
   editor/                   # Standalone editor application
 ```
 
+### Project Structure (Created by CLI)
+```
+my-game/                                    # Git repo root
+  project/
+    settings/
+      physics.yaml                          # Gravity, timestep, layers
+      renderer.yaml                         # Pixels per unit, clear color
+      audio.yaml                            # Master volume, bus config
+      input.yaml                            # Input action mappings
+      build.yaml                            # Entry scene, included scenes, platforms
+    scenes/
+      main-menu.scene.yaml
+      level-1.scene.yaml
+    assets/
+      textures/
+      audio/
+      animations/
+    src/
+      main.ts
+      systems/
+      components/
+
+  editor/
+    settings/
+      preferences.yaml                      # Grid size, snap, theme (shared with team)
+```
+
+### Editor App Data (Tauri paths, outside project)
+```
+~/.local/share/voidscript/                  # Linux (or platform equivalent)
+~/Library/Application Support/voidscript/   # macOS
+%APPDATA%/voidscript/                       # Windows
+
+  layout.json                               # Window positions, panel sizes
+  window-state.json                         # Last window size/position/maximized
+  recent-projects.json                      # List of recent projects with paths
+  project-states/
+    <project-hash>/
+      recent-scenes.json                    # Recent scenes for this project
+      last-opened.json                      # Last opened scene, selection state
+  cache/
+    thumbnails/                             # Asset thumbnails
+    compiled-shaders/                       # Cached shader compilation
+```
+
+**Note**:
+- `project/` is version controlled and shipped with the game
+- `editor/settings/` is version controlled (team shares editor preferences)
+- App data (layout, recent projects, cache) is local to each machine via Tauri's `appDataDir`
+
+---
+
+## Key Terminology Changes
+
+| Old Term | New Term | Reason |
+|----------|----------|--------|
+| World | Scene | More intuitive, matches industry standard |
+| World serialization | Scene file (.scene.yaml) | Clearer purpose |
+
+The current `World` class remains as the ECS runtime container. "Scene" refers to the serialized format and loading/unloading operations.
+
 ---
 
 ## Phase 1: Foundation (4-6 weeks)
@@ -70,24 +133,60 @@ apps/
 **Milestone**: Can create and run projects outside the monorepo
 
 ### 1.1 Editor Package Separation
+
+> **IMPORTANT: ImGui API Abstraction Requirement**
+>
+> The `@voidscript/editor` package and standalone editor application **MUST completely wrap the ImGui API**. Developers creating editor extensions, custom inspectors, or editor plugins should **NEVER**:
+> - Import directly from `imgui` or `@mori2003/jsimgui`
+> - See ImGui function names or types in their code
+> - Deal with jsimgui binding limitations or workarounds
+>
+> All ImGui interactions must go through our abstraction layer (`EditorLayout`, `EditorWidgets`, etc.). This includes:
+> - Mouse position workarounds (jsimgui's `GetCursorScreenPos()` doesn't work)
+> - Coordinate system conversions
+> - Popup/modal management
+> - Input handling quirks
+>
+> These hacks and workarounds should be **encapsulated once** in EditorLayout and related utilities, so users get a clean, consistent API without needing to know ImGui internals.
+
 - [ ] Create `packages/editor/` package structure
 - [ ] Move `src/editor/` to new package
 - [ ] Move editor panels from `src/app/imgui/`
 - [ ] Move editor-specific systems and managers
 - [ ] Create engine/editor interface contract
+- [ ] **Wrap all ImGui calls in EditorLayout/EditorWidgets abstractions**
+- [ ] **Ensure no imgui imports leak to public API**
 - [ ] Update all imports across codebase
 - [ ] Verify engine runs standalone without editor
 - [ ] Add tests for editor initialization
 
-### 1.2 CLI Tool Package
+### 1.2 World → Scene Rename
+- [ ] Rename serialization format from `.world.yaml` to `.scene.yaml`
+- [ ] Update WorldSerializer → SceneSerializer
+- [ ] Add SceneManager convenience API for loading/unloading
+- [ ] Implement persistent entities (survive scene changes)
+- [ ] Add scene load options (clear, merge, preserve entities)
+- [ ] Update all documentation and comments
+
+### 1.3 CLI Tool Package
 - [ ] Create `packages/cli/` package
 - [ ] Implement `voidscript create <name>` command
-- [ ] Create project template files
+- [ ] Create project template with folder structure
+- [ ] Generate default settings files
 - [ ] Implement `voidscript dev` command
-- [ ] Add project configuration schema (`voidscript.config.ts`)
 - [ ] Document CLI usage
 
-### 1.3 Runtime Mode Flag
+### 1.4 Project Settings System
+- [ ] Define settings file schema (YAML)
+- [ ] Create SettingsManager to load/save settings
+- [ ] Implement physics.yaml loader
+- [ ] Implement renderer.yaml loader
+- [ ] Implement audio.yaml loader
+- [ ] Implement input.yaml loader
+- [ ] Implement build.yaml loader
+- [ ] Settings hot-reload in editor (optional)
+
+### 1.5 Runtime Mode Flag
 - [ ] Add `VOIDSCRIPT_RUNTIME_ONLY` build flag
 - [ ] Conditional imports for editor code
 - [ ] Verify tree-shaking works
@@ -100,6 +199,8 @@ apps/
 - `packages/cli/src/commands/create.ts`
 - `packages/cli/src/commands/dev.ts`
 - `packages/cli/src/templates/`
+- `packages/engine/src/settings/settings-manager.ts`
+- `packages/engine/src/settings/schemas/`
 
 ---
 
@@ -109,7 +210,21 @@ apps/
 
 **Milestone**: Can export playable desktop and web games
 
-### 2.1 Asset Packing System
+### 2.1 File Browser Panel
+- [ ] Create File Browser panel (separate from Asset Browser)
+- [ ] Show actual disk contents of project/assets/
+- [ ] Display import status indicator per file
+  - ✓ = in manifest (imported)
+  - ⚠ = not in manifest (not imported)
+- [ ] Right-click → Import action
+- [ ] Import dialog with asset-type-specific options
+  - Textures: filter, wrap, sprite slicing
+  - Audio: (future: compression settings)
+  - Models: scale, rotation
+- [ ] Drag files from OS into File Browser
+- [ ] Delete/rename/move files
+
+### 2.2 Asset Packing System
 - [ ] Define .vpk pack format specification
 - [ ] Implement asset packer CLI command
 - [ ] Create VirtualFileSystem abstraction
@@ -118,31 +233,22 @@ apps/
 - [ ] Integrate with asset loader
 - [ ] Add asset hash verification
 
-### 2.2 Build Export Pipeline
+### 2.3 Build Export Pipeline
 - [ ] Implement `voidscript export` command
+- [ ] Read build.yaml for entry scene and included assets
 - [ ] Tauri desktop export (Windows, macOS, Linux)
 - [ ] Web export (static files)
 - [ ] Generate platform-specific configs
 - [ ] Bundle optimization (minification, tree-shaking)
 - [ ] Asset copying/packing during build
 
-### 2.3 Scene System
-- [ ] Create SceneManager resource
-- [ ] Define Scene asset type
-- [ ] Implement scene loading/unloading
-- [ ] Add scene transition system
-- [ ] Implement persistent entities
-- [ ] Add additive scene loading
-- [ ] Create scene serialization format
-
 **Files to Create**:
+- `packages/editor/src/panels/file-browser.ts`
+- `packages/editor/src/dialogs/import-dialog.ts`
 - `packages/cli/src/commands/pack.ts`
 - `packages/cli/src/commands/export.ts`
 - `packages/engine/src/asset/virtual-fs.ts`
 - `packages/engine/src/asset/pack-reader.ts`
-- `packages/engine/src/scene/scene-manager.ts`
-- `packages/engine/src/scene/scene-asset.ts`
-- `packages/engine/src/scene/scene-loader.ts`
 
 ---
 
@@ -154,22 +260,26 @@ apps/
 
 ### 3.1 Save/Load System
 - [ ] Create SaveManager resource
-- [ ] Implement save serialization
+- [ ] Implement save serialization (separate from scene serialization)
 - [ ] Add save slot management
 - [ ] Implement save versioning
 - [ ] Add migration system for old saves
 - [ ] Create Saveable component marker
 - [ ] Add auto-save functionality
+- [ ] Save file location (user data directory)
 
 ### 3.2 Input Action System
-- [ ] Create InputMap configuration
+- [ ] Load input mappings from input.yaml
+- [ ] Create InputMap runtime configuration
 - [ ] Implement action bindings
 - [ ] Add gamepad support
-- [ ] Implement input contexts
-- [ ] Add rebindable controls
+- [ ] Implement input contexts (UI vs gameplay)
+- [ ] Add rebindable controls (runtime)
+- [ ] Save rebinds to user preferences
 - [ ] Implement input buffering
 
 ### 3.3 Audio Improvements
+- [ ] Load audio config from audio.yaml
 - [ ] Create audio bus/mixer system
 - [ ] Implement 3D spatial audio
 - [ ] Add audio pooling
@@ -181,7 +291,7 @@ apps/
 - [ ] Serialization tests (target: 70%)
 - [ ] Asset system tests (target: 60%)
 - [ ] Animation tests (target: 50%)
-- [ ] Scene system tests (target: 70%)
+- [ ] Settings system tests (target: 70%)
 - [ ] Save system tests (target: 80%)
 
 **Files to Create**:
@@ -202,10 +312,14 @@ apps/
 
 ### 4.1 Standalone Editor Application
 - [ ] Create `apps/editor/` structure
-- [ ] Implement project manager UI
-- [ ] Add recent projects list
-- [ ] Implement project settings panel
-- [ ] Add build/export from editor
+- [ ] Implement project manager UI (open/create)
+- [ ] Load/save recent projects from Tauri appDataDir
+- [ ] Load project settings from project/settings/
+- [ ] Load shared editor prefs from editor/settings/preferences.yaml
+- [ ] Load/save window layout from Tauri appDataDir
+- [ ] Per-project state (recent scenes, last opened) in appDataDir
+- [ ] Implement project settings panel (edit YAML files via UI)
+- [ ] Add build/export from editor menu
 - [ ] Create installer/distribution
 
 ### 4.2 Undo/Redo System
@@ -240,6 +354,7 @@ apps/
 - `apps/editor/src/main.ts`
 - `apps/editor/src/project-manager.ts`
 - `apps/editor/src-tauri/tauri.conf.json`
+- `packages/editor/src/panels/project-settings-panel.ts`
 - `packages/editor/src/undo-redo/command-history.ts`
 - `packages/editor/src/undo-redo/operations/`
 - `packages/engine/src/debug/profiler.ts`
@@ -301,12 +416,95 @@ These features are acknowledged but not currently prioritized:
 
 ---
 
+## Settings File Examples
+
+### project/settings/physics.yaml
+```yaml
+gravity:
+  x: 0
+  y: -9.8
+  z: 0
+fixedTimestep: 0.016
+velocityIterations: 8
+positionIterations: 3
+layers:
+  - name: default
+  - name: player
+  - name: enemies
+  - name: projectiles
+collisionMatrix:
+  player: [enemies, projectiles]
+  enemies: [player, projectiles]
+```
+
+### project/settings/renderer.yaml
+```yaml
+pixelsPerUnit: 16
+clearColor: "#1a1a2e"
+antialiasing: false
+pixelPerfect: true
+defaultSortingLayer: "default"
+sortingLayers:
+  - background
+  - default
+  - foreground
+  - ui
+```
+
+### project/settings/build.yaml
+```yaml
+gameName: "My Game"
+version: "1.0.0"
+entryScene: "scenes/main-menu.scene.yaml"
+includedScenes:
+  - "scenes/**/*.scene.yaml"
+platforms:
+  desktop:
+    wrapper: tauri
+    targets: [windows, macos, linux]
+  web:
+    enabled: true
+    serverRequired: false
+```
+
+### editor/settings/preferences.yaml (in project, shared with team)
+```yaml
+theme: dark
+gridSize: 16
+snapToGrid: true
+showGrid: true
+autoSaveInterval: 300
+defaultZoom: 1.0
+```
+
+### App Data: layout.json (Tauri appDataDir, local to machine)
+```json
+{
+  "panels": {
+    "hierarchy": { "width": 250, "visible": true },
+    "inspector": { "width": 300, "visible": true },
+    "assets": { "height": 200, "visible": true }
+  },
+  "windowState": {
+    "width": 1920,
+    "height": 1080,
+    "x": 100,
+    "y": 100,
+    "maximized": false
+  }
+}
+```
+
+---
+
 ## Success Metrics
 
 | Phase | Metric | Target |
 |-------|--------|--------|
 | 1 | External project creation | Works |
 | 1 | Editor/engine separation | Clean interface |
+| 1 | Settings loaded from YAML | All 5 settings files |
+| 2 | File browser import flow | Works |
 | 2 | Export to desktop | < 5 min build time |
 | 2 | Bundle size (web) | < 2MB gzipped |
 | 3 | Test coverage | > 60% overall |
@@ -344,3 +542,11 @@ These features are acknowledged but not currently prioritized:
 - Current state assessment completed
 - Architecture plan defined
 - 5 phases outlined with detailed tasks
+
+### 2024-12-31 (Update)
+- Renamed World → Scene terminology
+- Added Project Settings System (project/settings/*.yaml)
+- Added Editor Settings (editor/settings/*.yaml)
+- Added File Browser panel (separate from Asset Browser)
+- Removed redundant "Scene System" (Scene = renamed World serialization)
+- Added settings file examples
