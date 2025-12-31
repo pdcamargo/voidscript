@@ -85,9 +85,9 @@ world:
                 y: 1
                 z: 1
                 w: 0.0784313753247261
-              wave_speed: 0.4560000002384186
-              wave_distortion: 0.40799999237060547
-              wave_multiplier: 18.993999481201172
+              distortion_amount: 0.009
+              distortion_speed: 1
+              distortion_scale: 40
               enable_water_texture: true
               foam_scale:
                 x: 70

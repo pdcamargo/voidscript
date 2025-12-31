@@ -120,7 +120,7 @@ entities:
         data:
           position:
             x: -78.18800354003906
-            y: 1.077000044286251
+            y: 0.6770000457763672
             z: 10
           rotation:
             x: 0
@@ -151,7 +151,7 @@ entities:
           mode: transposer
           offset:
             x: 0
-            y: -0.10000000149011612
+            y: -0.5
             z: 10
           damping: 30
           dampingPerAxis: null
@@ -184,7 +184,7 @@ entities:
         data:
           position:
             x: -78.18800354003906
-            y: 1.077000044286251
+            y: 0.6770000457763672
             z: 10
           rotation:
             x: 0
@@ -1143,7 +1143,7 @@ entities:
         typeName: Sprite2D
         data:
           texture:
-            guid: character-stop-run-mjtal8oq
+            guid: character-idle-mjtakht8
           color:
             r: 1
             g: 1
@@ -1163,7 +1163,7 @@ entities:
           visible: true
           isLit: true
           spriteRect:
-            x: 144
+            x: 0
             y: 0
             width: 144
             height: 112
@@ -1240,7 +1240,7 @@ entities:
       - typeId: 28
         typeName: Player2D
         data:
-          movementSpeed: 20
+          movementSpeed: 7
   - id: 18
     generation: 0
     components:
@@ -1453,7 +1453,7 @@ entities:
           lightningIntensity: 0.9959999918937683
           stormIntensity: 0.8500000238418579
 metadata:
-  createdAt: 2025-12-31T08:04:50.298Z
-  modifiedAt: 2025-12-31T08:04:50.298Z
+  createdAt: 2025-12-31T08:48:03.116Z
+  modifiedAt: 2025-12-31T08:48:03.116Z
   entityCount: 22
   archetypeCount: 60

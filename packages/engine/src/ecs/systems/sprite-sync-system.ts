@@ -73,7 +73,10 @@ interface SpriteEntry {
   material: AnySpriteMaterial;
   geometry: THREE.PlaneGeometry;
   texture: THREE.Texture | null;
+  /** Currently displayed texture URL */
   textureUrl: string | null;
+  /** Currently loading texture URL (to prevent white flash during async load) */
+  pendingTextureUrl: string | null;
   lastSortingLayer: number;
   lastSortingOrder: number;
   lastTileIndex: number | null;
@@ -157,6 +160,7 @@ export class SpriteRenderManager {
       geometry,
       texture: null,
       textureUrl: null,
+      pendingTextureUrl: null,
       lastSortingLayer: spriteData.sortingLayer,
       lastSortingOrder: spriteData.sortingOrder,
       lastTileIndex: spriteData.tileIndex,
@@ -426,6 +430,10 @@ export class SpriteRenderManager {
 
   /**
    * Load texture for sprite if needed
+   *
+   * Key behavior: When swapping textures (e.g., during animation), keep the OLD
+   * texture displayed until the NEW texture finishes loading. This prevents
+   * white flashes during texture transitions.
    */
   private async loadTextureIfNeeded(entity: Entity, spriteData: Sprite2DData): Promise<void> {
     const entry = this.sprites.get(entity);
@@ -439,34 +447,24 @@ export class SpriteRenderManager {
       textureUrl = spriteData.texture.getLoadableUrl();
     }
 
-    // Check if texture changed
+    // Case 1: No change - already displaying this texture
     if (textureUrl === entry.textureUrl) {
-      return; // No change needed
+      return;
     }
 
-    // Clear old texture
-    if (entry.texture) {
-      if (isStandardSpriteMaterial(entry.material)) {
-        entry.material.map = null;
-      } else {
-        // For shader materials, clear texture uniforms (map is the actual uniform name)
-        const shaderMaterial = entry.material as THREE.ShaderMaterial;
-        if (shaderMaterial.uniforms['map']) {
-          shaderMaterial.uniforms['map'].value = null;
-        }
-      }
-      entry.material.needsUpdate = true;
-      // Don't dispose - might be shared
+    // Case 2: Already loading this texture - wait for it
+    if (textureUrl === entry.pendingTextureUrl) {
+      return;
     }
 
-    entry.textureUrl = textureUrl;
-
+    // Case 3: Texture intentionally removed (set to null) - clear immediately
     if (!textureUrl) {
+      entry.textureUrl = null;
+      entry.pendingTextureUrl = null;
       entry.texture = null;
       if (isStandardSpriteMaterial(entry.material)) {
         entry.material.map = null;
       } else {
-        // For shader materials, clear texture uniforms (map is the actual uniform name)
         const shaderMaterial = entry.material as THREE.ShaderMaterial;
         if (shaderMaterial.uniforms['map']) {
           shaderMaterial.uniforms['map'].value = null;
@@ -476,7 +474,10 @@ export class SpriteRenderManager {
       return;
     }
 
-    // Load new texture
+    // Case 4: New texture to load - mark as pending but KEEP old texture displayed
+    entry.pendingTextureUrl = textureUrl;
+
+    // Load new texture asynchronously
     try {
       const options: TextureLoadOptions = {
         filtering: 'linear',
@@ -485,14 +486,16 @@ export class SpriteRenderManager {
 
       const texture = await loadTexture(textureUrl, options);
 
-      // Verify entity still exists and URL hasn't changed
+      // Verify entity still exists and this is still the texture we want
       const currentEntry = this.sprites.get(entity);
-      if (!currentEntry || currentEntry.textureUrl !== textureUrl) {
-        return; // Entity removed or URL changed during load
+      if (!currentEntry || currentEntry.pendingTextureUrl !== textureUrl) {
+        return; // Entity removed or different texture now requested
       }
 
-      // Apply texture to material
+      // Success! Now swap the texture atomically
       entry.texture = texture;
+      entry.textureUrl = textureUrl;
+      entry.pendingTextureUrl = null;
 
       if (isStandardSpriteMaterial(entry.material)) {
         entry.material.map = texture;
@@ -533,6 +536,8 @@ export class SpriteRenderManager {
         entry.material.needsUpdate = true;
       }
     } catch (error) {
+      // Load failed - clear pending but keep old texture displayed
+      entry.pendingTextureUrl = null;
       console.warn(`Failed to load texture for sprite entity ${entity}:`, error);
     }
   }
