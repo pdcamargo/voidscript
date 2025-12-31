@@ -222,99 +222,90 @@ function renderBackground(
   ImGui.SetCursorPos({ x: 0, y: 0 });
   ImGui.Dummy({ x: virtualWidth, y: virtualHeight });
 
-  // Calculate mouseCanvasPos using a consistent method
-  // We know that nodes are rendered at screenPos = (canvasPos - scrollOffset) * zoom
-  // So canvasPos = screenPos / zoom + scrollOffset
-  // Where screenPos is the window-local position (not screen position)
-
-  // To get window-local mouse position, we need:
-  // windowLocalMouse = screenMouse - windowContentStart
-
-  // GetScrollX/Y gives us how far we've scrolled
-  // The window content starts at some position we can't directly get
-
-  // WORKAROUND: Use GetIO().MousePos relative to main viewport, then subtract estimated window pos
-  // This is what we had before but was wrong. Let's try a different approach:
-  // Use InvisibleButton and check IsItemActive/Hovered to determine position relative to it
-
-  // Actually the correct approach is to calculate based on what we CAN know:
-  // - We're inside a child window
-  // - Items are positioned with SetCursorPos relative to the scrolled content
-  // - A node at canvas (100, 100) is rendered at window-local ((100 - scrollOffset.x) * zoom, (100 - scrollOffset.y) * zoom)
-  // - If that's at window-local (x, y), and the mouse is at window-local (mx, my), then:
-  //   mouseCanvasPos = (mx, my) / zoom + scrollOffset
-
-  // To get mx, my (window-local mouse):
-  // After BeginChild, the window content is at some screen position.
-  // GetCursorPosX/Y gives positions relative to this.
-  // But we need mouse position relative to this same origin.
-
-  // SOLUTION: Render an invisible button at (0,0) and when it's hovered/active,
-  // the mouse position relative to it can be inferred from scroll position.
-
-  // The scroll values tell us how much content is scrolled off-screen.
-  // If we're at scroll (50, 50), and the virtual canvas is 4000x3000,
-  // then content from (50, 50) to (50 + availableWidth, 50 + availableHeight) is visible.
-  // The mouse, when over this region, corresponds to canvas positions in that range.
-
-  // More precisely:
-  // visibleContentStart = (scrollX, scrollY) in window-local coords
-  // If mouse is at screen position (screenMouseX, screenMouseY), and the window content
-  // area starts at screen position (windowContentScreenX, windowContentScreenY), then:
-  // windowLocalMouse = screenMouse - windowContentScreen
-
-  // Since windowContentScreen is unknown, we use another approach:
-  // Track the delta between expected and actual item positions using a dummy item.
-
-  // Final simple approach that should work:
-  // Get the scroll offset and use it directly. The mouse position in the scrolled
-  // content frame is approximately: scrollOffset + (screenMousePos - windowScreenPos) / zoom
-  // We estimate windowScreenPos using the main viewport for now, but add a correction factor.
-
-  // Actually, let's trace through what happens:
-  // 1. beginCanvas is called, we're inside a child window
-  // 2. SetCursorPos({0, 0}) positions at the start of scrolled content
-  // 3. Background button is rendered covering full virtual size
-  // 4. Nodes are rendered at positions relative to scrolled content origin
-
-  // The key: GetCursorPosX/Y AFTER BeginChild gives the content cursor start.
-  // Before any SetCursorPos, this is typically small values (0 or padding).
-  // After SetCursorPos({0,0}), cursor is at (0, 0) in content coords.
-
-  // To get mouse in content coords:
-  // We need to know where content (0,0) is in screen coords.
-  // Without GetWindowPos or GetCursorScreenPos, we can't get this directly.
-
-  // PRAGMATIC SOLUTION:
-  // 1. Store mouse delta between frames for dragging (works regardless of offset)
-  // 2. For click-to-add-node, use the last known "correct" position or context menu position
-
-  // For now, let's calculate using scroll and try to make it work consistently:
   const scrollX = ImGui.GetScrollX();
   const scrollY = ImGui.GetScrollY();
 
-  // Assume the child window content area starts at approximately the current cursor baseline
-  // This won't be perfectly accurate but will be consistent for drag operations
-  // The issue is that cursor pos is in window-local space, not screen space
+  // CALIBRATION SOLUTION for calculating canvas origin:
+  //
+  // The challenge: jsimgui doesn't expose GetWindowPos() or GetCursorScreenPos().
+  // We need to determine where the child window content starts in screen coords.
+  //
+  // Solution: Use edge-detection calibration.
+  // 1. Render 4 thin invisible buttons along each edge of the visible area
+  // 2. When the mouse enters from an edge (hover detected on edge button),
+  //    we know the exact window-local coordinate at that edge position
+  // 3. From this, we can calculate the window screen origin
 
-  // Best we can do without proper APIs:
-  // Estimate canvas origin as mainViewport.Pos + some offset for the window structure
-  // This is what we'll use for context menu positioning
-  const mainViewport = ImGui.GetMainViewport();
-  context.canvasOrigin = {
-    x: mainViewport.Pos.x,
-    y: mainViewport.Pos.y,
+  const io = ImGui.GetIO();
+  const visibleWidth = context.visibleSize.width;
+  const visibleHeight = context.visibleSize.height;
+  const edgeThickness = 8; // Thin edge detection zones
+
+  // Left edge button - when hovered, mouse is at window-local x ≈ 0
+  ImGui.SetCursorPos({ x: 0, y: 0 });
+  ImGui.InvisibleButton('##edgeLeft', { x: edgeThickness, y: visibleHeight });
+  if (ImGui.IsItemHovered()) {
+    // Mouse is near left edge, so mouseWindowLocal.x ≈ io.MousePos.x - mouse position within button
+    // Since button starts at x=0, the window origin x is approximately mouseScreen.x minus a small offset
+    const estimatedLocalX = (io.MousePos.x - (state.calibratedWindowOrigin?.x ?? io.MousePos.x)) ;
+    if (estimatedLocalX < 0 || estimatedLocalX > edgeThickness || !state.calibratedWindowOrigin) {
+      // Mouse is at the left edge, so windowOrigin.x = mouseScreen.x - (small offset within button)
+      // We approximate: mouse is at windowLocal.x ≈ edgeThickness/2
+      state.calibratedWindowOrigin = {
+        x: io.MousePos.x - edgeThickness / 2,
+        y: state.calibratedWindowOrigin?.y ?? (io.MousePos.y - visibleHeight / 2),
+      };
+    }
+  }
+
+  // Top edge button - when hovered, mouse is at window-local y ≈ 0
+  ImGui.SetCursorPos({ x: 0, y: 0 });
+  ImGui.InvisibleButton('##edgeTop', { x: visibleWidth, y: edgeThickness });
+  if (ImGui.IsItemHovered()) {
+    state.calibratedWindowOrigin = {
+      x: state.calibratedWindowOrigin?.x ?? (io.MousePos.x - visibleWidth / 2),
+      y: io.MousePos.y - edgeThickness / 2,
+    };
+  }
+
+  // Right edge button - when hovered, mouse is at window-local x ≈ visibleWidth
+  ImGui.SetCursorPos({ x: visibleWidth - edgeThickness, y: 0 });
+  ImGui.InvisibleButton('##edgeRight', { x: edgeThickness, y: visibleHeight });
+  if (ImGui.IsItemHovered()) {
+    state.calibratedWindowOrigin = {
+      x: io.MousePos.x - visibleWidth + edgeThickness / 2,
+      y: state.calibratedWindowOrigin?.y ?? (io.MousePos.y - visibleHeight / 2),
+    };
+  }
+
+  // Bottom edge button - when hovered, mouse is at window-local y ≈ visibleHeight
+  ImGui.SetCursorPos({ x: 0, y: visibleHeight - edgeThickness });
+  ImGui.InvisibleButton('##edgeBottom', { x: visibleWidth, y: edgeThickness });
+  if (ImGui.IsItemHovered()) {
+    state.calibratedWindowOrigin = {
+      x: state.calibratedWindowOrigin?.x ?? (io.MousePos.x - visibleWidth / 2),
+      y: io.MousePos.y - visibleHeight + edgeThickness / 2,
+    };
+  }
+
+  // Use calibrated origin if available, otherwise fall back to initial estimate
+  const windowOrigin = state.calibratedWindowOrigin || {
+    // Initial estimate based on main viewport - will be refined when edges are hovered
+    x: ImGui.GetMainViewport().Pos.x,
+    y: ImGui.GetMainViewport().Pos.y,
   };
 
-  // For mouse canvas position, we need something that will be CONSISTENT
-  // even if not perfectly accurate. Use this formula:
-  // mouseCanvasPos = (mouseScreenPos - canvasOrigin) / zoom + scrollOffset
+  context.canvasOrigin = windowOrigin;
 
-  // This will have an offset error, but the error will be consistent,
-  // so drag deltas will work correctly.
+  // Compute mouse canvas position using the calibrated window origin
+  // Formula: canvasPos = (mouseWindowLocal + scrollPixels) / zoom
+  // Where mouseWindowLocal = mouseScreen - windowOrigin
+  const mouseWindowLocalX = context.mouseScreenPos.x - windowOrigin.x;
+  const mouseWindowLocalY = context.mouseScreenPos.y - windowOrigin.y;
+
   context.mouseCanvasPos = {
-    x: (context.mouseScreenPos.x - context.canvasOrigin.x + scrollX) / context.zoom,
-    y: (context.mouseScreenPos.y - context.canvasOrigin.y + scrollY) / context.zoom,
+    x: (mouseWindowLocalX + scrollX) / context.zoom,
+    y: (mouseWindowLocalY + scrollY) / context.zoom,
   };
 
   // Grid rendering (if enabled)

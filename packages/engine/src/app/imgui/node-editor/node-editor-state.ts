@@ -67,6 +67,8 @@ export interface NodeEditorState {
   hoveredPin: PinState | null;
   /** Whether the editor is dirty (has unsaved changes) */
   isDirty: boolean;
+  /** Calibrated window origin for accurate mouse-to-canvas conversion */
+  calibratedWindowOrigin: Vec2 | null;
 }
 
 // ============================================================================
@@ -97,6 +99,7 @@ export function createNodeEditorState(
     hoveredLinkId: null,
     hoveredPin: null,
     isDirty: false,
+    calibratedWindowOrigin: null,
   };
 }
 
