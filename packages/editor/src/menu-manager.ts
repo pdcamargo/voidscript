@@ -348,46 +348,19 @@ export class MenuManager {
 
   /**
    * Register global keyboard shortcuts for all panels and custom actions.
+   *
+   * Note: When running in Tauri with native menus, menu accelerators already
+   * handle shortcuts. Global shortcuts are only needed when the app is not focused
+   * or when running outside Tauri. For now, we skip global shortcut registration
+   * since the menu accelerators work when the app is focused.
    */
   async registerShortcuts(): Promise<void> {
-    try {
-      const { register } = await import(
-        '@tauri-apps/plugin-global-shortcut'
-      );
-
-      // Register panel shortcuts
-      for (const panel of this.panels.values()) {
-        if (panel.shortcut && !this.registeredShortcuts.has(panel.shortcut)) {
-          await register(panel.shortcut, () => {
-            panel.open();
-          });
-          this.registeredShortcuts.add(panel.shortcut);
-        }
-      }
-
-      // Register custom menu action shortcuts
-      for (const action of this.menuActions.values()) {
-        if (action.shortcut && !this.registeredShortcuts.has(action.shortcut)) {
-          await register(action.shortcut, () => {
-            void action.action();
-          });
-          this.registeredShortcuts.add(action.shortcut);
-        }
-      }
-
-      // Register app menu action shortcuts
-      for (const action of this.appMenuActions) {
-        if (action.shortcut && !this.registeredShortcuts.has(action.shortcut)) {
-          await register(action.shortcut, () => {
-            void action.action();
-          });
-          this.registeredShortcuts.add(action.shortcut);
-        }
-      }
-    } catch (error) {
-      // Not in Tauri environment or global-shortcut not available
-      console.debug('MenuManager: Could not register shortcuts:', error);
-    }
+    // Menu accelerators (set in buildAndSetMenu) already handle shortcuts
+    // when the app window is focused. Global shortcuts would cause double-firing.
+    // Only use global shortcuts if you need them to work when the app is NOT focused.
+    //
+    // For now, we rely on menu accelerators only.
+    console.debug('MenuManager: Shortcuts handled by menu accelerators');
   }
 
   /**
