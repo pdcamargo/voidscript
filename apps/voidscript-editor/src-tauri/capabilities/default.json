@@ -10,6 +10,14 @@
     "opener:default",
     "clipboard-manager:default",
     "dialog:default",
-    "fs:default"
+    "fs:default",
+    "fs:allow-appdata-read-recursive",
+    "fs:allow-appdata-write-recursive",
+    "fs:allow-exists",
+    "fs:allow-mkdir",
+    "global-shortcut:allow-register",
+    "global-shortcut:allow-unregister",
+    "global-shortcut:allow-is-registered",
+    "process:allow-exit"
   ]
 }

@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "voidscript-editor",
+  "productName": "Voidscript",
   "version": "0.1.0",
   "identifier": "io.fantasycraft.voidscript",
   "build": {
@@ -13,10 +13,12 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "voidscript-editor",
-        "width": 800,
-        "height": 600,
-        "devtools": true
+        "title": "VoidScript Editor",
+        "width": 1280,
+        "height": 720,
+        "devtools": true,
+        "decorations": false,
+        "transparent": false
       }
     ],
     "security": {

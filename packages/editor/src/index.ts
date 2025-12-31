@@ -19,6 +19,10 @@ export { EditorLayout, type TextOptions } from './editor-layout.js';
 // Enums and flags
 export { EditorPanelFocusFlags } from './focus-flags.js';
 
+// Managers
+export { MenuManager, type MenuActionConfig } from './menu-manager.js';
+export { PanelStateManager } from './panel-state-manager.js';
+
 // Types
 export type { Vec2, Size, Color } from './types.js';
 

@@ -7,6 +7,8 @@
 
 import { ImGui, ImGuiImplWeb, ImVec2Helpers } from '@voidscript/imgui';
 import type { EditorPanel } from './editor-panel.js';
+import { MenuManager } from './menu-manager.js';
+import { PanelStateManager } from './panel-state-manager.js';
 
 /**
  * Configuration options for EditorApplication
@@ -38,6 +40,15 @@ export class EditorApplication {
   private isRunning = false;
   private clearColor: { r: number; g: number; b: number; a: number };
   private animationFrameId: number | null = null;
+
+  /** Manager for native Tauri menu bar */
+  private readonly menuManager = new MenuManager();
+
+  /** Manager for panel state persistence */
+  private readonly panelStateManager = new PanelStateManager();
+
+  /** Track panel open states to detect changes */
+  private lastPanelStates = new Map<string, boolean>();
 
   /**
    * Create a new EditorApplication
@@ -73,12 +84,25 @@ export class EditorApplication {
   }
 
   /**
-   * Register a panel to be rendered each frame
+   * Register a panel to be rendered each frame.
+   * If panel states have been loaded, applies the saved open state.
+   * Also registers the panel with the menu manager.
    *
    * @param panel - The panel instance to register
    */
   registerPanel(panel: EditorPanel): void {
     this.panels.push(panel);
+
+    // Register with menu manager for native menu integration
+    this.menuManager.registerPanel(panel);
+
+    // Apply saved state if available
+    if (this.panelStateManager.isLoaded()) {
+      panel.isOpen = this.panelStateManager.getOpenState(
+        panel.getId(),
+        panel.defaultOpen,
+      );
+    }
   }
 
   /**
@@ -91,6 +115,7 @@ export class EditorApplication {
     const index = this.panels.indexOf(panel);
     if (index !== -1) {
       this.panels.splice(index, 1);
+      this.menuManager.unregisterPanel(panel);
       return true;
     }
     return false;
@@ -106,12 +131,32 @@ export class EditorApplication {
   /**
    * Initialize ImGui and start the render loop.
    * This method returns a promise that resolves when the application stops.
+   *
+   * Also loads panel states from storage, builds the native menu bar,
+   * and registers global keyboard shortcuts.
    */
   async run(): Promise<void> {
     if (this.isRunning) {
       console.warn('EditorApplication is already running');
       return;
     }
+
+    // Load panel states from storage
+    await this.panelStateManager.load();
+
+    // Apply saved states to already-registered panels
+    for (const panel of this.panels) {
+      panel.isOpen = this.panelStateManager.getOpenState(
+        panel.getId(),
+        panel.defaultOpen,
+      );
+    }
+
+    // Build and set native Tauri menu bar
+    await this.menuManager.buildAndSetMenu();
+
+    // Register global keyboard shortcuts
+    await this.menuManager.registerShortcuts();
 
     // Initialize ImGui
     await this.initializeImGui();
@@ -135,14 +180,21 @@ export class EditorApplication {
   }
 
   /**
-   * Stop the render loop
+   * Stop the render loop.
+   * Also saves panel states and unregisters keyboard shortcuts.
    */
-  stop(): void {
+  async stop(): Promise<void> {
     this.isRunning = false;
     if (this.animationFrameId !== null) {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
     }
+
+    // Save panel states
+    await this.panelStateManager.saveImmediate(this.panels);
+
+    // Unregister keyboard shortcuts
+    await this.menuManager.unregisterShortcuts();
   }
 
   /**
@@ -164,6 +216,28 @@ export class EditorApplication {
    */
   getCanvas(): HTMLCanvasElement {
     return this.canvas;
+  }
+
+  /**
+   * Get the menu manager for advanced menu customization.
+   */
+  getMenuManager(): MenuManager {
+    return this.menuManager;
+  }
+
+  /**
+   * Get the panel state manager for advanced state control.
+   */
+  getPanelStateManager(): PanelStateManager {
+    return this.panelStateManager;
+  }
+
+  /**
+   * Save all panel states to storage.
+   * Uses debouncing to avoid excessive writes.
+   */
+  async savePanelStates(): Promise<void> {
+    await this.panelStateManager.save(this.panels);
   }
 
   /**
@@ -254,6 +328,9 @@ export class EditorApplication {
       for (const panel of this.panels) {
         panel.render();
       }
+
+      // Check for panel state changes and auto-save
+      this.checkAndSavePanelStates();
     } else {
       ImGui.PopStyleVar(3);
     }
@@ -271,6 +348,29 @@ export class EditorApplication {
       this.canvas.width = displayWidth;
       this.canvas.height = displayHeight;
       this.gl.viewport(0, 0, displayWidth, displayHeight);
+    }
+  }
+
+  /**
+   * Check if any panel states have changed and trigger save if needed.
+   */
+  private checkAndSavePanelStates(): void {
+    let hasChanges = false;
+
+    for (const panel of this.panels) {
+      const panelId = panel.getId();
+      const currentState = panel.isOpen;
+      const lastState = this.lastPanelStates.get(panelId);
+
+      if (lastState !== currentState) {
+        hasChanges = true;
+        this.lastPanelStates.set(panelId, currentState);
+      }
+    }
+
+    if (hasChanges) {
+      // Trigger debounced save
+      void this.panelStateManager.save(this.panels);
     }
   }
 }

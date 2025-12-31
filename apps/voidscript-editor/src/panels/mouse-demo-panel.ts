@@ -20,6 +20,12 @@ export class MouseDemoPanel extends EditorPanel {
       id: 'mouse-demo',
       title: 'Mouse Demo',
       initialSize: { x: 320, y: 280 },
+      // Menu integration: appears under Window > Mouse Demo
+      menuPath: 'Window/Mouse Demo',
+      // Keyboard shortcut to open/focus this panel
+      shortcut: 'CmdOrCtrl+Shift+M',
+      // Start open by default
+      defaultOpen: true,
     });
   }
 

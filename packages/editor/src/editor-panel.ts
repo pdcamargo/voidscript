@@ -21,6 +21,25 @@ export interface EditorPanelConfig {
   initialSize?: Vec2;
   /** ImGui window flags (optional) */
   flags?: number;
+  /**
+   * Menu path for native Tauri menu bar integration.
+   * Uses "/" as separator for nested menus.
+   * @example "Window/Hierarchy" - Creates Window menu with Hierarchy item
+   * @example "Window/Debug/Profiler" - Creates Window > Debug > Profiler
+   */
+  menuPath?: string;
+  /**
+   * Keyboard shortcut to open/focus this panel.
+   * Uses Tauri accelerator format.
+   * @example "CmdOrCtrl+Shift+H"
+   * @example "Alt+1"
+   */
+  shortcut?: string;
+  /**
+   * Whether the panel should be open by default.
+   * @default true
+   */
+  defaultOpen?: boolean;
 }
 
 /**
@@ -55,6 +74,21 @@ export abstract class EditorPanel {
   /** ImGui window flags */
   protected readonly windowFlags: number;
 
+  /** Menu path for Tauri menu bar integration */
+  public readonly menuPath?: string;
+
+  /** Keyboard shortcut for opening this panel */
+  public readonly shortcut?: string;
+
+  /** Default open state (used when no persisted state exists) */
+  public readonly defaultOpen: boolean;
+
+  /** Current open state of the panel */
+  private _isOpen: boolean;
+
+  /** Whether to request focus on next render */
+  private shouldFocus = false;
+
   /** Tracks if the window was open in the previous frame */
   private wasOpen = false;
 
@@ -83,6 +117,10 @@ export abstract class EditorPanel {
     this.title = config.title;
     this.initialSize = config.initialSize;
     this.windowFlags = config.flags ?? 0;
+    this.menuPath = config.menuPath;
+    this.shortcut = config.shortcut;
+    this.defaultOpen = config.defaultOpen ?? true;
+    this._isOpen = this.defaultOpen;
   }
 
   /**
@@ -184,12 +222,62 @@ export abstract class EditorPanel {
   }
 
   /**
+   * Get the unique identifier for this panel.
+   */
+  public getId(): string {
+    return this.id;
+  }
+
+  /**
+   * Get whether the panel is currently open.
+   */
+  public get isOpen(): boolean {
+    return this._isOpen;
+  }
+
+  /**
+   * Set the open state of the panel.
+   * Use open() or close() methods for programmatic control with focus handling.
+   */
+  public set isOpen(value: boolean) {
+    this._isOpen = value;
+  }
+
+  /**
+   * Open the panel and bring it to focus.
+   * Called when user clicks the menu item or uses keyboard shortcut.
+   */
+  public open(): void {
+    this._isOpen = true;
+    // Request focus on next frame - ImGui will handle this when render() is called
+    this.shouldFocus = true;
+  }
+
+  /**
+   * Close the panel.
+   * Usually triggered by clicking the X button in the title bar.
+   */
+  public close(): void {
+    this._isOpen = false;
+  }
+
+  /**
    * Render the panel. Called by EditorApplication each frame.
    * Handles window creation, lifecycle events, and delegates to onRender().
    *
    * @internal
    */
   render(): void {
+    // Skip rendering if panel is closed
+    if (!this._isOpen) {
+      // Reset lifecycle tracking when closed
+      if (this.wasOpen) {
+        this.wasOpen = false;
+        this.onClosed();
+      }
+      return;
+    }
+
     // Set initial size if specified (only applies on first render)
     if (this.initialSize) {
       ImGui.SetNextWindowSize(
@@ -198,11 +286,17 @@ export abstract class EditorPanel {
       );
     }
 
+    // Handle focus request
+    if (this.shouldFocus) {
+      ImGui.SetNextWindowFocus();
+      this.shouldFocus = false;
+    }
+
     // Window title with unique ID (### separates visible title from ID)
     const windowTitle = `${this.title}###${this.id}`;
-    const isOpen: [boolean] = [true];
+    const isOpenRef: [boolean] = [true];
 
-    if (ImGui.Begin(windowTitle, isOpen, this.windowFlags)) {
+    if (ImGui.Begin(windowTitle, isOpenRef, this.windowFlags)) {
       // Handle opened lifecycle
       if (!this.wasOpen) {
         this.wasOpen = true;
@@ -217,10 +311,13 @@ export abstract class EditorPanel {
     }
     ImGui.End();
 
-    // Handle closed lifecycle
-    if (!isOpen[0] && this.wasOpen) {
-      this.wasOpen = false;
-      this.onClosed();
+    // Handle close button click (X in title bar)
+    if (!isOpenRef[0]) {
+      this._isOpen = false;
+      if (this.wasOpen) {
+        this.wasOpen = false;
+        this.onClosed();
+      }
     }
   }
 
