@@ -69,6 +69,7 @@ export class AnimationClip {
   private _duration: number = 1.0;
   private _loopMode: LoopMode = LoopMode.Once;
   private _speed: number = 1.0;
+  private _name: string = '';
 
   private constructor(id: string) {
     this.id = id;
@@ -144,6 +145,14 @@ export class AnimationClip {
     return this;
   }
 
+  /**
+   * Set the human-readable display name
+   */
+  setName(name: string): this {
+    this._name = name;
+    return this;
+  }
+
   // ============================================================================
   // Accessors
   // ============================================================================
@@ -167,6 +176,13 @@ export class AnimationClip {
    */
   get speed(): number {
     return this._speed;
+  }
+
+  /**
+   * Get the human-readable display name (defaults to id if not set)
+   */
+  get name(): string {
+    return this._name || this.id;
   }
 
   /**
@@ -298,13 +314,20 @@ export class AnimationClip {
    * Serialized animation clip format
    */
   toJSON(): SerializedAnimationClip {
-    return {
+    const result: SerializedAnimationClip = {
       id: this.id,
       duration: this._duration,
       loopMode: this._loopMode,
       speed: this._speed,
       tracks: this._tracks.map((track) => track.toJSON()),
     };
+
+    // Only include name if it differs from id
+    if (this._name && this._name !== this.id) {
+      result.name = this._name;
+    }
+
+    return result;
   }
 
   /**
@@ -315,6 +338,7 @@ export class AnimationClip {
     clip._duration = data.duration ?? 1.0;
     clip._loopMode = (data.loopMode as LoopMode) ?? LoopMode.Once;
     clip._speed = data.speed ?? 1.0;
+    clip._name = data.name ?? '';
 
     if (data.tracks) {
       for (const trackData of data.tracks) {
@@ -334,6 +358,7 @@ export class AnimationClip {
     cloned._duration = this._duration;
     cloned._loopMode = this._loopMode;
     cloned._speed = this._speed;
+    cloned._name = this._name;
 
     for (const track of this._tracks) {
       cloned._tracks.push(track.clone());
@@ -361,6 +386,8 @@ export interface SerializedTrack {
  */
 export interface SerializedAnimationClip {
   id: string;
+  /** Human-readable display name (optional, defaults to id) */
+  name?: string;
   duration?: number;
   loopMode?: string;
   speed?: number;

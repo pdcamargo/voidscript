@@ -1786,6 +1786,7 @@ export class EditorLayer extends Layer {
           () => this.getEntitiesForAnimationPreview(app),
           app.world,
           app.getCommands(),
+          app.getAssetsManifestPath(),
         );
       }
 

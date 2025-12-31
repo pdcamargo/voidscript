@@ -81,6 +81,8 @@ export interface AnimationEditorState {
 
   // Animation data
   animationId: string;
+  /** Human-readable display name (optional, defaults to animationId) */
+  animationName: string;
   duration: number;
   loopMode: LoopMode;
   speed: number;
@@ -89,6 +91,8 @@ export interface AnimationEditorState {
   // File state
   currentFilePath: string | null;
   isDirty: boolean;
+  /** Asset GUID for manifest registration (null = new animation, not yet registered) */
+  assetGuid: string | null;
 
   // Selection
   selectedTrackId: string | null;
@@ -370,7 +374,8 @@ export function createNewAnimation(): void {
   editorState = {
     selectedEntity: null,
 
-    animationId: DEFAULTS.animationId,
+    animationId: crypto.randomUUID(),
+    animationName: '',
     duration: DEFAULTS.duration,
     loopMode: LoopMode.Once,
     speed: DEFAULTS.speed,
@@ -378,6 +383,7 @@ export function createNewAnimation(): void {
 
     currentFilePath: null,
     isDirty: false,
+    assetGuid: null,
 
     selectedTrackId: null,
     selectedKeyframeIds: new Set(),

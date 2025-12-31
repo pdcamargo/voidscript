@@ -42,6 +42,7 @@ import { DEFAULTS } from './constants.js';
 export function jsonToEditorState(
   json: AnimationClipJson,
   filePath: string | null = null,
+  assetGuid: string | null = null,
 ): AnimationEditorState {
   const tracks = json.tracks.map(trackJsonToEditorTrack);
 
@@ -49,6 +50,7 @@ export function jsonToEditorState(
     selectedEntity: null,
 
     animationId: json.id,
+    animationName: json.name ?? '',
     duration: json.duration,
     loopMode: loopModeFromString(json.loopMode),
     speed: json.speed ?? 1.0,
@@ -56,6 +58,7 @@ export function jsonToEditorState(
 
     currentFilePath: filePath,
     isDirty: false,
+    assetGuid,
 
     selectedTrackId: null,
     selectedKeyframeIds: new Set(),
@@ -121,13 +124,20 @@ function loopModeFromString(mode: string | undefined): LoopMode {
  * Convert AnimationEditorState to AnimationClipJson
  */
 export function editorStateToJson(state: AnimationEditorState): AnimationClipJson {
-  return {
+  const json: AnimationClipJson = {
     id: state.animationId,
     duration: state.duration,
     loopMode: loopModeToString(state.loopMode),
     speed: state.speed !== 1.0 ? state.speed : undefined,
     tracks: state.tracks.map(editorTrackToJson),
   };
+
+  // Only include name if it differs from id
+  if (state.animationName && state.animationName !== state.animationId) {
+    json.name = state.animationName;
+  }
+
+  return json;
 }
 
 /**
@@ -194,10 +204,18 @@ function loopModeToString(mode: LoopMode): 'once' | 'loop' | 'pingPong' {
 
 /**
  * Load animation from JSON string and set it as the current state
+ *
+ * @param jsonString - The JSON content of the animation file
+ * @param filePath - The file path of the animation
+ * @param assetGuid - Optional existing GUID from the asset database
  */
-export function loadAnimationFromJson(jsonString: string, filePath: string): void {
+export function loadAnimationFromJson(
+  jsonString: string,
+  filePath: string,
+  assetGuid: string | null = null,
+): void {
   const json = JSON.parse(jsonString) as AnimationClipJson;
-  const state = jsonToEditorState(json, filePath);
+  const state = jsonToEditorState(json, filePath, assetGuid);
   loadState(state);
 }
 

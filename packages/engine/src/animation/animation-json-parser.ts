@@ -98,6 +98,8 @@ export interface AnimationTrackJson {
 export interface AnimationClipJson {
   /** Unique identifier for this clip */
   id: string;
+  /** Human-readable display name (optional, defaults to id) */
+  name?: string;
   /** Duration in seconds */
   duration: number;
   /** Loop mode (default: 'once') */

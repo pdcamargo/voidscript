@@ -187,7 +187,6 @@ export const SESSION_STORAGE_KEYS = {
 // ============================================================================
 
 export const DEFAULTS = {
-  animationId: 'new-animation',
   duration: 1.0,
   speed: 1.0,
   loopMode: 'once' as const,

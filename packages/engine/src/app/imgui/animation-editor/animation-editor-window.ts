@@ -13,6 +13,8 @@ import type * as THREE from 'three';
 import { LoopMode } from '../../../animation/animation-clip.js';
 import type { Entity } from '../../../ecs/entity.js';
 import type { EditorPlatform } from '../../../editor/editor-platform.js';
+import { AssetDatabase } from '../../../ecs/asset-database.js';
+import { AssetType } from '../../../ecs/asset-metadata.js';
 import {
   getAnimationEditorState,
   isAnimationEditorOpen,
@@ -60,6 +62,9 @@ import {
 import type { World } from '../../../ecs/world.js';
 import type { Command } from '../../../ecs/command.js';
 
+// Module-level state to pass assetsManifest to async handlers
+let currentAssetsManifest: string | undefined;
+
 /**
  * Render the animation editor window
  *
@@ -69,6 +74,7 @@ import type { Command } from '../../../ecs/command.js';
  *        This should be filtered to only return entities that have the AnimationController component.
  * @param world - Optional world for keyframe inspector
  * @param commands - Optional ECS commands for syncing preview to AnimationController
+ * @param assetsManifest - Path to the assets manifest file for auto-registration
  */
 export function renderAnimationEditorWindow(
   platform: EditorPlatform,
@@ -76,7 +82,10 @@ export function renderAnimationEditorWindow(
   getEntitiesWithAnimationController?: () => Array<{ entity: Entity; name: string }>,
   world?: World,
   commands?: Command,
+  assetsManifest?: string,
 ): void {
+  // Store for async handlers
+  currentAssetsManifest = assetsManifest;
   if (!isAnimationEditorOpen()) return;
 
   const state = getAnimationEditorState();
@@ -314,18 +323,18 @@ function renderToolbar(
 
   ImGui.SameLine(180);
 
-  // Animation ID
-  ImGui.Text('ID:');
+  // Animation Name
+  ImGui.Text('Name:');
   ImGui.SameLine();
-  const idBuffer: [string] = [state.animationId];
-  ImGui.SetNextItemWidth(120);
-  ImGui.InputText('##animId', idBuffer, 64);
-  if (idBuffer[0] !== state.animationId) {
-    state.animationId = idBuffer[0];
+  const nameBuffer: [string] = [state.animationName];
+  ImGui.SetNextItemWidth(100);
+  ImGui.InputText('##animName', nameBuffer, 64);
+  if (nameBuffer[0] !== state.animationName) {
+    state.animationName = nameBuffer[0];
     markDirty();
   }
 
-  ImGui.SameLine(350);
+  ImGui.SameLine();
 
   // Duration
   ImGui.Text('Duration:');
@@ -337,7 +346,7 @@ function renderToolbar(
     markDirty();
   }
 
-  ImGui.SameLine(500);
+  ImGui.SameLine();
 
   // Loop Mode
   ImGui.Text('Loop:');
@@ -351,7 +360,7 @@ function renderToolbar(
     markDirty();
   }
 
-  ImGui.SameLine(650);
+  ImGui.SameLine();
 
   // Speed
   ImGui.Text('Speed:');
@@ -526,7 +535,15 @@ async function handleOpenAnimation(platform: EditorPlatform): Promise<void> {
       const filePath = Array.isArray(result) ? result[0] : result;
       if (filePath) {
         const content = await platform.readTextFile(filePath);
-        loadAnimationFromJson(content, filePath);
+
+        // Try to find existing GUID for this file
+        let assetGuid: string | null = null;
+        const webPath = convertToWebPath(filePath, platform);
+        if (webPath) {
+          assetGuid = AssetDatabase.findByPath(webPath) ?? null;
+        }
+
+        loadAnimationFromJson(content, filePath, assetGuid);
       }
     }
   } catch (error) {
@@ -539,6 +556,7 @@ async function handleSaveAnimation(platform: EditorPlatform, saveAs: boolean): P
   if (!state) return;
 
   let filePath = state.currentFilePath;
+  let assetGuid = state.assetGuid;
 
   // If Save As or no current path, show save dialog
   if (saveAs || !filePath) {
@@ -552,13 +570,23 @@ async function handleSaveAnimation(platform: EditorPlatform, saveAs: boolean): P
       if (!result) return; // User cancelled
 
       filePath = result;
+
+      // If saving to a new path (Save As), need a new GUID
+      if (saveAs) {
+        assetGuid = null;
+      }
     } catch (error) {
       console.error('Failed to show save dialog:', error);
       return;
     }
   }
 
-  // Serialize and save
+  // Generate UUID for new assets
+  if (!assetGuid) {
+    assetGuid = crypto.randomUUID();
+  }
+
+  // Serialize and save animation file
   try {
     const jsonContent = serializeCurrentState(true);
     if (!jsonContent) {
@@ -568,6 +596,33 @@ async function handleSaveAnimation(platform: EditorPlatform, saveAs: boolean): P
 
     await platform.writeTextFile(filePath, jsonContent);
     setCurrentFilePath(filePath);
+
+    // Update state with the GUID
+    state.assetGuid = assetGuid;
+
+    // Register in AssetDatabase and save manifest
+    const webPath = convertToWebPath(filePath, platform);
+    if (webPath) {
+      // Check for existing registration at this path
+      const existingGuid = AssetDatabase.findByPath(webPath);
+      if (existingGuid && existingGuid !== assetGuid) {
+        // Path already registered with different GUID, use existing
+        assetGuid = existingGuid;
+        state.assetGuid = assetGuid;
+      }
+
+      // Register the asset
+      AssetDatabase.registerAdditionalAssets({
+        [assetGuid]: {
+          type: AssetType.Animation,
+          path: webPath,
+        },
+      });
+
+      // Save manifest if available
+      await saveManifestIfAvailable(platform, currentAssetsManifest);
+    }
+
     markClean();
   } catch (error) {
     console.error('Failed to save animation file:', error);
@@ -664,4 +719,43 @@ export function handleAnimationEditorShortcut(key: string, ctrl: boolean, shift:
   }
 
   return false;
+}
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * Convert an absolute file path to a web-relative path.
+ * Returns null if conversion is not possible.
+ */
+function convertToWebPath(absolutePath: string, platform: EditorPlatform): string | null {
+  if (!platform.sourceAssetsDir) return null;
+  if (!absolutePath.startsWith(platform.sourceAssetsDir)) return null;
+
+  const relative = absolutePath.slice(platform.sourceAssetsDir.length);
+  return relative.startsWith('/') ? relative : '/' + relative;
+}
+
+/**
+ * Save the asset manifest if platform supports it.
+ */
+async function saveManifestIfAvailable(
+  platform: EditorPlatform,
+  assetsManifest?: string,
+): Promise<void> {
+  if (!assetsManifest || !platform.sourceAssetsDir || !platform.joinPath || !platform.writeTextFile) {
+    return;
+  }
+
+  try {
+    const manifestRelative = assetsManifest.startsWith('/')
+      ? assetsManifest.slice(1)
+      : assetsManifest;
+    const manifestPath = await platform.joinPath(platform.sourceAssetsDir, manifestRelative);
+    const json = AssetDatabase.serializeToJson(true);
+    await platform.writeTextFile(manifestPath, json);
+  } catch (error) {
+    console.error('Failed to save manifest:', error);
+  }
 }
