@@ -1,6 +1,6 @@
 # VoidScript Engine Roadmap
 
-> **Vision**: A production-ready TypeScript game engine with ECS architecture, capable of shipping games to Desktop, Web, and Mobile platforms.
+> **Vision**: A production-ready TypeScript game engine with ECS architecture, capable of shipping **2D and 3D** games to Desktop, Web, and Mobile platforms.
 
 ## Quick Navigation
 
@@ -62,6 +62,26 @@ packages/
 apps/
   editor/                   # Standalone editor application
 ```
+
+> **IMPORTANT: Three.js Re-export**
+>
+> The engine **re-exports Three.js** so users don't need to install it separately. All Three.js types and classes should be imported from `@voidscript/engine` (or `@voidscript/renderer`), not from `three` directly. This ensures version consistency and simplifies project setup.
+>
+> ```typescript
+> // DO THIS:
+> import { Vector3, Mesh, Scene } from '@voidscript/engine';
+>
+> // NOT THIS:
+> import { Vector3 } from 'three';
+> ```
+
+### 2D and 3D Support
+
+The engine supports both **2D and 3D** game development. After the standalone editor is complete, we will ensure:
+- Clear separation between 2D and 3D workflows in the editor
+- Easy switching or mixing of 2D/3D in the same project
+- Consistent component patterns for both (Transform3D works for 2D with z=0)
+- 2D-specific tools (sprite editor, tilemap) alongside 3D tools (model viewer, scene gizmos)
 
 ### Project Structure (Created by CLI)
 ```
@@ -322,20 +342,65 @@ The current `World` class remains as the ECS runtime container. "Scene" refers t
 - [ ] Add build/export from editor menu
 - [ ] Create installer/distribution
 
-### 4.2 Undo/Redo System
-- [ ] Implement command pattern
-- [ ] Create operation history
-- [ ] Track component changes
-- [ ] Track entity operations
-- [ ] Track hierarchy changes
-- [ ] Add undo groups
-- [ ] Keyboard shortcuts (Ctrl+Z, Ctrl+Y)
+### 4.2 SerializableObject API & Undo/Redo System
 
-### 4.3 Prefab Improvements
+The `SerializableObject`/`SerializableProperty` API provides a unified way to edit component data with built-in change tracking, dirty flags, and undo/redo support. All inspector edits go through this API.
+
+**Benefits:**
+- Automatic `isDirty` tracking per component/entity
+- Undo/redo recording without manual command creation
+- Diff-based serialization (only changed properties)
+- Change notifications for UI updates
+- Batch operations (multiple changes = single undo step)
+
+**API Design:**
+```typescript
+// Wrap component for editing
+const so = new SerializableObject(entity, Transform3D);
+
+// Find and modify properties
+const posProp = so.findProperty('position');
+posProp.vector3Value = new Vector3(1, 2, 3); // Auto-records undo
+
+// Check state
+so.isDirty;           // true if any property changed
+so.hasModifiedProperties;
+so.applyModifiedProperties(); // Commit changes
+so.revertAllProperties();     // Discard changes
+
+// Nested properties
+const xProp = so.findProperty('position.x');
+xProp.floatValue = 5;
+```
+
+- [ ] Design SerializableObject class wrapping entity+component
+- [ ] Design SerializableProperty for individual fields
+- [ ] Support primitive types (float, int, bool, string)
+- [ ] Support complex types (Vector3, Color, RuntimeAsset)
+- [ ] Support nested properties (position.x, rotation.y)
+- [ ] Support array properties
+- [ ] Implement `isDirty` tracking per property
+- [ ] Implement `applyModifiedProperties()` / `revertAllProperties()`
+- [ ] Integrate with undo/redo command history
+- [ ] Create operation history with configurable depth
+- [ ] Track entity creation/deletion operations
+- [ ] Track hierarchy changes (parent/child)
+- [ ] Add undo groups (batch multiple changes)
+- [ ] Keyboard shortcuts (Ctrl+Z, Ctrl+Y)
+- [ ] Update all inspector panels to use SerializableObject
+
+### 4.3 Prefab Editor & Improvements
+
+A dedicated **Prefab Editor** for editing prefabs in isolation, similar to Unity's prefab mode. Opens prefab in a separate view with its own scene context.
+
+- [ ] Create Prefab Editor panel/mode
+- [ ] Edit prefab in isolation (separate scene context)
+- [ ] Live preview of prefab changes
 - [ ] Implement prefab variants
 - [ ] Add nested prefabs support
 - [ ] Create prefab overrides UI
 - [ ] Add batch prefab updates
+- [ ] "Open Prefab" action from hierarchy/inspector
 
 ### 4.4 Performance Profiler
 - [ ] System execution timing
@@ -355,6 +420,9 @@ The current `World` class remains as the ECS runtime container. "Scene" refers t
 - `apps/editor/src/project-manager.ts`
 - `apps/editor/src-tauri/tauri.conf.json`
 - `packages/editor/src/panels/project-settings-panel.ts`
+- `packages/editor/src/serialization/serializable-object.ts`
+- `packages/editor/src/serialization/serializable-property.ts`
+- `packages/editor/src/serialization/property-types/` (per-type handlers)
 - `packages/editor/src/undo-redo/command-history.ts`
 - `packages/editor/src/undo-redo/operations/`
 - `packages/engine/src/debug/profiler.ts`
