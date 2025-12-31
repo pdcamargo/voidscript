@@ -458,8 +458,12 @@ function renderTimeEditor(state: AnimationEditorState, keyframe: EditorKeyframe)
 
   const timeValue: [number] = [keyframe.time];
   ImGui.SetNextItemWidth(-1);
-  if (ImGui.SliderFloat('##kfTime', timeValue, 0.0, 1.0, '%.3f')) {
+  // Use InputFloat for direct text input (more precise than slider)
+  if (ImGui.InputFloat('##kfTime', timeValue, 0.01, 0.1, '%.3f')) {
     updateKeyframeTime(keyframe.id, Math.max(0, Math.min(1, timeValue[0])));
+  }
+  if (ImGui.IsItemHovered()) {
+    ImGui.SetTooltip('Time (0.0 - 1.0)');
   }
 
   // Show in seconds

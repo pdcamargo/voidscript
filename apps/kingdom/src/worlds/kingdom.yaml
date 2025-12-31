@@ -37,25 +37,25 @@ componentRegistry:
   - id: 17
     name: CampFire
   - id: 18
-    name: RigidBody2D
-  - id: 19
-    name: Collider2D
-  - id: 20
-    name: CharacterController2D
-  - id: 21
-    name: Ccd
-  - id: 22
-    name: AnimationController
-  - id: 23
-    name: DesiredMovement2D
-  - id: 24
-    name: ActiveCollisionEvents2D
-  - id: 25
-    name: Player2D
-  - id: 26
     name: LightningController
-  - id: 27
+  - id: 19
     name: FogSkySync
+  - id: 20
+    name: RigidBody2D
+  - id: 21
+    name: Collider2D
+  - id: 22
+    name: CharacterController2D
+  - id: 23
+    name: Ccd
+  - id: 24
+    name: AnimationController
+  - id: 25
+    name: DesiredMovement2D
+  - id: 26
+    name: ActiveCollisionEvents2D
+  - id: 27
+    name: Player2D
   - id: 28
     name: Light3D
   - id: 29
@@ -85,8 +85,8 @@ entities:
         data:
           ids:
             - 4
+            - 14
             - 15
-            - 16
       - typeId: 1
         typeName: Name
         data:
@@ -117,8 +117,8 @@ entities:
         typeName: Transform3D
         data:
           position:
-            x: -99.58040390186204
-            y: 0.9771685967238097
+            x: -78.18800354003906
+            y: 1.077000044286251
             z: 10
           rotation:
             x: 0
@@ -145,7 +145,7 @@ entities:
       - typeId: 4
         typeName: VirtualCameraFollow
         data:
-          target: 13
+          target: 17
           mode: transposer
           offset:
             x: 0
@@ -181,8 +181,8 @@ entities:
         typeName: Transform3D
         data:
           position:
-            x: -99.58040390186204
-            y: 0.9771685967238097
+            x: -78.18800354003906
+            y: 1.077000044286251
             z: 10
           rotation:
             x: 0
@@ -780,136 +780,6 @@ entities:
       - typeId: 1
         typeName: Name
         data:
-          name: Character
-      - typeId: 2
-        typeName: Transform3D
-        data:
-          position:
-            x: -99.58040390186204
-            y: 1.0771685982139259
-            z: 0
-          rotation:
-            x: 0
-            y: 0
-            z: 0
-          scale:
-            x: 0.5
-            y: 1
-            z: 1
-      - typeId: 15
-        typeName: Sprite2D
-        data:
-          texture:
-            guid: moon
-          color:
-            r: 1
-            g: 1
-            b: 1
-            a: 1
-          tileIndex: 0
-          tileSize:
-            x: 512
-            y: 512
-          tilesetSize:
-            x: 512
-            y: 512
-          pixelsPerUnit: 100
-          flipX: false
-          flipY: false
-          sortingLayer: 0
-          sortingOrder: 0
-          anchor:
-            x: 0.5
-            y: 0.5
-          visible: true
-          isLit: true
-          spriteRect: null
-      - typeId: 16
-        typeName: Sprite2DMaterial
-        data:
-          shader:
-            guid: color-pulse-shader
-          uniforms:
-            pulse_intensity: 0.8899999856948853
-            pulse_color:
-              r: 1
-              g: 0
-              b: 0
-            pulse_speed: 1
-          uniqueInstance: true
-          enabled: true
-      - typeId: 18
-        typeName: RigidBody2D
-        data:
-          bodyType: kinematic
-          canSleep: false
-      - typeId: 19
-        typeName: Collider2D
-        data:
-          shape:
-            type: cuboid
-            halfWidth: 0.5
-            halfHeight: 0.5
-          offset:
-            x: 0
-            y: 0
-          rotationOffset: 0
-          isSensor: false
-          friction: 0
-          restitution: 0
-          density: 0
-      - typeId: 20
-        typeName: CharacterController2D
-        data:
-          offset: 0.01
-          up:
-            x: 0
-            y: 1
-          maxSlopeClimbAngle: 0.7853981633974483
-          minSlopeSlideAngle: 1.0471975511965976
-          autostepEnabled: false
-          autostepMaxHeight: 0.5
-          autostepMinWidth: 0.2
-          autostepIncludesDynamicBodies: false
-          snapToGroundEnabled: false
-          snapToGroundDistance: 0.2
-          slideEnabled: true
-          normalNudgeFactor: 0
-          applyImpulsesToDynamicBodies: false
-          characterMass: null
-      - typeId: 21
-        typeName: Ccd
-        data:
-          enabled: false
-      - typeId: 22
-        typeName: AnimationController
-        data:
-          animations: []
-          currentAnimationId: null
-          isPlaying: false
-          currentTime: 0
-          speed: 1
-          loopCount: 0
-      - typeId: 23
-        typeName: DesiredMovement2D
-        data:
-          translation:
-            x: 0
-            y: 0
-      - typeId: 24
-        typeName: ActiveCollisionEvents2D
-        data:
-          events: 1
-      - typeId: 25
-        typeName: Player2D
-        data:
-          movementSpeed: 20
-  - id: 14
-    generation: 0
-    components:
-      - typeId: 1
-        typeName: Name
-        data:
           name: Lightning Field
       - typeId: 2
         typeName: Transform3D
@@ -975,9 +845,10 @@ entities:
             sub_branch_probability: 0.6050000190734863
             enable_ground_glow: false
             ground_glow_radius: 20
+            flash_intensity: 0
           uniqueInstance: true
           enabled: true
-      - typeId: 26
+      - typeId: 18
         typeName: LightningController
         data:
           minInterval: 3.617000102996826
@@ -990,7 +861,7 @@ entities:
           angleVariation: 0.5
           enableScreenFlash: true
           flashIntensity: 0.671999990940094
-  - id: 15
+  - id: 14
     generation: 0
     components:
       - typeId: 9
@@ -1077,11 +948,11 @@ entities:
             edge_fade_right: 0.34599998593330383
           uniqueInstance: true
           enabled: true
-      - typeId: 27
+      - typeId: 19
         typeName: FogSkySync
         data:
           skyEntity: 20
-  - id: 16
+  - id: 15
     generation: 0
     components:
       - typeId: 9
@@ -1168,11 +1039,11 @@ entities:
             edge_fade_right: 0.22300000488758087
           uniqueInstance: true
           enabled: true
-      - typeId: 27
+      - typeId: 19
         typeName: FogSkySync
         data:
           skyEntity: 20
-  - id: 17
+  - id: 16
     generation: 0
     components:
       - typeId: 1
@@ -1240,10 +1111,127 @@ entities:
             edge_fade_right: 0.5
           uniqueInstance: true
           enabled: true
-      - typeId: 27
+      - typeId: 19
         typeName: FogSkySync
         data:
           skyEntity: 20
+  - id: 17
+    generation: 0
+    components:
+      - typeId: 1
+        typeName: Name
+        data:
+          name: Character
+      - typeId: 2
+        typeName: Transform3D
+        data:
+          position:
+            x: -78.18800354003906
+            y: 1.1770000457763672
+            z: 0
+          rotation:
+            x: 0
+            y: 0
+            z: 0
+          scale:
+            x: 3
+            y: 3
+            z: 1
+      - typeId: 15
+        typeName: Sprite2D
+        data:
+          texture:
+            guid: character-idle-mjtakht8
+          color:
+            r: 1
+            g: 1
+            b: 1
+            a: 1
+          tileIndex: null
+          tileSize: null
+          tilesetSize: null
+          pixelsPerUnit: 100
+          flipX: false
+          flipY: false
+          sortingLayer: 0
+          sortingOrder: 0
+          anchor:
+            x: 0.5
+            y: 0.5
+          visible: true
+          isLit: true
+          spriteRect:
+            x: 576
+            y: 0
+            width: 144
+            height: 112
+      - typeId: 20
+        typeName: RigidBody2D
+        data:
+          bodyType: kinematic
+          canSleep: false
+      - typeId: 21
+        typeName: Collider2D
+        data:
+          shape:
+            type: cuboid
+            halfWidth: 0.5
+            halfHeight: 0.5
+          offset:
+            x: 0
+            y: 0
+          rotationOffset: 0
+          isSensor: false
+          friction: 0
+          restitution: 0
+          density: 0
+      - typeId: 22
+        typeName: CharacterController2D
+        data:
+          offset: 0.01
+          up:
+            x: 0
+            y: 1
+          maxSlopeClimbAngle: 0.7853981633974483
+          minSlopeSlideAngle: 1.0471975511965976
+          autostepEnabled: false
+          autostepMaxHeight: 0.5
+          autostepMinWidth: 0.2
+          autostepIncludesDynamicBodies: false
+          snapToGroundEnabled: false
+          snapToGroundDistance: 0.2
+          slideEnabled: true
+          normalNudgeFactor: 0
+          applyImpulsesToDynamicBodies: false
+          characterMass: null
+      - typeId: 23
+        typeName: Ccd
+        data:
+          enabled: false
+      - typeId: 24
+        typeName: AnimationController
+        data:
+          animations:
+            - guid: e7c34b63-64f4-4ebe-89aa-65682b9d84e9
+          currentAnimationId: 76aaf793-c7a2-4ed5-8fbd-3903b0b7ac99
+          isPlaying: true
+          currentTime: 2.1509999999999994
+          speed: 1
+          loopCount: 0
+      - typeId: 25
+        typeName: DesiredMovement2D
+        data:
+          translation:
+            x: 0
+            y: 0
+      - typeId: 26
+        typeName: ActiveCollisionEvents2D
+        data:
+          events: 1
+      - typeId: 27
+        typeName: Player2D
+        data:
+          movementSpeed: 20
   - id: 18
     generation: 0
     components:
@@ -1456,7 +1444,7 @@ entities:
           lightningIntensity: 0.9959999918937683
           stormIntensity: 0.8500000238418579
 metadata:
-  createdAt: 2025-12-30T22:40:41.507Z
-  modifiedAt: 2025-12-30T22:40:41.507Z
+  createdAt: 2025-12-31T01:44:40.618Z
+  modifiedAt: 2025-12-31T01:44:40.618Z
   entityCount: 22
   archetypeCount: 59

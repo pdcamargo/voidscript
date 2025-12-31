@@ -381,7 +381,73 @@
     "magFilter": "nearest",
     "minFilter": "nearest",
     "wrapS": "clamp",
-    "wrapT": "clamp"
+    "wrapT": "clamp",
+    "sprites": [
+      {
+        "id": "sprite-mjtbyu6d-0",
+        "name": "character_Idle Sprite 1",
+        "x": 0,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtbyu6d-1",
+        "name": "character_Idle Sprite 2",
+        "x": 144,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtbyu6d-2",
+        "name": "character_Idle Sprite 3",
+        "x": 288,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtbyu6d-3",
+        "name": "character_Idle Sprite 4",
+        "x": 432,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtbyu6d-4",
+        "name": "character_Idle Sprite 5",
+        "x": 576,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtbyu6d-5",
+        "name": "character_Idle Sprite 6",
+        "x": 720,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtbyu6d-6",
+        "name": "character_Idle Sprite 7",
+        "x": 864,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtbyu6d-7",
+        "name": "character_Idle Sprite 8",
+        "x": 1008,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      }
+    ]
   },
   "character-start-run-mjtakpy6": {
     "type": "texture",
@@ -389,7 +455,17 @@
     "magFilter": "nearest",
     "minFilter": "nearest",
     "wrapS": "clamp",
-    "wrapT": "clamp"
+    "wrapT": "clamp",
+    "sprites": [
+      {
+        "id": "sprite-mjtbzmkm-0",
+        "name": "character_Start Run Sprite 1",
+        "x": 0,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      }
+    ]
   },
   "character-run-mjtakvio": {
     "type": "texture",
@@ -397,7 +473,73 @@
     "magFilter": "nearest",
     "minFilter": "nearest",
     "wrapS": "clamp",
-    "wrapT": "clamp"
+    "wrapT": "clamp",
+    "sprites": [
+      {
+        "id": "sprite-mjtc01a7-0",
+        "name": "character_Run Sprite 1",
+        "x": 0,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtc01a7-1",
+        "name": "character_Run Sprite 2",
+        "x": 144,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtc01a7-2",
+        "name": "character_Run Sprite 3",
+        "x": 288,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtc01a7-3",
+        "name": "character_Run Sprite 4",
+        "x": 432,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtc01a7-4",
+        "name": "character_Run Sprite 5",
+        "x": 576,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtc01a7-5",
+        "name": "character_Run Sprite 6",
+        "x": 720,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtc01a7-6",
+        "name": "character_Run Sprite 7",
+        "x": 864,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtc01a7-7",
+        "name": "character_Run Sprite 8",
+        "x": 1008,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      }
+    ]
   },
   "character-stop-run-mjtal8oq": {
     "type": "texture",
@@ -405,7 +547,25 @@
     "magFilter": "nearest",
     "minFilter": "nearest",
     "wrapS": "clamp",
-    "wrapT": "clamp"
+    "wrapT": "clamp",
+    "sprites": [
+      {
+        "id": "sprite-mjtc09zo-0",
+        "name": "character_Stop Run Sprite 1",
+        "x": 0,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtc09zo-1",
+        "name": "character_Stop Run Sprite 2",
+        "x": 144,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      }
+    ]
   },
   "character-hit-mjtalgc7": {
     "type": "texture",
@@ -413,7 +573,33 @@
     "magFilter": "nearest",
     "minFilter": "nearest",
     "wrapS": "clamp",
-    "wrapT": "clamp"
+    "wrapT": "clamp",
+    "sprites": [
+      {
+        "id": "sprite-mjtc0g2l-0",
+        "name": "character_Hit Sprite 1",
+        "x": 0,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtc0g2l-1",
+        "name": "character_Hit Sprite 2",
+        "x": 144,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtc0g2l-2",
+        "name": "character_Hit Sprite 3",
+        "x": 288,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      }
+    ]
   },
   "character-death-mjtalm5h": {
     "type": "texture",
@@ -421,6 +607,116 @@
     "magFilter": "nearest",
     "minFilter": "nearest",
     "wrapS": "clamp",
-    "wrapT": "clamp"
+    "wrapT": "clamp",
+    "sprites": [
+      {
+        "id": "sprite-mjtc0ve0-0",
+        "name": "character_Death Sprite 1",
+        "x": 0,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtc0ve0-1",
+        "name": "character_Death Sprite 2",
+        "x": 144,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtc0ve0-2",
+        "name": "character_Death Sprite 3",
+        "x": 288,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtc0ve0-3",
+        "name": "character_Death Sprite 4",
+        "x": 432,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtc0ve0-4",
+        "name": "character_Death Sprite 5",
+        "x": 576,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtc0ve0-5",
+        "name": "character_Death Sprite 6",
+        "x": 720,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtc0ve0-6",
+        "name": "character_Death Sprite 7",
+        "x": 864,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtc0ve0-7",
+        "name": "character_Death Sprite 8",
+        "x": 1008,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtc0ve0-8",
+        "name": "character_Death Sprite 9",
+        "x": 1152,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtc0ve0-9",
+        "name": "character_Death Sprite 10",
+        "x": 1296,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtc0ve0-10",
+        "name": "character_Death Sprite 11",
+        "x": 1440,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtc0ve0-11",
+        "name": "character_Death Sprite 12",
+        "x": 1584,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      },
+      {
+        "id": "sprite-mjtc0ve0-12",
+        "name": "character_Death Sprite 13",
+        "x": 1728,
+        "y": 0,
+        "width": 144,
+        "height": 112
+      }
+    ]
+  },
+  "e7c34b63-64f4-4ebe-89aa-65682b9d84e9": {
+    "type": "animation",
+    "path": "/assets/animations/character/Character Idle.anim.json"
   }
 }

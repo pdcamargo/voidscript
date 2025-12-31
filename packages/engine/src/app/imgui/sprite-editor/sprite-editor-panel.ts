@@ -40,6 +40,7 @@ import {
 } from './sprite-editor-state.js';
 
 import type { EditorPlatform } from '../../../editor/editor-platform.js';
+import { EditorLayout } from '../editor-layout.js';
 
 // ============================================================================
 // Texture Cache
@@ -298,6 +299,9 @@ export function renderSpriteEditorPanel(options: SpriteEditorPanelOptions): void
     );
     renderSpriteProperties(state);
     ImGui.EndChild();
+
+    // Render popups (must be inside the window)
+    renderGridCreationPopup();
   }
   ImGui.End();
 
@@ -340,6 +344,13 @@ function renderMenuBar(
         )
       ) {
         deleteSelectedSprite();
+      }
+      ImGui.EndMenu();
+    }
+
+    if (ImGui.BeginMenu('Utilities')) {
+      if (ImGui.MenuItem('Create Sprites by Grid...', '', false, !!state.selectedTextureGuid)) {
+        showGridCreationPopup = true;
       }
       ImGui.EndMenu();
     }
@@ -610,6 +621,156 @@ let newSpriteX = 0;
 let newSpriteY = 0;
 let newSpriteWidth = 32;
 let newSpriteHeight = 32;
+
+// Grid creation form state
+let gridCols = 4;
+let gridRows = 4;
+let showGridCreationPopup = false;
+
+// ============================================================================
+// Grid Creation Popup
+// ============================================================================
+
+function renderGridCreationPopup(): void {
+  const state = getSpriteEditorState();
+  const metadata = getSelectedTextureMetadata();
+  if (!metadata || !state.selectedTextureGuid) return;
+
+  // Get actual texture dimensions from the loaded texture cache (not metadata)
+  const cachedInfo = textureCache.get(state.selectedTextureGuid);
+  const textureWidth = cachedInfo?.width ?? 0;
+  const textureHeight = cachedInfo?.height ?? 0;
+
+  if (!metadata.sprites) {
+    metadata.sprites = [];
+  }
+
+  // Open popup if flag is set
+  if (showGridCreationPopup) {
+    ImGui.OpenPopup('Create Sprites by Grid###GridCreationPopup');
+    showGridCreationPopup = false;
+  }
+
+  // Center the popup
+  const mainViewport = ImGui.GetMainViewport();
+  ImGui.SetNextWindowPos(
+    {
+      x: mainViewport.Pos.x + mainViewport.Size.x / 2,
+      y: mainViewport.Pos.y + mainViewport.Size.y / 2,
+    },
+    ImGui.Cond.Appearing,
+    { x: 0.5, y: 0.5 },
+  );
+  ImGui.SetNextWindowSize({ x: 300, y: 0 }, ImGui.Cond.Appearing);
+
+  if (
+    ImGui.BeginPopupModal(
+      'Create Sprites by Grid###GridCreationPopup',
+      undefined,
+      ImGui.WindowFlags.AlwaysAutoResize,
+    )
+  ) {
+    // Check if we have texture dimensions from the loaded texture
+    if (textureWidth === 0 || textureHeight === 0) {
+      EditorLayout.warning('Texture not loaded yet.');
+      EditorLayout.textDisabled('Wait for the texture to finish loading.');
+      EditorLayout.spacing();
+      if (EditorLayout.button('Close', { width: -1 })) {
+        ImGui.CloseCurrentPopup();
+      }
+      ImGui.EndPopup();
+      return;
+    }
+
+    // Get texture name for sprite naming
+    const textureName =
+      metadata.path.split('/').pop()?.replace(/\.[^.]+$/, '') ?? 'Texture';
+
+    // Show texture info
+    EditorLayout.textDisabled(`Texture: ${textureWidth} x ${textureHeight}`);
+    EditorLayout.separator();
+
+    // Use label width alignment for consistent layout
+    EditorLayout.beginLabelsWidth(['Columns', 'Rows']);
+
+    // Columns input
+    const [newCols, colsChanged] = EditorLayout.integerField(
+      'Columns',
+      gridCols,
+      {
+        min: 1,
+        max: textureWidth,
+        speed: 1,
+      },
+    );
+    if (colsChanged) gridCols = newCols;
+
+    // Rows input
+    const [newRows, rowsChanged] = EditorLayout.integerField('Rows', gridRows, {
+      min: 1,
+      max: textureHeight,
+      speed: 1,
+    });
+    if (rowsChanged) gridRows = newRows;
+
+    EditorLayout.endLabelsWidth();
+
+    // Calculate tile sizes from texture dimensions
+    const tileWidth = Math.floor(textureWidth / gridCols);
+    const tileHeight = Math.floor(textureHeight / gridRows);
+
+    EditorLayout.separator();
+
+    // Preview info
+    const totalSprites = gridCols * gridRows;
+    EditorLayout.textDisabled(`Tile size: ${tileWidth} x ${tileHeight}`);
+    EditorLayout.textDisabled(`Will create ${totalSprites} sprites`);
+
+    EditorLayout.spacing();
+
+    // Buttons row
+    if (
+      EditorLayout.styledButton('Generate', {
+        width: 120,
+        color: { r: 0.2, g: 0.5, b: 0.7 },
+        hoverColor: { r: 0.3, g: 0.6, b: 0.8 },
+      })
+    ) {
+      const startIndex = metadata.sprites!.length;
+      const baseTime = Date.now().toString(36);
+
+      for (let row = 0; row < gridRows; row++) {
+        for (let col = 0; col < gridCols; col++) {
+          const index = row * gridCols + col;
+          const globalIndex = startIndex + index + 1;
+
+          const newSprite: RectSpriteDefinition = {
+            id: `sprite-${baseTime}-${index}`,
+            name: `${textureName} Sprite ${globalIndex}`,
+            x: col * tileWidth,
+            y: row * tileHeight,
+            width: tileWidth,
+            height: tileHeight,
+          };
+          metadata.sprites!.push(newSprite);
+        }
+      }
+
+      // Select the first newly created sprite
+      selectSprite(startIndex);
+      markDirty();
+      ImGui.CloseCurrentPopup();
+    }
+
+    EditorLayout.sameLine();
+
+    if (EditorLayout.button('Cancel', { width: 120 })) {
+      ImGui.CloseCurrentPopup();
+    }
+
+    ImGui.EndPopup();
+  }
+}
 
 // ============================================================================
 // Sprite Properties Panel

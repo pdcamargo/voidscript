@@ -1144,6 +1144,62 @@ export class EditorLayout {
   }
 
   /**
+   * Render a styled button with custom colors
+   * @returns true if clicked
+   */
+  static styledButton(
+    label: string,
+    options?: {
+      width?: number;
+      height?: number;
+      tooltip?: string;
+      color?: { r: number; g: number; b: number; a?: number };
+      hoverColor?: { r: number; g: number; b: number; a?: number };
+    },
+  ): boolean {
+    let colorsPushed = 0;
+
+    if (options?.color) {
+      const c = options.color;
+      ImGui.PushStyleColorImVec4(ImGui.Col.Button, {
+        x: c.r,
+        y: c.g,
+        z: c.b,
+        w: c.a ?? 1.0,
+      });
+      colorsPushed++;
+    }
+    if (options?.hoverColor) {
+      const c = options.hoverColor;
+      ImGui.PushStyleColorImVec4(ImGui.Col.ButtonHovered, {
+        x: c.r,
+        y: c.g,
+        z: c.b,
+        w: c.a ?? 1.0,
+      });
+      colorsPushed++;
+    }
+
+    const size =
+      options?.width || options?.height
+        ? { x: options.width ?? 0, y: options.height ?? 0 }
+        : undefined;
+
+    const clicked = size ? ImGui.Button(label, size) : ImGui.Button(label);
+    const isHovered = ImGui.IsItemHovered();
+
+    if (colorsPushed > 0) {
+      ImGui.PopStyleColor(colorsPushed);
+    }
+
+    if (options?.tooltip && isHovered) {
+      ImGui.SetTooltip(options.tooltip);
+    }
+
+    return clicked;
+  }
+
+  /**
    * Continue on the same line
    */
   static sameLine(): void {
