@@ -1,8 +1,0 @@
-// Test Red Shader - Outputs solid red to verify shader is working
-shader_type canvas_item;
-render_mode unshaded;
-
-void fragment() {
-    // Just output solid red - this should be VERY obvious if it works
-    COLOR = vec4(1.0, 0.0, 0.0, 1.0);
-}

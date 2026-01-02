@@ -33,7 +33,7 @@
 - [x] Editor (play/pause/stop, hierarchy, inspector, animation/sprite/state-machine editors)
 - [x] Asset System (lazy loading, JSON manifest, 13+ asset types)
 - [x] Scene Serialization (snapshots, entity ID remapping) - currently called "World"
-- [x] Basic Tauri Integration (apps/kingdom/src-tauri)
+- [x] Basic Tauri Integration (apps/voidscript-editor/src-tauri)
 
 ### Critical Gaps
 - [ ] Build/Export Pipeline
@@ -157,17 +157,15 @@ The current `World` class remains as the ECS runtime container. "Scene" refers t
 > **IMPORTANT: ImGui API Abstraction Requirement**
 >
 > The `@voidscript/editor` package and standalone editor application **MUST completely wrap the ImGui API**. Developers creating editor extensions, custom inspectors, or editor plugins should **NEVER**:
-> - Import directly from `imgui` or `@mori2003/jsimgui`
+> - Import directly from `imgui` or `@voidscript/imgui`
 > - See ImGui function names or types in their code
-> - Deal with jsimgui binding limitations or workarounds
 >
-> All ImGui interactions must go through our abstraction layer (`EditorLayout`, `EditorWidgets`, etc.). This includes:
-> - Mouse position workarounds (jsimgui's `GetCursorScreenPos()` doesn't work)
-> - Coordinate system conversions
-> - Popup/modal management
-> - Input handling quirks
+> All ImGui interactions must go through our abstraction layer (`EditorLayout`, `EditorWidgets`, etc.). This ensures:
+> - Consistent styling and layout across all panels
+> - Type-safe APIs without exposing ImGui internals
+> - Easy refactoring if underlying ImGui bindings change
 >
-> These hacks and workarounds should be **encapsulated once** in EditorLayout and related utilities, so users get a clean, consistent API without needing to know ImGui internals.
+> The `@voidscript/imgui` package provides complete ImGui bindings including `ImVec2Helpers` for position/size operations.
 
 - [ ] Create `packages/editor/` package structure
 - [ ] Move `src/editor/` to new package

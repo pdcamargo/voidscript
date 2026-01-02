@@ -8,10 +8,28 @@ import { invoke } from '@tauri-apps/api/core';
 import { exit } from '@tauri-apps/plugin-process';
 import { EditorApplication } from '@voidscript/editor';
 import { MouseDemoPanel } from './panels/mouse-demo-panel.js';
+import { RendererDemoPanel } from './panels/renderer-demo-panel.js';
+import { SceneViewPanel } from './panels/scene-view-panel.js';
+import { GameViewPanel } from './panels/game-view-panel.js';
+
+// Font asset paths (relative to public directory)
+const MAIN_FONT_URL = '/assets/Roboto-Medium.ttf';
+const ICON_FONT_URL = '/assets/Font Awesome 7 Free-Solid-900.otf';
 
 async function main() {
   const app = new EditorApplication({
     canvas: 'render-canvas',
+    editorFPS: 30,
+    fonts: {
+      mainFontUrl: MAIN_FONT_URL,
+      iconFontUrl: ICON_FONT_URL,
+    },
+    engine: {
+      // Minimal engine config - renderer will use defaults
+      renderer: {
+        clearColor: 0x1a1a2e,
+      },
+    },
   });
 
   const menuManager = app.getMenuManager();
@@ -56,8 +74,13 @@ async function main() {
     },
   });
 
-  // Register demo panel
+  // Register view panels
+  app.registerPanel(new SceneViewPanel());
+  app.registerPanel(new GameViewPanel());
+
+  // Register demo panels
   app.registerPanel(new MouseDemoPanel());
+  app.registerPanel(new RendererDemoPanel());
 
   // Start the editor
   await app.run();

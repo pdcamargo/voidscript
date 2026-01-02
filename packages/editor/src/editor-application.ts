@@ -1,14 +1,38 @@
 /**
  * EditorApplication - Main application class for VoidScript Editor
  *
- * Handles ImGui initialization, WebGL context management, and the render loop.
- * Panels are registered and rendered automatically each frame.
+ * Supports two modes:
+ * 1. Standalone (ImGui-only): Just panels and UI, no game engine
+ * 2. Integrated: Wraps EngineApplication for full game editor with 30fps throttled UI
+ *
+ * In integrated mode, game logic runs at full fps while editor UI renders at 30fps.
  */
 
 import { ImGui, ImGuiImplWeb, ImVec2Helpers } from '@voidscript/imgui';
+import {
+  EngineApplication,
+  type EngineApplicationConfig,
+  EditorManager,
+  EditorCameraManager,
+} from '@voidscript/engine';
+import type { Scene } from '@voidscript/renderer';
 import type { EditorPanel } from './editor-panel.js';
 import { MenuManager } from './menu-manager.js';
 import { PanelStateManager } from './panel-state-manager.js';
+import { EditorCamera } from './editor-camera.js';
+import { EditorFonts } from './editor-fonts.js';
+import { TitleBar } from './title-bar.js';
+import { initOSInfo } from './os-info.js';
+
+/**
+ * Font configuration for the editor
+ */
+export interface EditorFontConfig {
+  /** URL to the main font file (TTF) */
+  mainFontUrl: string;
+  /** URL to the icon font file (OTF/TTF) */
+  iconFontUrl: string;
+}
 
 /**
  * Configuration options for EditorApplication
@@ -18,18 +42,45 @@ export interface EditorApplicationConfig {
   canvas: string | HTMLCanvasElement;
   /** Background clear color (default: dark gray) */
   clearColor?: { r: number; g: number; b: number; a: number };
+  /** Target FPS for editor UI rendering (default: 30) */
+  editorFPS?: number;
+  /**
+   * Font configuration for the editor.
+   * Required for proper icon and text rendering.
+   */
+  fonts?: EditorFontConfig;
+  /**
+   * Engine configuration for integrated mode.
+   * If provided, EditorApplication wraps EngineApplication.
+   * If omitted, runs in standalone mode (ImGui only).
+   */
+  engine?: Omit<EngineApplicationConfig, 'window'>;
 }
 
 /**
  * Main application class that manages ImGui and editor panels.
  *
- * @example
+ * @example Standalone mode (ImGui only)
  * ```typescript
  * const app = new EditorApplication({
  *   canvas: 'render-canvas',
  * });
  *
  * app.registerPanel(new MyPanel());
+ * await app.run();
+ * ```
+ *
+ * @example Integrated mode (with game engine)
+ * ```typescript
+ * const app = new EditorApplication({
+ *   canvas: 'render-canvas',
+ *   editorFPS: 30,
+ *   engine: {
+ *     renderer: { clearColor: 0x1a1a2e },
+ *   },
+ * });
+ *
+ * app.registerPanel(new SceneViewPanel());
  * await app.run();
  * ```
  */
@@ -50,6 +101,37 @@ export class EditorApplication {
   /** Track panel open states to detect changes */
   private lastPanelStates = new Map<string, boolean>();
 
+  /** Custom title bar component */
+  private readonly titleBar = new TitleBar();
+
+  /** Font configuration (optional, for custom fonts) */
+  private fontConfig: EditorFontConfig | undefined;
+
+  // ============================================================================
+  // Integrated Mode (Engine)
+  // ============================================================================
+
+  /** Wrapped engine application (null in standalone mode) */
+  private engine: EngineApplication | null = null;
+
+  /** Editor state manager (null in standalone mode) */
+  private editorManager: EditorManager | null = null;
+
+  /** Editor camera manager (null in standalone mode) */
+  private editorCameraManager: EditorCameraManager | null = null;
+
+  /** Editor camera for scene view (null in standalone mode) */
+  private editorCamera: EditorCamera | null = null;
+
+  /** Target interval between editor renders in ms */
+  private editorRenderInterval: number;
+
+  /** Last time editor UI was rendered */
+  private lastEditorRenderTime = 0;
+
+  /** Whether we're in integrated mode (have an engine) */
+  private readonly isIntegratedMode: boolean;
+
   /**
    * Create a new EditorApplication
    *
@@ -57,6 +139,9 @@ export class EditorApplication {
    * @throws Error if canvas element not found or WebGL2 not supported
    */
   constructor(config: EditorApplicationConfig) {
+    this.isIntegratedMode = config.engine !== undefined;
+    this.editorRenderInterval = 1000 / (config.editorFPS ?? 30);
+
     // Get canvas element
     if (typeof config.canvas === 'string') {
       const element = document.getElementById(config.canvas);
@@ -68,19 +153,33 @@ export class EditorApplication {
       this.canvas = config.canvas;
     }
 
-    // Create WebGL2 context
-    const gl = this.canvas.getContext('webgl2', {
-      antialias: true,
-      alpha: false,
-      preserveDrawingBuffer: true,
-    });
-    if (!gl) {
-      throw new Error('WebGL2 not supported');
-    }
-    this.gl = gl;
-
     // Set clear color
     this.clearColor = config.clearColor ?? { r: 0.1, g: 0.1, b: 0.1, a: 1.0 };
+
+    // Store font configuration
+    this.fontConfig = config.fonts;
+
+    if (this.isIntegratedMode) {
+      // Integrated mode: create engine, share WebGL context
+      this.engine = new EngineApplication({
+        window: { canvas: this.canvas },
+        ...config.engine,
+      });
+
+      // Get GL context from engine's renderer
+      this.gl = this.engine.getRenderer().getThreeRenderer().getContext() as WebGL2RenderingContext;
+    } else {
+      // Standalone mode: create our own WebGL context
+      const gl = this.canvas.getContext('webgl2', {
+        antialias: true,
+        alpha: false,
+        preserveDrawingBuffer: true,
+      });
+      if (!gl) {
+        throw new Error('WebGL2 not supported');
+      }
+      this.gl = gl;
+    }
   }
 
   /**
@@ -92,6 +191,9 @@ export class EditorApplication {
    */
   registerPanel(panel: EditorPanel): void {
     this.panels.push(panel);
+
+    // Set application reference so panel can access engine, renderer, etc.
+    panel.setApplication(this);
 
     // Register with menu manager for native menu integration
     this.menuManager.registerPanel(panel);
@@ -141,6 +243,27 @@ export class EditorApplication {
       return;
     }
 
+    // Initialize engine first (if integrated mode)
+    if (this.engine) {
+      await this.engine.initialize();
+
+      // Create editor managers
+      this.editorManager = new EditorManager(
+        this.engine.getWorld(),
+        () => this.engine!.createCommands(),
+      );
+      this.engine.insertResource(this.editorManager);
+
+      this.editorCameraManager = new EditorCameraManager(this.engine.getRenderer());
+      this.engine.insertResource(this.editorCameraManager);
+
+      // Create editor camera for scene view
+      this.editorCamera = new EditorCamera({
+        position: { x: 5, y: 5, z: 5 },
+        lookAt: { x: 0, y: 0, z: 0 },
+      });
+    }
+
     // Load panel states from storage
     await this.panelStateManager.load();
 
@@ -158,11 +281,26 @@ export class EditorApplication {
     // Register global keyboard shortcuts
     await this.menuManager.registerShortcuts();
 
+    // Initialize OS detection
+    await initOSInfo();
+
     // Initialize ImGui
     await this.initializeImGui();
 
+    // Load fonts if configured
+    if (this.fontConfig) {
+      await EditorFonts.loadFonts(
+        this.fontConfig.mainFontUrl,
+        this.fontConfig.iconFontUrl,
+      );
+    }
+
+    // Initialize title bar (sets up Tauri window controls)
+    await this.titleBar.initialize();
+
     // Start the render loop
     this.isRunning = true;
+    this.lastEditorRenderTime = performance.now();
 
     return new Promise<void>((resolve) => {
       const loop = (time: number) => {
@@ -171,7 +309,12 @@ export class EditorApplication {
           return;
         }
 
-        this.renderFrame(time);
+        if (this.isIntegratedMode) {
+          this.combinedLoop(time);
+        } else {
+          this.standaloneLoop(time);
+        }
+
         this.animationFrameId = requestAnimationFrame(loop);
       };
 
@@ -188,6 +331,11 @@ export class EditorApplication {
     if (this.animationFrameId !== null) {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
+    }
+
+    // Stop engine if running
+    if (this.engine) {
+      this.engine.stop();
     }
 
     // Save panel states
@@ -240,6 +388,55 @@ export class EditorApplication {
     await this.panelStateManager.save(this.panels);
   }
 
+  // ============================================================================
+  // Integrated Mode Accessors
+  // ============================================================================
+
+  /**
+   * Get the wrapped EngineApplication.
+   * Only available in integrated mode.
+   */
+  getEngine(): EngineApplication | null {
+    return this.engine;
+  }
+
+  /**
+   * Get the EditorManager.
+   * Only available in integrated mode.
+   */
+  getEditorManager(): EditorManager | null {
+    return this.editorManager;
+  }
+
+  /**
+   * Get the EditorCameraManager.
+   * Only available in integrated mode.
+   */
+  getEditorCameraManager(): EditorCameraManager | null {
+    return this.editorCameraManager;
+  }
+
+  /**
+   * Get the EditorCamera for scene view rendering.
+   * Only available in integrated mode.
+   */
+  getEditorCamera(): EditorCamera | null {
+    return this.editorCamera;
+  }
+
+  /**
+   * Get the shared scene from the engine's renderer.
+   * Both Scene View and Game View render this same scene.
+   * Only available in integrated mode.
+   */
+  getScene(): Scene | null {
+    return this.engine?.getRenderer().getScene() ?? null;
+  }
+
+  // ============================================================================
+  // Private Methods
+  // ============================================================================
+
   /**
    * Initialize ImGui with the WebGL context
    */
@@ -265,9 +462,9 @@ export class EditorApplication {
   }
 
   /**
-   * Render a single frame
+   * Standalone loop - just ImGui rendering
    */
-  private renderFrame(_time: number): void {
+  private standaloneLoop(_time: number): void {
     // Handle canvas resize
     this.handleResize();
 
@@ -287,17 +484,66 @@ export class EditorApplication {
   }
 
   /**
+   * Combined loop - game at full fps, editor at 30fps
+   */
+  private combinedLoop(time: number): void {
+    if (!this.engine) return;
+
+    // Handle canvas resize
+    this.handleResize();
+
+    const shouldRenderEditor = time - this.lastEditorRenderTime >= this.editorRenderInterval;
+
+    // Game logic runs at full FPS
+    this.engine.updateOnly();
+
+    // Editor UI at throttled fps
+    if (shouldRenderEditor) {
+      this.lastEditorRenderTime = time;
+      this.renderEditorUI();
+    }
+  }
+
+  /**
+   * Render the editor UI (ImGui + panels)
+   */
+  private renderEditorUI(): void {
+    if (!this.engine) return;
+
+    // Reset WebGL state after Three.js
+    this.engine.getRenderer().resetState();
+
+    // Clear screen for editor
+    const { r, g, b, a } = this.clearColor;
+    this.gl.clearColor(r, g, b, a);
+    this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+
+    // ImGui frame
+    ImGuiImplWeb.BeginRender();
+    this.renderDockspace();
+    ImGuiImplWeb.EndRender();
+  }
+
+  /**
    * Render the root dockspace that fills the entire viewport
    */
   private renderDockspace(): void {
+    // Render title bar first (at top of screen)
+    this.titleBar.render();
+
     // Use ImVec2Helpers instead of viewport.Pos/Size which are broken in jsimgui
     const dockspacePos = ImVec2Helpers.GetMainViewportPos();
     const dockspaceSize = ImVec2Helpers.GetMainViewportSize();
     const viewportID = ImVec2Helpers.GetMainViewportID();
 
-    // Create fullscreen dockspace window
-    ImGui.SetNextWindowPos(dockspacePos, ImGui.Cond.Always);
-    ImGui.SetNextWindowSize(dockspaceSize, ImGui.Cond.Always);
+    // Offset dockspace to account for title bar height
+    const titleBarHeight = this.titleBar.getHeight();
+    const adjustedPos = { x: dockspacePos.x, y: dockspacePos.y + titleBarHeight };
+    const adjustedSize = { x: dockspaceSize.x, y: dockspaceSize.y - titleBarHeight };
+
+    // Create fullscreen dockspace window (below title bar)
+    ImGui.SetNextWindowPos(adjustedPos, ImGui.Cond.Always);
+    ImGui.SetNextWindowSize(adjustedSize, ImGui.Cond.Always);
     ImGui.SetNextWindowViewport(viewportID);
 
     const windowFlags =
@@ -348,6 +594,11 @@ export class EditorApplication {
       this.canvas.width = displayWidth;
       this.canvas.height = displayHeight;
       this.gl.viewport(0, 0, displayWidth, displayHeight);
+
+      // Notify engine of resize if in integrated mode
+      if (this.engine) {
+        this.engine.getRenderer().onResize(displayWidth, displayHeight);
+      }
     }
   }
 

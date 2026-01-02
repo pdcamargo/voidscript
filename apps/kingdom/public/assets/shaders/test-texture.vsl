@@ -1,8 +1,0 @@
-// Test Texture Shader - Just samples and outputs texture to verify basic functionality
-shader_type canvas_item;
-render_mode unshaded;
-
-void fragment() {
-    // Just sample and output the texture - simplest possible shader
-    COLOR = texture(TEXTURE, UV);
-}

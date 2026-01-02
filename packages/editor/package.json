@@ -9,7 +9,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@voidscript/imgui": "workspace:*"
+    "@voidscript/engine": "workspace:*",
+    "@voidscript/imgui": "workspace:*",
+    "@voidscript/renderer": "workspace:*"
   },
   "devDependencies": {
     "@workspace/typescript-config": "workspace:*",

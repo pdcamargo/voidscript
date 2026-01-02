@@ -314,7 +314,7 @@ export class MenuManager {
           items.push(
             await MenuItem.new({
               id: `panel-${panel.getId()}`,
-              text: panel.title,
+              text: panel.getTitle(),
               accelerator: panel.shortcut,
               action: () => {
                 panel.open();

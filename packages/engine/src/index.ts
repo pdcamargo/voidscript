@@ -1,3 +1,53 @@
+// Re-export core math types from @voidscript/core
+// Note: Some types like Color may conflict with engine-specific types
+// Use explicit imports where needed to avoid ambiguity
+export {
+  Vector2 as CoreVector2,
+  Vector3 as CoreVector3,
+  Vector4 as CoreVector4,
+  Matrix2,
+  Matrix3 as CoreMatrix3,
+  Matrix4 as CoreMatrix4,
+  Euler,
+  Quaternion as CoreQuaternion,
+  Box2,
+  Box3,
+  Sphere,
+  Plane as CorePlane,
+  Ray,
+  Line3,
+  Triangle,
+  Frustum,
+  Cylindrical,
+  Spherical,
+  SphericalHarmonics3,
+  MathUtils,
+} from '@voidscript/core';
+
+export type {
+  Vector2Metadata,
+  Vector3Metadata,
+  Vector4Metadata,
+  Matrix2Metadata,
+  Matrix3Metadata,
+  Matrix4Metadata,
+  EulerMetadata,
+  EulerOrder,
+  QuaternionMetadata,
+  ColorMetadata,
+  Box2Metadata,
+  Box3Metadata,
+  SphereMetadata,
+  PlaneMetadata,
+  RayMetadata,
+  Line3Metadata,
+  TriangleMetadata,
+  FrustumMetadata,
+  CylindricalMetadata,
+  SphericalMetadata,
+  SphericalHarmonics3Metadata,
+} from '@voidscript/core';
+
 // ECS core (excluding Application which is replaced by the enhanced version)
 export type { Entity, EntityMetadata } from "./ecs/entity.js";
 export {

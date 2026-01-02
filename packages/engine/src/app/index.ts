@@ -11,13 +11,20 @@
  * - ImGui support
  */
 
-// Core application
+// Core application (legacy - full featured with editor support)
 export {
   Application,
   type ApplicationConfig,
   type DefaultWorldConfig,
   type AppEditorConfig,
 } from "./application.js";
+
+// Clean engine application (no editor coupling)
+export {
+  EngineApplication,
+  type EngineApplicationConfig,
+  type PhysicsConfig,
+} from "./engine-application.js";
 
 // World loader
 export { WorldLoader, type WorldLoaderConfig } from "./world-loader.js";

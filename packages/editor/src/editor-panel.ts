@@ -8,6 +8,7 @@
 import { ImGui, ImVec2Helpers } from '@voidscript/imgui';
 import { EditorPanelFocusFlags } from './focus-flags.js';
 import type { Vec2 } from './types.js';
+import type { EditorApplication } from './editor-application.js';
 
 /**
  * Configuration options for EditorPanel
@@ -107,6 +108,15 @@ export abstract class EditorPanel {
   /** Current cursor screen position (content origin) */
   private currentCursorScreenPos: Vec2 = { x: 0, y: 0 };
 
+  /** Previous content width for resize detection */
+  private previousContentWidth = 0;
+
+  /** Previous content height for resize detection */
+  private previousContentHeight = 0;
+
+  /** Reference to the parent EditorApplication (set when registered) */
+  private _application: EditorApplication | null = null;
+
   /**
    * Create a new EditorPanel
    *
@@ -134,6 +144,19 @@ export abstract class EditorPanel {
    * Override to perform cleanup logic.
    */
   protected onClosed(): void {}
+
+  /**
+   * Called when the panel content area is resized.
+   * Override to handle resize events (e.g., resizing render targets).
+   *
+   * @param width - New content width in pixels
+   * @param height - New content height in pixels
+   */
+  protected onResize(width: number, height: number): void {
+    // Default implementation does nothing
+    void width;
+    void height;
+  }
 
   /**
    * Render the panel content.
@@ -229,6 +252,13 @@ export abstract class EditorPanel {
   }
 
   /**
+   * Get the window title for this panel.
+   */
+  public getTitle(): string {
+    return this.title;
+  }
+
+  /**
    * Get whether the panel is currently open.
    */
   public get isOpen(): boolean {
@@ -259,6 +289,33 @@ export abstract class EditorPanel {
    */
   public close(): void {
     this._isOpen = false;
+  }
+
+  /**
+   * Get the parent EditorApplication.
+   * Only available after the panel has been registered with an application.
+   *
+   * @throws Error if the panel has not been registered with an application
+   * @returns The parent EditorApplication
+   */
+  protected getApplication(): EditorApplication {
+    if (!this._application) {
+      throw new Error(
+        `Panel "${this.id}" has not been registered with an EditorApplication. ` +
+          `Call app.registerPanel() before accessing getApplication().`,
+      );
+    }
+    return this._application;
+  }
+
+  /**
+   * Set the parent application reference.
+   * Called internally by EditorApplication when registering the panel.
+   *
+   * @internal
+   */
+  public setApplication(app: EditorApplication): void {
+    this._application = app;
   }
 
   /**
@@ -335,6 +392,19 @@ export abstract class EditorPanel {
     // Get actual content dimensions (excluding padding, title bar, etc.)
     this.currentContentWidth = contentRegion.x;
     this.currentContentHeight = contentRegion.y;
+
+    // Detect resize and call onResize callback
+    if (
+      this.currentContentWidth !== this.previousContentWidth ||
+      this.currentContentHeight !== this.previousContentHeight
+    ) {
+      // Only call if we have valid dimensions (not initial 0,0)
+      if (this.previousContentWidth > 0 || this.previousContentHeight > 0) {
+        this.onResize(this.currentContentWidth, this.currentContentHeight);
+      }
+      this.previousContentWidth = this.currentContentWidth;
+      this.previousContentHeight = this.currentContentHeight;
+    }
 
     // Store actual window position
     this.currentWindowPos = {

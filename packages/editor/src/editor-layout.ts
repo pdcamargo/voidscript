@@ -5,8 +5,24 @@
  * All methods follow the pattern: first param is the value, second is an options object.
  */
 
-import { ImGui } from '@voidscript/imgui';
+import { ImGui, ImVec2Helpers } from '@voidscript/imgui';
 import type { Color } from './types.js';
+
+/**
+ * Options for icon buttons
+ */
+export interface IconButtonOptions {
+  /** Button size in pixels (both width and height) */
+  size?: number;
+  /** Tooltip shown on hover */
+  tooltip?: string;
+  /** Button background color when not hovered */
+  bgColor?: Color;
+  /** Button background color when hovered */
+  hoverColor?: Color;
+  /** Icon color */
+  iconColor?: Color;
+}
 
 /**
  * Options for the text() method
@@ -105,5 +121,322 @@ export class EditorLayout {
    */
   static hint(content: string): void {
     ImGui.TextDisabled(content);
+  }
+
+  /**
+   * Render a filled rectangle with the specified color.
+   * Useful for viewport backgrounds or color indicators.
+   *
+   * @param width - Width of the rectangle in pixels
+   * @param height - Height of the rectangle in pixels
+   * @param color - Fill color (RGBA values 0-1)
+   *
+   * @example
+   * ```typescript
+   * // Draw a blue viewport background
+   * EditorLayout.fillRect(800, 600, { r: 0.1, g: 0.2, b: 0.4, a: 1 });
+   * ```
+   */
+  static fillRect(
+    width: number,
+    height: number,
+    color: { r: number; g: number; b: number; a?: number },
+  ): void {
+    const drawList = ImGui.GetWindowDrawList();
+    const cursorPos = ImVec2Helpers.GetCursorScreenPos();
+
+    const pMin = { x: cursorPos.x, y: cursorPos.y };
+    const pMax = { x: cursorPos.x + width, y: cursorPos.y + height };
+
+    const colorU32 = ImGui.ColorConvertFloat4ToU32({
+      x: color.r,
+      y: color.g,
+      z: color.b,
+      w: color.a ?? 1.0,
+    });
+
+    drawList.AddRectFilled(pMin, pMax, colorU32);
+
+    // Advance cursor
+    ImGui.Dummy({ x: width, y: height });
+  }
+
+  /**
+   * Render a button with the specified label.
+   *
+   * @param label - Button label
+   * @param options - Optional button configuration
+   * @returns true if the button was clicked
+   *
+   * @example
+   * ```typescript
+   * if (EditorLayout.button('Click Me')) {
+   *   console.log('Button clicked!');
+   * }
+   * ```
+   */
+  static button(
+    label: string,
+    options?: {
+      /** Button width (0 = auto) */
+      width?: number;
+      /** Button height (0 = auto) */
+      height?: number;
+      /** Tooltip shown on hover */
+      tooltip?: string;
+    },
+  ): boolean {
+    const size = { x: options?.width ?? 0, y: options?.height ?? 0 };
+    const clicked = ImGui.Button(label, size);
+
+    if (options?.tooltip && ImGui.IsItemHovered()) {
+      ImGui.SetTooltip(options.tooltip);
+    }
+
+    return clicked;
+  }
+
+  /**
+   * Render items on the same line.
+   *
+   * @param spacing - Optional spacing between items
+   */
+  static sameLine(spacing?: number): void {
+    if (spacing !== undefined) {
+      ImGui.SameLine(0, spacing);
+    } else {
+      ImGui.SameLine();
+    }
+  }
+
+  /**
+   * Draw a filled circle at the current cursor position.
+   *
+   * @param radius - Circle radius in pixels
+   * @param color - Fill color (RGBA values 0-1)
+   *
+   * @example
+   * ```typescript
+   * // Draw a red circle
+   * EditorLayout.drawCircle(6, { r: 1, g: 0.3, b: 0.3, a: 1 });
+   * ```
+   */
+  static drawCircle(
+    radius: number,
+    color: { r: number; g: number; b: number; a?: number },
+  ): void {
+    const drawList = ImGui.GetWindowDrawList();
+    const cursorPos = ImVec2Helpers.GetCursorScreenPos();
+
+    // Center of the circle
+    const centerX = cursorPos.x + radius;
+    const centerY = cursorPos.y + radius;
+
+    const colorU32 = ImGui.ColorConvertFloat4ToU32({
+      x: color.r,
+      y: color.g,
+      z: color.b,
+      w: color.a ?? 1.0,
+    });
+
+    // Draw filled circle (32 segments for smoothness)
+    drawList.AddCircleFilled({ x: centerX, y: centerY }, radius, colorU32, 32);
+
+    // Advance cursor past the circle
+    ImGui.Dummy({ x: radius * 2, y: radius * 2 });
+  }
+
+  /**
+   * Create an invisible button for hit detection.
+   * Useful for creating custom clickable areas.
+   *
+   * @param id - Unique button ID
+   * @param width - Button width in pixels
+   * @param height - Button height in pixels
+   * @returns true if the button was clicked
+   *
+   * @example
+   * ```typescript
+   * // Create a clickable area
+   * if (EditorLayout.invisibleButton('drag-region', 100, 32)) {
+   *   console.log('Clicked!');
+   * }
+   * ```
+   */
+  static invisibleButton(id: string, width: number, height: number): boolean {
+    return ImGui.InvisibleButton(id, { x: width, y: height });
+  }
+
+  /**
+   * Check if the last item is hovered
+   */
+  static isItemHovered(): boolean {
+    return ImGui.IsItemHovered();
+  }
+
+  /**
+   * Check if the last item is active (being clicked/dragged)
+   */
+  static isItemActive(): boolean {
+    return ImGui.IsItemActive();
+  }
+
+  /**
+   * Get the screen position of the last item's min corner (top-left)
+   */
+  static getItemRectMin(): { x: number; y: number } {
+    // Use workaround since GetItemRectMin returns ImVec2 which is broken
+    const cursorPos = ImVec2Helpers.GetCursorScreenPos();
+    const itemSpacing = ImGui.GetStyle().ItemSpacing;
+    // This is an approximation - in practice we track positions ourselves
+    return {
+      x: cursorPos.x,
+      y: cursorPos.y - itemSpacing.y,
+    };
+  }
+
+  /**
+   * Set cursor position within the window
+   *
+   * @param x - X position in window coordinates
+   * @param y - Y position in window coordinates
+   */
+  static setCursorPos(x: number, y: number): void {
+    ImGui.SetCursorPos({ x, y });
+  }
+
+  /**
+   * Set cursor X position within the window
+   *
+   * @param x - X position in window coordinates
+   */
+  static setCursorPosX(x: number): void {
+    ImGui.SetCursorPosX(x);
+  }
+
+  /**
+   * Set cursor Y position within the window
+   *
+   * @param y - Y position in window coordinates
+   */
+  static setCursorPosY(y: number): void {
+    ImGui.SetCursorPosY(y);
+  }
+
+  /**
+   * Get current cursor X position in window coordinates
+   */
+  static getCursorPosX(): number {
+    return ImGui.GetCursorPosX();
+  }
+
+  /**
+   * Get current cursor Y position in window coordinates
+   */
+  static getCursorPosY(): number {
+    return ImGui.GetCursorPosY();
+  }
+
+  /**
+   * Get current window width
+   */
+  static getWindowWidth(): number {
+    return ImGui.GetWindowWidth();
+  }
+
+  /**
+   * Get current window height
+   */
+  static getWindowHeight(): number {
+    return ImGui.GetWindowHeight();
+  }
+
+  /**
+   * Push a style color
+   *
+   * @param idx - ImGui color index
+   * @param color - Color to push
+   */
+  static pushStyleColor(
+    idx: number,
+    color: { r: number; g: number; b: number; a?: number },
+  ): void {
+    ImGui.PushStyleColorImVec4(idx, {
+      x: color.r,
+      y: color.g,
+      z: color.b,
+      w: color.a ?? 1.0,
+    });
+  }
+
+  /**
+   * Pop style colors
+   *
+   * @param count - Number of colors to pop (default: 1)
+   */
+  static popStyleColor(count: number = 1): void {
+    ImGui.PopStyleColor(count);
+  }
+
+  /**
+   * Render an icon button (square button with centered icon)
+   *
+   * @param icon - The icon character to render
+   * @param options - Button options
+   * @returns true if the button was clicked
+   */
+  static iconButton(icon: string, options?: IconButtonOptions): boolean {
+    const size = options?.size ?? 24;
+    const bgColor = options?.bgColor ?? { r: 0, g: 0, b: 0, a: 0 };
+    const hoverColor = options?.hoverColor ?? { r: 0.3, g: 0.3, b: 0.3, a: 1 };
+
+    // Push transparent button colors
+    this.pushStyleColor(ImGui.Col.Button, bgColor);
+    this.pushStyleColor(ImGui.Col.ButtonHovered, hoverColor);
+    this.pushStyleColor(ImGui.Col.ButtonActive, {
+      ...hoverColor,
+      a: (hoverColor.a ?? 1) * 0.8,
+    });
+
+    if (options?.iconColor) {
+      this.pushStyleColor(ImGui.Col.Text, options.iconColor);
+    }
+
+    const clicked = ImGui.Button(icon, { x: size, y: size });
+
+    if (options?.iconColor) {
+      this.popStyleColor();
+    }
+    this.popStyleColor(3);
+
+    if (options?.tooltip && ImGui.IsItemHovered()) {
+      ImGui.SetTooltip(options.tooltip);
+    }
+
+    return clicked;
+  }
+
+  /**
+   * Begin a group (for layout purposes)
+   */
+  static beginGroup(): void {
+    ImGui.BeginGroup();
+  }
+
+  /**
+   * End a group
+   */
+  static endGroup(): void {
+    ImGui.EndGroup();
+  }
+
+  /**
+   * Add a dummy item for spacing
+   *
+   * @param width - Width in pixels
+   * @param height - Height in pixels
+   */
+  static dummy(width: number, height: number): void {
+    ImGui.Dummy({ x: width, y: height });
   }
 }

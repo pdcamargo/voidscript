@@ -1,9 +1,0 @@
-// Test Tint Shader - Tints the texture red to verify shader affects output
-shader_type canvas_item;
-render_mode unshaded;
-
-void fragment() {
-    vec4 tex = texture(TEXTURE, UV);
-    // Apply strong red tint - should be VERY obvious if working
-    COLOR = vec4(tex.rgb * vec3(1.0, 0.3, 0.3), tex.a);
-}
