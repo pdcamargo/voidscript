@@ -5,12 +5,12 @@
  * Assets are loaded using the registered loaders from AssetLoaderRegistry.
  */
 
-import type { World } from "./world.js";
-import type { Command } from "./command.js";
-import type { RuntimeAsset } from "./runtime-asset.js";
-import type { ComponentType } from "./component.js";
-import { RuntimeAssetManager } from "./runtime-asset-manager.js";
-import type { GUID } from "./asset-metadata.js";
+import type { Scene } from './scene.js';
+import type { Command } from './command.js';
+import type { RuntimeAsset } from './runtime-asset.js';
+import type { ComponentType } from './component.js';
+import { RuntimeAssetManager } from './runtime-asset-manager.js';
+import type { GUID } from './asset-metadata.js';
 
 /**
  * Progress callback for asset loading
@@ -35,20 +35,20 @@ export interface PreloadAssetsOptions {
 /**
  * Find all RuntimeAsset instances in a world by scanning all components
  *
- * @param world - The ECS World to scan
+ * @param scene - The ECS Scene to scan
  * @param commands - The Command interface
  * @returns Array of unique RuntimeAsset instances
  */
 export function findAllRuntimeAssets(
-  world: World,
-  commands: Command
+  scene: Scene,
+  commands: Command,
 ): RuntimeAsset[] {
   const foundAssets = new Map<string, RuntimeAsset>(); // guid -> asset
 
   // Query all entities
-  world.query().each((entityId) => {
+  scene.query().each((entityId) => {
     // Get all components for this entity
-    const componentsMap = world.getAllComponents(entityId);
+    const componentsMap = scene.getAllComponents(entityId);
     if (!componentsMap) return;
 
     // Scan each component's data for RuntimeAsset instances
@@ -65,17 +65,12 @@ export function findAllRuntimeAssets(
  */
 function scanObjectForAssets(
   obj: any,
-  foundAssets: Map<string, RuntimeAsset>
+  foundAssets: Map<string, RuntimeAsset>,
 ): void {
-  if (!obj || typeof obj !== "object") return;
+  if (!obj || typeof obj !== 'object') return;
 
   // Check if this is a RuntimeAsset
-  if (
-    obj.guid &&
-    obj.metadata &&
-    obj.path &&
-    typeof obj.load === "function"
-  ) {
+  if (obj.guid && obj.metadata && obj.path && typeof obj.load === 'function') {
     const asset = obj as RuntimeAsset;
     if (!foundAssets.has(asset.guid)) {
       foundAssets.set(asset.guid, asset);
@@ -133,29 +128,29 @@ export async function preloadAssets(...guids: GUID[]): Promise<void> {
 /**
  * Preload all RuntimeAsset instances in a world
  *
- * @param world - The ECS World containing assets
+ * @param scene - The ECS Scene containing assets
  * @param commands - The Command interface
  * @param options - Preload options
  * @returns Promise that resolves when all assets are loaded
  *
  * @example
  * ```typescript
- * await preloadWorldAssets(world, commands, {
+ * await preloadSceneAssets(world, commands, {
  *   onProgress: (progress) => {
  *     console.log(`Loading: ${progress.loaded}/${progress.total}`);
  *   }
  * });
  * ```
  */
-export async function preloadWorldAssets(
-  world: World,
+export async function preloadSceneAssets(
+  scene: Scene,
   commands: Command,
-  options?: PreloadAssetsOptions
+  options?: PreloadAssetsOptions,
 ): Promise<void> {
   const { onProgress } = options ?? {};
 
   // Find all RuntimeAsset instances
-  const assets = findAllRuntimeAssets(world, commands);
+  const assets = findAllRuntimeAssets(scene, commands);
 
   console.log(`[AssetPreloader] Found ${assets.length} assets to preload`);
 
@@ -188,7 +183,10 @@ export async function preloadWorldAssets(
         console.log(`[AssetPreloader] Already loaded: ${asset.path}`);
       }
     } catch (error) {
-      console.error(`[AssetPreloader] Failed to load asset: ${asset.path}`, error);
+      console.error(
+        `[AssetPreloader] Failed to load asset: ${asset.path}`,
+        error,
+      );
       // Continue loading other assets even if one fails
     }
 

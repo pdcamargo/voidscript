@@ -1,5 +1,5 @@
 /**
- * ECS World - Main container for entities and components
+ * ECS Scene - Main container for entities and components
  *
  * Provides high-level API for entity/component operations with deferred command buffer
  * for loop-safe modifications.
@@ -12,9 +12,9 @@ import { Query } from './query.js';
 import { EventEmitter } from './event-emitter.js';
 
 /**
- * World event types
+ * Scene event types
  */
-export type WorldEvent =
+export type SceneEvent =
   | { type: 'entity:created'; entity: Entity }
   | { type: 'entity:destroyed'; entity: Entity }
   | {
@@ -57,9 +57,9 @@ interface QueryCacheEntry {
 }
 
 /**
- * World - ECS container and API
+ * Scene - ECS container and API
  */
-export class World {
+export class Scene {
   private readonly entityManager = new EntityManager();
   private readonly archetypeGraph = new ArchetypeGraph();
   private readonly commandBuffer: DeferredCommand[] = [];
@@ -71,8 +71,8 @@ export class World {
   private archetypeVersion = 0;
 
   /** Event system for entity/component changes */
-  private readonly eventQueue: WorldEvent[] = [];
-  public readonly events = new EventEmitter<WorldEvent>();
+  private readonly eventQueue: SceneEvent[] = [];
+  public readonly events = new EventEmitter<SceneEvent>();
 
   constructor() {
     // Hook into archetype creation to invalidate query cache
@@ -441,7 +441,7 @@ export class World {
     const archetypeEntity = archetype.entities[row];
     if (archetypeEntity !== entity) {
       console.error(
-        `[World.getAllComponents] ENTITY ROW MISMATCH DETECTED!\n` +
+        `[Scene.getAllComponents] ENTITY ROW MISMATCH DETECTED!\n` +
         `  Entity: ${entity}\n` +
         `  meta.row: ${row}\n` +
         `  archetype.entities[${row}]: ${archetypeEntity}\n` +
@@ -457,7 +457,7 @@ export class World {
     const archetypeRowCheck = (archetype as any).entityToRow?.get(entity);
     if (archetypeRowCheck !== undefined && archetypeRowCheck !== row) {
       console.error(
-        `[World.getAllComponents] ARCHETYPE entityToRow MISMATCH!\n` +
+        `[Scene.getAllComponents] ARCHETYPE entityToRow MISMATCH!\n` +
         `  Entity: ${entity}\n` +
         `  meta.row: ${row}\n` +
         `  archetype.entityToRow.get(entity): ${archetypeRowCheck}`
@@ -569,7 +569,7 @@ export class World {
           const meta = this.entityManager.getMetadata(entity);
           if (meta && meta.row !== row) {
             console.error(
-              `[World.executeQuery] ROW MISMATCH in query iteration!\n` +
+              `[Scene.executeQuery] ROW MISMATCH in query iteration!\n` +
               `  Entity: ${entity}\n` +
               `  iteration row: ${row}\n` +
               `  meta.row: ${meta.row}\n` +
@@ -837,7 +837,7 @@ export class World {
   /**
    * Queue an event to be emitted later (during flushEvents)
    */
-  private queueEvent(event: WorldEvent): void {
+  private queueEvent(event: SceneEvent): void {
     this.eventQueue.push(event);
   }
 
@@ -867,7 +867,7 @@ export class EntityBuilder {
   private components = new Map<number, any>();
   private callback?: (entity: Entity) => void;
 
-  constructor(private world: World) {}
+  constructor(private scene: Scene) {}
 
   /**
    * Add component to entity
@@ -890,6 +890,7 @@ export class EntityBuilder {
    * @returns Entity handle (may be undefined if spawn is deferred)
    */
   build(): Entity | undefined {
-    return (this.world as any).spawnInternal(this.components, this.callback);
+    return (this.scene as any).spawnInternal(this.components, this.callback);
   }
 }
+

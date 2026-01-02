@@ -26,7 +26,7 @@ import type { EditorPlatform } from './editor-platform.js';
 import { EditorManager } from './editor-manager.js';
 import { EditorCameraManager } from '../app/editor-camera-manager.js';
 import { HelperManager } from '../app/helper-manager.js';
-import { WorldSerializer } from '../ecs/serialization/world-serializer.js';
+import { SceneSerializer } from '../ecs/serialization/scene-serializer.js';
 import { isYamlFile } from '../ecs/serialization/yaml-utils.js';
 import { AssetDatabase } from '../ecs/asset-database.js';
 import { renderImGuiHierarchy } from '../app/imgui/hierarchy-viewer.js';
@@ -177,7 +177,7 @@ const LAST_SCENE_PATH_KEY = 'voidscript-editor-last-scene-path';
  */
 export class EditorLayer extends Layer {
   private config: EditorConfig;
-  private worldSerializer = new WorldSerializer();
+  private sceneSerializer = new SceneSerializer();
   private saveInProgress = false;
   private loadInProgress = false;
 
@@ -312,8 +312,8 @@ export class EditorLayer extends Layer {
 
       // Deserialize based on file extension
       const loadResult = isYamlFile(filePath)
-        ? this.worldSerializer.deserializeFromYaml(
-            app.world,
+        ? this.sceneSerializer.deserializeFromYaml(
+            app.scene,
             app.getCommands(),
             fileContent,
             {
@@ -321,8 +321,8 @@ export class EditorLayer extends Layer {
               assetMetadataResolver: (guid) => AssetDatabase.getMetadata(guid),
             },
           )
-        : this.worldSerializer.deserializeFromString(
-            app.world,
+        : this.sceneSerializer.deserializeFromString(
+            app.scene,
             app.getCommands(),
             fileContent,
             {
@@ -1356,17 +1356,17 @@ export class EditorLayer extends Layer {
     ];
 
     const menuCallbacks: MenuBarCallbacks = {
-      onNewWorld:
-        this.config.menuCallbacks?.onNewWorld ?? (() => this.handleNewWorld()),
-      onSaveWorld:
-        this.config.menuCallbacks?.onSaveWorld ??
-        (() => this.handleSaveWorld()),
-      onSaveWorldAs:
-        this.config.menuCallbacks?.onSaveWorldAs ??
-        (() => this.handleSaveWorldAs()),
-      onLoadWorld:
-        this.config.menuCallbacks?.onLoadWorld ??
-        (() => this.handleLoadWorld()),
+      onNewScene:
+        this.config.menuCallbacks?.onNewScene ?? (() => this.handleNewScene()),
+      onSaveScene:
+        this.config.menuCallbacks?.onSaveScene ??
+        (() => this.handleSaveScene()),
+      onSaveSceneAs:
+        this.config.menuCallbacks?.onSaveSceneAs ??
+        (() => this.handleSaveSceneAs()),
+      onLoadScene:
+        this.config.menuCallbacks?.onLoadScene ??
+        (() => this.handleLoadScene()),
       onReload:
         this.config.menuCallbacks?.onReload ?? (() => window.location.reload()),
       hasCurrentPath:
@@ -1802,7 +1802,7 @@ export class EditorLayer extends Layer {
           this.config.platform!,
           app.getRenderer(),
           () => this.getEntitiesForAnimationPreview(app),
-          app.world,
+          app.scene,
           app.getCommands(),
           app.getAssetsManifestPath(),
         );
@@ -2095,7 +2095,7 @@ export class EditorLayer extends Layer {
   /**
    * Handle Save (uses current path if available, otherwise falls back to Save As)
    */
-  private handleSaveWorld(): void {
+  private handleSaveScene(): void {
     if (this.saveInProgress) return;
 
     // Prevent saving while the game is playing
@@ -2117,14 +2117,14 @@ export class EditorLayer extends Layer {
         });
     } else {
       // No current path - fall back to Save As
-      this.handleSaveWorldAs();
+      this.handleSaveSceneAs();
     }
   }
 
   /**
    * Handle Save As (always shows dialog)
    */
-  private handleSaveWorldAs(): void {
+  private handleSaveSceneAs(): void {
     if (this.saveInProgress) return;
 
     // Prevent saving while the game is playing
@@ -2145,7 +2145,7 @@ export class EditorLayer extends Layer {
       });
   }
 
-  private handleLoadWorld(): void {
+  private handleLoadScene(): void {
     if (this.loadInProgress) return;
     this.loadInProgress = true;
 
@@ -2161,7 +2161,7 @@ export class EditorLayer extends Layer {
   /**
    * Handle New World (creates a new empty world and saves it)
    */
-  private handleNewWorld(): void {
+  private handleNewScene(): void {
     if (this.saveInProgress || this.loadInProgress) return;
 
     // Prevent creating new world while the game is playing
@@ -2198,9 +2198,9 @@ export class EditorLayer extends Layer {
 
     // Serialize based on file extension
     const content = isYamlFile(filePath)
-      ? this.worldSerializer.serializeToYaml(app.world, app.getCommands())
-      : this.worldSerializer.serializeToString(
-          app.world,
+      ? this.sceneSerializer.serializeToYaml(app.scene, app.getCommands())
+      : this.sceneSerializer.serializeToString(
+          app.scene,
           app.getCommands(),
           true,
         );
@@ -2304,11 +2304,11 @@ export class EditorLayer extends Layer {
     this.lastPostProcessingEntity = null;
 
     // Clear the world
-    app.world.clear();
+    app.scene.clear();
 
     // Serialize and save the empty world
-    const json = this.worldSerializer.serializeToString(
-      app.world,
+    const json = this.sceneSerializer.serializeToString(
+      app.scene,
       app.getCommands(),
       true,
     );
@@ -2333,7 +2333,7 @@ export class EditorLayer extends Layer {
     app: Application,
   ): Array<{ entity: Entity; name: string }> {
     const entities: Array<{ entity: Entity; name: string }> = [];
-    const world = app.world;
+    const world = app.scene;
 
     // Query only entities with AnimationController (entities that can be animated)
     app

@@ -23,6 +23,10 @@ import type { RuntimeAsset } from './runtime-asset.js';
 import type { TextureMetadata, Model3DMetadata, TiledMapMetadata } from './asset-metadata.js';
 import { AssetType } from './asset-metadata.js';
 import { getTextureLoader } from '../loaders/texture-loader.js';
+import {
+  FileExtensions,
+  enforceFileExtension,
+} from '../constants/file-extensions.js';
 import * as THREE from 'three';
 import type * as tiled from '@kayahr/tiled';
 
@@ -157,9 +161,17 @@ AssetLoaderRegistry.register(AssetType.TiledMap, async (asset) => {
 /**
  * Default loader for Animation assets
  * Fetches JSON and parses into AnimationClip
+ * Requires .vanim file extension
  */
 AssetLoaderRegistry.register(AssetType.Animation, async (asset) => {
   const url = asset.getLoadableUrl();
+
+  // Enforce correct file extension
+  enforceFileExtension(
+    asset.metadata.path,
+    FileExtensions.AnimationClip,
+    'loading animation',
+  );
 
   const response = await fetch(url);
   if (!response.ok) {
@@ -202,9 +214,17 @@ AssetLoaderRegistry.register(AssetType.Audio, async (asset) => {
  * Default loader for Prefab assets
  * Fetches YAML/JSON and parses into PrefabAsset
  * Also caches the prefab in PrefabManager for instantiation
+ * Requires .vprefab file extension
  */
 AssetLoaderRegistry.register(AssetType.Prefab, async (asset) => {
   const url = asset.getLoadableUrl();
+
+  // Enforce correct file extension
+  enforceFileExtension(
+    asset.metadata.path,
+    FileExtensions.Prefab,
+    'loading prefab',
+  );
 
   const response = await fetch(url);
   if (!response.ok) {
@@ -256,9 +276,17 @@ AssetLoaderRegistry.register(AssetType.Prefab, async (asset) => {
  * Default loader for Shader assets (.vsl files)
  * Fetches VSL source and compiles into ShaderAsset
  * Also updates asset metadata with shader information (uniforms, functions, etc.)
+ * Requires .vsl file extension
  */
 AssetLoaderRegistry.register(AssetType.Shader, async (asset) => {
   const url = asset.getLoadableUrl();
+
+  // Enforce correct file extension
+  enforceFileExtension(
+    asset.metadata.path,
+    FileExtensions.Shader,
+    'loading shader',
+  );
 
   const response = await fetch(url);
   if (!response.ok) {
@@ -296,12 +324,20 @@ AssetLoaderRegistry.register(AssetType.Shader, async (asset) => {
 });
 
 /**
- * Default loader for StateMachine assets (.sm.json files)
+ * Default loader for StateMachine assets (.vanimsm files)
  * Fetches JSON and parses into AnimationStateMachine
  * Also updates asset metadata with state machine information
+ * Requires .vanimsm file extension
  */
 AssetLoaderRegistry.register(AssetType.StateMachine, async (asset) => {
   const url = asset.getLoadableUrl();
+
+  // Enforce correct file extension
+  enforceFileExtension(
+    asset.metadata.path,
+    FileExtensions.AnimationStateMachine,
+    'loading state machine',
+  );
 
   const response = await fetch(url);
   if (!response.ok) {

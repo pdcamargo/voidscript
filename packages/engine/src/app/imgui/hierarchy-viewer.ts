@@ -64,7 +64,7 @@ let currentPlatform: EditorPlatform | null = null;
  */
 function entityMatchesFilter(
   entity: Entity,
-  world: Application['world'],
+  world: Application['scene'],
   filter: string,
 ): boolean {
   if (!filter.trim()) return true;
@@ -88,7 +88,7 @@ function entityMatchesFilter(
  */
 function collectVisibleEntities(
   entity: Entity,
-  world: Application['world'],
+  world: Application['scene'],
   filter: string,
 ): Set<Entity> {
   const visible = new Set<Entity>();
@@ -128,7 +128,7 @@ export function renderImGuiHierarchy(app: Application, platform?: EditorPlatform
   ImGui.SetNextWindowSize({ x: 300, y: 500 }, ImGui.Cond.FirstUseEver);
 
   if (ImGui.Begin('Hierarchy')) {
-    const world = app.world;
+    const world = app.scene;
 
     // Reset flag at start of frame
     entityContextMenuOpened = false;
@@ -278,7 +278,7 @@ function renderEntityNode(
   entity: Entity,
   visibleEntities: Set<Entity> | null,
 ): void {
-  const world = app.world;
+  const world = app.scene;
   const commands = app.getCommands();
 
   // Get name or use fallback
@@ -625,7 +625,7 @@ function renderPrefabNode(
   isSelected: boolean,
   prefabInstance: { prefabAssetGuid: string; instanceId: string },
 ): void {
-  const world = app.world;
+  const world = app.scene;
   const commands = app.getCommands();
 
   // Render as leaf node with special styling
@@ -750,7 +750,7 @@ export function renderSavePrefabDialog(app: Application): void {
  * Actually save the prefab to the manifest and generate YAML
  */
 async function performPrefabSave(app: Application, entity: Entity, path: string): Promise<void> {
-  const world = app.world;
+  const world = app.scene;
   const commands = app.getCommands();
   const platform = currentPlatform;
 

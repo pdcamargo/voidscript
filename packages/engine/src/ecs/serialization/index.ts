@@ -1,14 +1,14 @@
 /**
- * ECS World Serialization
+ * ECS Scene Serialization
  *
  * Exports:
- * - WorldSerializer: Core serialization/deserialization class
+ * - SceneSerializer: Core serialization/deserialization class
  * - ComponentSerializer: Interface for custom serializers
  * - Built-in serializers: DefaultSerializer, SetSerializer, ParentSerializer, ChildrenSerializer, AssetRefSerializer
  * - Types and schemas
  */
 
-export { WorldSerializer } from "./world-serializer.js";
+export { SceneSerializer } from "./scene-serializer.js";
 export type {
   ComponentSerializer,
   SerializationContext,
@@ -35,8 +35,8 @@ export type {
   ComponentRegistryEntry,
   SerializedComponent,
   SerializedEntity,
-  WorldMetadata,
-  WorldData,
+  SceneMetadata,
+  SceneData,
   ResourceRegistryEntry,
   SerializedResource,
 } from "./schemas.js";
@@ -44,8 +44,8 @@ export {
   ComponentRegistryEntrySchema,
   SerializedComponentSchema,
   SerializedEntitySchema,
-  WorldMetadataSchema,
-  WorldSchema,
+  SceneMetadataSchema,
+  SceneSchema,
   ResourceRegistryEntrySchema,
   SerializedResourceSchema,
 } from "./schemas.js";

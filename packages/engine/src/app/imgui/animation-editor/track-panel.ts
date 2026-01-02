@@ -29,7 +29,7 @@ import {
 } from './constants.js';
 import { getDefaultValueForProperty } from './animation-serializer.js';
 import { parsePropertyPath, buildPropertyPath } from '../../../animation/property-path.js';
-import type { World } from '../../../ecs/world.js';
+import type { Scene } from '../../../ecs/scene.js';
 import type { ComponentType } from '../../../ecs/component.js';
 import type { PropertySerializerConfig } from '../../../ecs/serialization/types.js';
 
@@ -70,12 +70,12 @@ function resetPickerState(): void {
  *
  * @param state - Animation editor state
  * @param availableHeight - Available height for the panel
- * @param world - World for querying entity components (optional, needed for Add Track picker)
+ * @param scene - Scene for querying entity components (optional, needed for Add Track picker)
  */
 export function renderTrackPanel(
   state: AnimationEditorState,
   availableHeight: number,
-  world?: World,
+  scene?: Scene,
 ): void {
   ImGui.PushStyleColorImVec4(ImGui.Col.ChildBg, COLORS.trackPanelBackground);
 
@@ -85,7 +85,7 @@ export function renderTrackPanel(
   ImGui.BeginChild('##TrackPanel', { x: TRACK_PANEL_WIDTH, y: contentHeight }, 0, ImGui.WindowFlags.None);
 
   // Header area (aligns with time ruler)
-  renderTrackPanelHeader(state, headerHeight, world);
+  renderTrackPanelHeader(state, headerHeight, scene);
 
   // Track list
   const trackListHeight = contentHeight - headerHeight;
@@ -100,7 +100,7 @@ export function renderTrackPanel(
 // Header
 // ============================================================================
 
-function renderTrackPanelHeader(state: AnimationEditorState, height: number, world?: World): void {
+function renderTrackPanelHeader(state: AnimationEditorState, height: number, scene?: Scene): void {
   ImGui.BeginChild('##TrackPanelHeader', { x: 0, y: height }, 0, ImGui.WindowFlags.None);
 
   // Add Track button
@@ -112,7 +112,7 @@ function renderTrackPanelHeader(state: AnimationEditorState, height: number, wor
 
   // Add Track popup menu
   if (ImGui.BeginPopup('##AddTrackPopup')) {
-    renderAddTrackMenu(state, world);
+    renderAddTrackMenu(state, scene);
     ImGui.EndPopup();
   }
 
@@ -128,16 +128,16 @@ function renderTrackPanelHeader(state: AnimationEditorState, height: number, wor
 // Add Track Menu - Component and Property Picker
 // ============================================================================
 
-function renderAddTrackMenu(state: AnimationEditorState, world?: World): void {
+function renderAddTrackMenu(state: AnimationEditorState, scene?: Scene): void {
   const entity = getSelectedEntity();
 
-  if (!entity || !world) {
+  if (!entity || !scene) {
     ImGui.TextDisabled('No entity selected');
     return;
   }
 
   // Get components on the selected entity
-  const components = world.getAllComponents(entity);
+  const components = scene.getAllComponents(entity);
   if (!components || components.size === 0) {
     ImGui.TextDisabled('Entity has no components');
     return;

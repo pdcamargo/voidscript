@@ -6,7 +6,7 @@
 
 import type { ComponentType } from './component.js';
 import type { Entity } from './entity.js';
-import type { World } from './world.js';
+import type { Scene } from './scene.js';
 
 /**
  * Extract component data type from ComponentType
@@ -66,7 +66,7 @@ export class Query<
   private noneTypes: ComponentType[] = [];
   private exclusiveTypes: ComponentType[] = [];
 
-  constructor(private world: World) {}
+  constructor(private scene: Scene) {}
 
   /**
    * All filter: entities must have ALL specified components
@@ -83,7 +83,7 @@ export class Query<
   all<T extends readonly ComponentType[]>(
     ...types: T
   ): Query<T, TAny, TNone, TExclusive> {
-    const query = new Query<T, TAny, TNone, TExclusive>(this.world);
+    const query = new Query<T, TAny, TNone, TExclusive>(this.scene);
     query.allTypes = [...types];
     query.anyTypes = this.anyTypes;
     query.noneTypes = this.noneTypes;
@@ -106,7 +106,7 @@ export class Query<
   any<T extends readonly ComponentType[]>(
     ...types: T
   ): Query<TAll, T, TNone, TExclusive> {
-    const query = new Query<TAll, T, TNone, TExclusive>(this.world);
+    const query = new Query<TAll, T, TNone, TExclusive>(this.scene);
     query.allTypes = this.allTypes;
     query.anyTypes = [...types];
     query.noneTypes = this.noneTypes;
@@ -130,7 +130,7 @@ export class Query<
   none<T extends readonly ComponentType[]>(
     ...types: T
   ): Query<TAll, TAny, T, TExclusive> {
-    const query = new Query<TAll, TAny, T, TExclusive>(this.world);
+    const query = new Query<TAll, TAny, T, TExclusive>(this.scene);
     query.allTypes = this.allTypes;
     query.anyTypes = this.anyTypes;
     query.noneTypes = [...types];
@@ -153,7 +153,7 @@ export class Query<
   exclusive<T extends readonly ComponentType[]>(
     ...types: T
   ): Query<[], [], [], T> {
-    const query = new Query<[], [], [], T>(this.world);
+    const query = new Query<[], [], [], T>(this.scene);
     query.allTypes = [];
     query.anyTypes = [];
     query.noneTypes = [];
@@ -183,7 +183,7 @@ export class Query<
         ? (entity: Entity, ...components: ComponentDataTuple<TAll>) => void
         : (entity: Entity) => void,
   ): void {
-    this.world.executeQuery(
+    this.scene.executeQuery(
       this.allTypes,
       this.anyTypes,
       this.noneTypes,
@@ -194,7 +194,7 @@ export class Query<
 
   map<T>(callback: (entity: Entity, ...components: any[]) => T): T[] {
     const results: T[] = [];
-    this.world.executeQuery(
+    this.scene.executeQuery(
       this.allTypes,
       this.anyTypes,
       this.noneTypes,

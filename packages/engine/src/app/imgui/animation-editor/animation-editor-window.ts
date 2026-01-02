@@ -70,7 +70,7 @@ import {
 // Main Window Rendering
 // ============================================================================
 
-import type { World } from '../../../ecs/world.js';
+import type { Scene } from '../../../ecs/scene.js';
 import type { Command } from '../../../ecs/command.js';
 
 // Module-level state to pass context to async handlers
@@ -85,7 +85,7 @@ let currentPlatform: EditorPlatform | undefined;
  * @param renderer - Optional renderer for sprite previews
  * @param getEntitiesWithAnimationController - Callback to get entities with AnimationController.
  *        This should be filtered to only return entities that have the AnimationController component.
- * @param world - Optional world for keyframe inspector
+ * @param scene - Optional scene for keyframe inspector
  * @param commands - Optional ECS commands for syncing preview to AnimationController
  * @param assetsManifest - Path to the assets manifest file for auto-registration
  */
@@ -93,7 +93,7 @@ export function renderAnimationEditorWindow(
   platform: EditorPlatform,
   renderer?: { getThreeRenderer: () => THREE.WebGLRenderer },
   getEntitiesWithAnimationController?: () => Array<{ entity: Entity; name: string }>,
-  world?: World,
+  scene?: Scene,
   commands?: Command,
   assetsManifest?: string,
 ): void {
@@ -143,7 +143,7 @@ export function renderAnimationEditorWindow(
       ImGui.BeginChild('##AnimEditorContent', { x: 0, y: contentHeight }, 0, ImGui.WindowFlags.None);
 
       // Split layout: Track Panel | Timeline (no preview panel - preview happens on actual entity in scene)
-      renderTrackPanel(state, contentHeight, world);
+      renderTrackPanel(state, contentHeight, scene);
       ImGui.SameLine();
 
       // Timeline takes remaining width

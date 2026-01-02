@@ -5,7 +5,7 @@
  */
 
 import type { Entity } from '../../ecs/entity.js';
-import type { World } from '../../ecs/world.js';
+import type { Scene } from '../../ecs/scene.js';
 import type {
   ParsedQuery,
   QueryFilter,
@@ -44,12 +44,12 @@ function getComponentByNameCaseInsensitive(name: string): ComponentType | undefi
  */
 function evaluateFilter(
   entity: Entity,
-  world: World,
+  scene: Scene,
   filter: QueryFilter,
 ): boolean {
   switch (filter.type) {
     case 'name': {
-      const nameComp = world.getComponent(entity, Name);
+      const nameComp = scene.getComponent(entity, Name);
       const displayName = nameComp?.name || `Entity #${entity}`;
       return displayName.toLowerCase().includes(filter.value.toLowerCase());
     }
@@ -58,7 +58,7 @@ function evaluateFilter(
       // Entity must have ALL components in the list
       return filter.names.every((name) => {
         const compType = getComponentByNameCaseInsensitive(name);
-        return compType ? world.hasComponent(entity, compType) : false;
+        return compType ? scene.hasComponent(entity, compType) : false;
       });
     }
 
@@ -66,7 +66,7 @@ function evaluateFilter(
       // Entity must have AT LEAST ONE component in the list
       return filter.names.some((name) => {
         const compType = getComponentByNameCaseInsensitive(name);
-        return compType ? world.hasComponent(entity, compType) : false;
+        return compType ? scene.hasComponent(entity, compType) : false;
       });
     }
 
@@ -75,7 +75,7 @@ function evaluateFilter(
       return filter.names.every((name) => {
         const compType = getComponentByNameCaseInsensitive(name);
         // If component type doesn't exist, treat as "not having it"
-        return compType ? !world.hasComponent(entity, compType) : true;
+        return compType ? !scene.hasComponent(entity, compType) : true;
       });
     }
   }
@@ -84,8 +84,8 @@ function evaluateFilter(
 /**
  * Check if a term matches an entity (all filters must pass)
  */
-function evaluateTerm(entity: Entity, world: World, term: QueryTerm): boolean {
-  return term.filters.every((filter) => evaluateFilter(entity, world, filter));
+function evaluateTerm(entity: Entity, scene: Scene, term: QueryTerm): boolean {
+  return term.filters.every((filter) => evaluateFilter(entity, scene, filter));
 }
 
 /**
@@ -93,10 +93,10 @@ function evaluateTerm(entity: Entity, world: World, term: QueryTerm): boolean {
  */
 function evaluateAndExpression(
   entity: Entity,
-  world: World,
+  scene: Scene,
   expr: AndExpression,
 ): boolean {
-  return expr.terms.every((term) => evaluateTerm(entity, world, term));
+  return expr.terms.every((term) => evaluateTerm(entity, scene, term));
 }
 
 /**
@@ -108,13 +108,13 @@ function evaluateAndExpression(
  * - Third level: Individual filters within a term (all must match)
  *
  * @param entity - The entity to check
- * @param world - The world containing the entity
+ * @param scene - The scene containing the entity
  * @param query - The parsed query to evaluate
  * @returns true if the entity matches the query
  */
 export function evaluateQuery(
   entity: Entity,
-  world: World,
+  scene: Scene,
   query: ParsedQuery,
 ): boolean {
   // Empty query matches everything
@@ -124,6 +124,6 @@ export function evaluateQuery(
 
   // Any OR expression matching is sufficient
   return query.orExpressions.some((expr) =>
-    evaluateAndExpression(entity, world, expr),
+    evaluateAndExpression(entity, scene, expr),
   );
 }

@@ -3,7 +3,7 @@
  *
  * This is the core game engine application class with NO editor coupling.
  * It provides:
- * - ECS (World, Command, Scheduler)
+ * - ECS (Scene, Command, Scheduler)
  * - Layer system for modular game logic
  * - Three.js rendering via @voidscript/renderer
  * - Resource management (Bevy-inspired)
@@ -24,7 +24,7 @@
  * ```
  */
 
-import { World } from '../ecs/world.js';
+import { Scene } from '../ecs/scene.js';
 import { Command } from '../ecs/command.js';
 import { Scheduler, type SystemPhase } from '../ecs/scheduler.js';
 import type { SystemWrapper } from '../ecs/system.js';
@@ -207,8 +207,8 @@ export class EngineApplication {
   // ECS
   // ============================================================================
 
-  /** ECS World (for advanced use - prefer using commands in systems) */
-  readonly world: World;
+  /** ECS Scene (for advanced use - prefer using commands in systems) */
+  readonly scene: Scene;
 
   /** System scheduler for ECS systems */
   private readonly scheduler: Scheduler;
@@ -264,9 +264,12 @@ export class EngineApplication {
     AssetDatabase.initialize(config.assets);
 
     // Initialize ECS
-    this.world = new World();
+    this.scene = new Scene();
     this.scheduler = new Scheduler();
-    this.commands = new Command(this.world, this as unknown as import('./application.js').Application);
+    this.commands = new Command(
+      this.scene,
+      this as unknown as import('./application.js').Application,
+    );
     this.layerStack = new LayerStack();
 
     // Initialize window
@@ -310,7 +313,9 @@ export class EngineApplication {
 
     // Attach all layers
     for (const layer of this.layerStack) {
-      layer._setApplication(this as unknown as import('./application.js').Application);
+      layer._setApplication(
+        this as unknown as import('./application.js').Application,
+      );
       await layer.onAttach();
     }
 
@@ -318,7 +323,7 @@ export class EngineApplication {
     this.scheduler.executeSystems('earlyStartup', { commands: this.commands });
     this.scheduler.executeSystems('startup', { commands: this.commands });
     this.scheduler.executeSystems('lateStartup', { commands: this.commands });
-    this.world.flushEvents();
+    this.scene.flushEvents();
 
     this._isInitialized = true;
   }
@@ -390,7 +395,7 @@ export class EngineApplication {
     if (!this._isPaused) {
       this.runUpdatePhase();
       this.runFixedUpdatePhase();
-      this.world.flushEvents();
+      this.scene.flushEvents();
     }
 
     this.runRenderPhase();
@@ -415,7 +420,7 @@ export class EngineApplication {
     if (!this._isPaused) {
       this.runUpdatePhase();
       this.runFixedUpdatePhase();
-      this.world.flushEvents();
+      this.scene.flushEvents();
     }
   }
 
@@ -449,7 +454,10 @@ export class EngineApplication {
    * Used by EditorApplication to create commands for EditorManager.
    */
   createCommands(): Command {
-    return new Command(this.world, this as unknown as import('./application.js').Application);
+    return new Command(
+      this.scene,
+      this as unknown as import('./application.js').Application,
+    );
   }
 
   // ============================================================================
@@ -579,7 +587,7 @@ export class EngineApplication {
 
     this.renderer.destroy();
     this.window.destroy();
-    this.world.clear();
+    this.scene.clear();
     this.scheduler.clear();
     this.resources.clear();
   }
@@ -601,7 +609,10 @@ export class EngineApplication {
       const assets = AssetDatabase.parseAssetsJson(jsonString);
       AssetDatabase.registerAdditionalAssets(assets);
     } catch (error) {
-      console.error(`[EngineApplication] Failed to load asset manifest:`, error);
+      console.error(
+        `[EngineApplication] Failed to load asset manifest:`,
+        error,
+      );
     }
   }
 
@@ -610,7 +621,9 @@ export class EngineApplication {
   // ============================================================================
 
   pushLayer<T extends Layer>(layer: T): T {
-    layer._setApplication(this as unknown as import('./application.js').Application);
+    layer._setApplication(
+      this as unknown as import('./application.js').Application,
+    );
     this.layerStack.pushLayer(layer);
 
     if (this._isInitialized) {
@@ -624,7 +637,9 @@ export class EngineApplication {
   }
 
   pushOverlay<T extends Layer>(overlay: T): T {
-    overlay._setApplication(this as unknown as import('./application.js').Application);
+    overlay._setApplication(
+      this as unknown as import('./application.js').Application,
+    );
     this.layerStack.pushOverlay(overlay);
 
     if (this._isInitialized) {
@@ -832,7 +847,7 @@ export class EngineApplication {
     const events = this.getResource(Events);
     if (events) {
       setupUIInteractionEvents(uiInteractionManager, events, (entity) => {
-        return this.world.getComponent(entity, UIInteraction);
+        return this.scene.getComponent(entity, UIInteraction);
       });
     }
 
@@ -910,8 +925,8 @@ export class EngineApplication {
     return this._isInitialized;
   }
 
-  getWorld(): World {
-    return this.world;
+  getScene(): Scene {
+    return this.scene;
   }
 
   // ============================================================================
@@ -923,7 +938,9 @@ export class EngineApplication {
     this.resources.set(ctor, resource);
 
     if (isInitializableResource(resource)) {
-      resource.onInitialize(this as unknown as import('./application.js').Application);
+      resource.onInitialize(
+        this as unknown as import('./application.js').Application,
+      );
     }
 
     return this;

@@ -15,7 +15,7 @@
 export {
   Application,
   type ApplicationConfig,
-  type DefaultWorldConfig,
+  type DefaultSceneConfig,
   type AppEditorConfig,
 } from "./application.js";
 
@@ -26,8 +26,8 @@ export {
   type PhysicsConfig,
 } from "./engine-application.js";
 
-// World loader
-export { WorldLoader, type WorldLoaderConfig } from "./world-loader.js";
+// Scene loader
+export { SceneLoader, type SceneLoaderConfig } from "./scene-loader.js";
 
 // Layer system
 export { Layer, LayerStack } from "./layer.js";

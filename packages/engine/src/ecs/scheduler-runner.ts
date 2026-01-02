@@ -4,7 +4,7 @@
 
 import type { Scheduler } from './scheduler.js';
 import type { Command } from './command.js';
-import type { World } from './world.js';
+import type { Scene } from './scene.js';
 
 /**
  * Scheduler Runner - Executes scheduler systems in game loop
@@ -62,7 +62,7 @@ export class SchedulerRunner {
    * 2. Run startup systems once
    * 3. Main loop: update → fixed update → flush events → render → after render
    */
-  async run(commands: Command, world: World): Promise<void> {
+  async run(commands: Command, world: Scene): Promise<void> {
     // Detect target FPS (minimum 60)
     console.log('Detecting target FPS...');
     const detectedFPS = await this.detectTargetFPS();
@@ -92,7 +92,7 @@ export class SchedulerRunner {
   /**
    * Main game loop
    */
-  private gameLoop(commands: Command, world: World): void {
+  private gameLoop(commands: Command, world: Scene): void {
     if (!this.isRunning) {
       return;
     }

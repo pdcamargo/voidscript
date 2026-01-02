@@ -8,7 +8,7 @@
  * - Nested prefab support
  */
 
-import type { World } from './world.js';
+import type { Scene } from './scene.js';
 import type { Command } from './command.js';
 import type {
   PrefabAsset,
@@ -16,7 +16,7 @@ import type {
   InstantiatePrefabResult,
 } from './prefab-asset.js';
 import { PrefabSerializer } from './prefab-serializer.js';
-import { WorldSerializer } from './serialization/world-serializer.js';
+import { SceneSerializer } from './serialization/scene-serializer.js';
 import { PrefabInstance, type PrefabInstanceData } from './components/prefab-instance.js';
 import { Parent } from './components/parent.js';
 import { Transform3D } from './components/rendering/index.js';
@@ -42,11 +42,11 @@ export class PrefabManager {
 
   private prefabCache: Map<string, PrefabAsset> = new Map();
   private prefabSerializer: PrefabSerializer;
-  private worldSerializer: WorldSerializer;
+  private worldSerializer: SceneSerializer;
 
   private constructor() {
     this.prefabSerializer = new PrefabSerializer();
-    this.worldSerializer = new WorldSerializer();
+    this.worldSerializer = new SceneSerializer();
   }
 
   // ============================================================================
@@ -193,7 +193,7 @@ export class PrefabManager {
    * 6. Apply any overrides
    *
    * @param guid - Prefab asset GUID
-   * @param world - World to instantiate into
+   * @param world - Scene to instantiate into
    * @param commands - Command instance for entity creation
    * @param options - Instantiation options (position, parent, overrides)
    * @returns Instantiation result with entity IDs and mapping
@@ -201,7 +201,7 @@ export class PrefabManager {
    */
   instantiate(
     guid: string,
-    world: World,
+    world: Scene,
     commands: Command,
     options?: InstantiatePrefabOptions,
   ): InstantiatePrefabResult {
@@ -224,7 +224,7 @@ export class PrefabManager {
     // Pass 1: Create all entities (without components)
     const serializedToRuntime = new Map<number, number>();
 
-    for (const serializedEntity of prefabAsset.world.entities) {
+    for (const serializedEntity of prefabAsset.scene.entities) {
       const newEntity = commands.spawn().build();
       if (!newEntity) {
         throw new Error('Failed to spawn entity');
@@ -243,7 +243,7 @@ export class PrefabManager {
       assetMetadataResolver: options?.assetMetadataResolver,
     };
 
-    for (const serializedEntity of prefabAsset.world.entities) {
+    for (const serializedEntity of prefabAsset.scene.entities) {
       const runtimeId = serializedToRuntime.get(serializedEntity.id);
       if (runtimeId === undefined) continue;
 

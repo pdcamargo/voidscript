@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { World } from "./world.js";
+import { Scene } from "./scene.js";
 import { Command } from "./command.js";
 import { Application } from "./application.js";
 import { system } from "./system.js";
@@ -35,11 +35,11 @@ const Position = component<PositionData>("Position");
 const Velocity = component<VelocityData>("Velocity");
 
 describe("Command API", () => {
-  let world: World;
+  let world: Scene;
   let commands: Command;
 
   beforeEach(() => {
-    world = new World();
+    world = new Scene();
     commands = new Command(world);
   });
 
@@ -113,11 +113,11 @@ describe("Command API", () => {
 });
 
 describe("Parent-Child Hierarchy", () => {
-  let world: World;
+  let world: Scene;
   let commands: Command;
 
   beforeEach(() => {
-    world = new World();
+    world = new Scene();
     commands = new Command(world);
   });
 
@@ -265,7 +265,7 @@ describe("System Wrapper", () => {
       executed = true;
     });
 
-    const world = new World();
+    const world = new Scene();
     const commands = new Command(world);
     testSystem.execute({ commands });
 
@@ -280,7 +280,7 @@ describe("System Wrapper", () => {
       executed = true;
     }).runIf(() => shouldRun);
 
-    const world = new World();
+    const world = new Scene();
     const commands = new Command(world);
 
     // runIf condition is enforced by the Scheduler, not by execute()
@@ -311,12 +311,12 @@ describe("System Wrapper", () => {
 
 describe("Scheduler", () => {
   let scheduler: Scheduler;
-  let world: World;
+  let world: Scene;
   let commands: Command;
 
   beforeEach(() => {
     scheduler = new Scheduler();
-    world = new World();
+    world = new Scene();
     commands = new Command(world);
   });
 
@@ -404,7 +404,7 @@ describe("Application", () => {
   it("should create application with all components", () => {
     const app = new Application();
 
-    expect(app.world).toBeDefined();
+    expect(app.scene).toBeDefined();
     expect(app.commands).toBeDefined();
     expect(app.scheduler).toBeDefined();
     expect(app.runner).toBeDefined();
@@ -432,7 +432,7 @@ describe("Application", () => {
 
     app.clear();
 
-    expect(app.world.getEntityCount()).toBe(0);
+    expect(app.scene.getEntityCount()).toBe(0);
   });
 });
 
@@ -493,6 +493,6 @@ describe("Integration Tests", () => {
     // Destroy parent recursively
     app.commands.entity(parent.id()).destroyRecursive();
 
-    expect(app.world.getEntityCount()).toBe(0);
+    expect(app.scene.getEntityCount()).toBe(0);
   });
 });

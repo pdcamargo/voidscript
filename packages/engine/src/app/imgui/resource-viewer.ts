@@ -47,7 +47,7 @@ export function renderImGuiResourceViewer(app: Application): void {
     // Set EditorLayout context
     setEditorLayoutContext({
       commands: app.getCommands(),
-      world: app.world,
+      scene: app.scene,
       renderer: app.getRenderer().getThreeRenderer(),
       idPrefix: 'resources',
     });

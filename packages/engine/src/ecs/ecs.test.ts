@@ -12,7 +12,7 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
-import { World } from "./world.js";
+import { Scene } from "./scene.js";
 import { component } from "./component.js";
 import { entityId, entityGeneration } from "./entity.js";
 
@@ -74,10 +74,10 @@ const Dwarf = component<DwarfData>("Dwarf");
 const NewType = component<NewTypeData>("NewType");
 
 describe("ECS System", () => {
-  let world: World;
+  let world: Scene;
 
   beforeEach(() => {
-    world = new World();
+    world = new Scene();
   });
 
   describe("Entity Lifecycle", () => {

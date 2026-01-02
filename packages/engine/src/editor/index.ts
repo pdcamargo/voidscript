@@ -4,7 +4,7 @@
  * Provides:
  * - EditorManager: State machine for edit/play/pause modes
  * - System conditions: Helper functions for conditional system execution
- * - WorldSnapshot: World state capture/restore for play mode
+ * - SceneSnapshot: Scene state capture/restore for play mode
  * - EditorPlatform: Platform abstraction for file dialogs and filesystem
  * - EditorLayer: Built-in layer that provides complete editor UI
  * - setupEditor: Utility function to set up complete editor environment
@@ -29,8 +29,8 @@ export {
   not,
 } from './system-conditions.js';
 
-// World state snapshots
-export { WorldSnapshot } from './world-snapshot.js';
+// Scene state snapshots
+export { SceneSnapshot } from './scene-snapshot.js';
 
 // Platform abstraction
 export { WebPlatform, detectPlatform } from './editor-platform.js';

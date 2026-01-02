@@ -6,7 +6,7 @@
  */
 
 import type { PrefabMetadata } from './asset-metadata.js';
-import type { WorldData } from './serialization/schemas.js';
+import type { SceneData } from './serialization/schemas.js';
 
 /**
  * Prefab file format (.prefab.yaml)
@@ -21,8 +21,8 @@ export interface PrefabAsset {
   /** Prefab asset metadata */
   metadata: PrefabMetadata;
 
-  /** World serialization data (entities, components, component registry) */
-  world: WorldData;
+  /** Scene serialization data (entities, components, component registry) */
+  scene: SceneData;
 
   /** Prefab-specific data */
   prefabData: PrefabData;

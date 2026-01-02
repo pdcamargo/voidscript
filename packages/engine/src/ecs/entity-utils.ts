@@ -4,7 +4,7 @@
  * Provides utility functions for duplicating, copying, and manipulating entities.
  */
 
-import type { World } from './world.js';
+import type { Scene } from './scene.js';
 import type { Command } from './command.js';
 import type { Entity } from './entity.js';
 import type { ComponentType } from './component.js';
@@ -43,7 +43,7 @@ export interface DuplicateEntityOptions {
  */
 export function duplicateEntity(
   entity: Entity,
-  world: World,
+  world: Scene,
   commands: Command,
   options: DuplicateEntityOptions = {},
 ): Entity | undefined {

@@ -6,7 +6,7 @@
  */
 
 import type { Command } from '../../ecs/command.js';
-import type { World } from '../../ecs/world.js';
+import type { Scene } from '../../ecs/scene.js';
 import type * as THREE from 'three';
 
 /**
@@ -15,8 +15,8 @@ import type * as THREE from 'three';
 export interface EditorLayoutContext {
   /** ECS commands for entity/component queries */
   commands: Command;
-  /** ECS world for direct entity/component access */
-  world: World;
+  /** ECS scene for direct entity/component access */
+  scene: Scene;
   /** Three.js renderer for texture previews in pickers */
   renderer: THREE.WebGLRenderer | null;
   /** Unique ID prefix for ImGui controls (prevents ID conflicts) */

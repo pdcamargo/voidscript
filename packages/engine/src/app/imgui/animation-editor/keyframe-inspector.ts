@@ -20,7 +20,7 @@ import {
   getPreviewEntity,
 } from './animation-editor-state.js';
 import { Sprite2D } from '../../../ecs/components/rendering/sprite-2d.js';
-import { World } from '../../../ecs/world.js';
+import { Scene } from '../../../ecs/scene.js';
 import type { Color, SpriteValue } from '../../../animation/interpolation.js';
 import { EASING_NAMES } from './constants.js';
 import { parsePropertyPath } from '../../../animation/property-path.js';
@@ -231,13 +231,13 @@ function getOrLoadSpriteTexture(
 /**
  * Get the default texture GUID from the preview entity's Sprite2D component
  */
-function getPreviewEntityTextureGuid(world?: World): string | null {
-  if (!world) return null;
+function getPreviewEntityTextureGuid(scene?: Scene): string | null {
+  if (!scene) return null;
 
   const previewEntity = getPreviewEntity();
   if (previewEntity === null) return null;
 
-  const spriteData = world.getComponent(previewEntity, Sprite2D);
+  const spriteData = scene.getComponent(previewEntity, Sprite2D);
   if (!spriteData || !spriteData.texture) return null;
 
   return spriteData.texture.guid ?? null;
@@ -249,7 +249,7 @@ function getPreviewEntityTextureGuid(world?: World): string | null {
 export function renderKeyframeInspector(
   state: AnimationEditorState,
   renderer?: { getThreeRenderer: () => THREE.WebGLRenderer },
-  world?: World,
+  scene?: Scene,
 ): void {
   if (!state.inspectorKeyframeId) return;
 
@@ -272,7 +272,7 @@ export function renderKeyframeInspector(
   }
 
   // Get default texture from preview entity
-  const defaultTextureGuid = getPreviewEntityTextureGuid(world);
+  const defaultTextureGuid = getPreviewEntityTextureGuid(scene);
 
   // Set initial window position (centered)
   ImGui.SetNextWindowSize({ x: 300, y: 0 }, ImGui.Cond.FirstUseEver);

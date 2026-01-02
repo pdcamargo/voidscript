@@ -25,6 +25,7 @@ export enum AssetType {
   Audio = 'audio',
   Shader = 'shader',
   StateMachine = 'statemachine',
+  Scene = 'scene',
   BlueprintScript = 'blueprint-script',
   BlueprintShader = 'blueprint-shader',
   BlueprintAnimation = 'blueprint-animation',
@@ -552,6 +553,26 @@ export interface StateMachineMetadata extends BaseAssetMetadata {
 }
 
 /**
+ * Scene asset metadata interface
+ * Supports .vscn files (VoidScript scene files)
+ */
+export interface SceneMetadata extends BaseAssetMetadata {
+  type: AssetType.Scene;
+
+  /** Number of entities in the scene */
+  entityCount?: number;
+
+  /** Component types used in the scene (for dependency tracking) */
+  componentTypes?: string[];
+
+  /** GUID of the default camera entity (if any) */
+  defaultCamera?: string;
+
+  /** Scene description/documentation */
+  description?: string;
+}
+
+/**
  * Unknown asset metadata (fallback for unsupported types)
  */
 export interface UnknownAssetMetadata extends BaseAssetMetadata {
@@ -571,6 +592,7 @@ export type AssetMetadata =
   | AudioAssetMetadata
   | ShaderMetadata
   | StateMachineMetadata
+  | SceneMetadata
   | BlueprintScriptMetadata
   | BlueprintShaderMetadata
   | BlueprintAnimationMetadata
@@ -692,6 +714,15 @@ export function isStateMachineMetadata(
   metadata: AssetMetadata,
 ): metadata is StateMachineMetadata {
   return metadata.type === AssetType.StateMachine;
+}
+
+/**
+ * Type guard for SceneMetadata
+ */
+export function isSceneMetadata(
+  metadata: AssetMetadata,
+): metadata is SceneMetadata {
+  return metadata.type === AssetType.Scene;
 }
 
 /**

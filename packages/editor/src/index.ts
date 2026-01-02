@@ -107,3 +107,6 @@ export {
 
 // Re-export ImGui utilities for direct access
 export { ImGui, ImGuiImplWeb, ImTextureRef, ImVec2Helpers } from '@voidscript/imgui';
+
+// Project utilities
+export * from './project/index.js';

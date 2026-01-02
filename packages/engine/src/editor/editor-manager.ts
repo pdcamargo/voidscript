@@ -12,10 +12,10 @@
  * - Supports single-frame stepping in pause mode
  */
 
-import type { World } from '../ecs/world.js';
+import type { Scene } from '../ecs/scene.js';
 import type { Command } from '../ecs/command.js';
 import type { EditorMode } from './editor-mode.js';
-import { WorldSnapshot } from './world-snapshot.js';
+import { SceneSnapshot } from './scene-snapshot.js';
 
 /**
  * Event types emitted by EditorManager
@@ -38,9 +38,9 @@ export type EditorManagerEventListener = (event: EditorManagerEvent) => void;
  * EditorManager - Central editor state machine
  */
 export class EditorManager {
-  private world: World;
+  private scene: Scene;
   private _mode: EditorMode = 'edit';
-  private worldSnapshot: WorldSnapshot | null = null;
+  private sceneSnapshot: SceneSnapshot | null = null;
   private _stepRequested = false;
   private listeners: Set<EditorManagerEventListener> = new Set();
 
@@ -53,8 +53,8 @@ export class EditorManager {
    */
   private _useViewportRendering = false;
 
-  constructor(world: World, commandFactory: () => Command) {
-    this.world = world;
+  constructor(scene: Scene, commandFactory: () => Command) {
+    this.scene = scene;
     this.createCommands = commandFactory;
   }
 
@@ -123,7 +123,7 @@ export class EditorManager {
     // Capture world state before playing (only if coming from edit mode)
     if (this._mode === 'edit') {
       const commands = this.createCommands();
-      this.worldSnapshot = WorldSnapshot.capture(this.world, commands);
+      this.sceneSnapshot = SceneSnapshot.capture(this.scene, commands);
     }
 
     this._mode = 'play';
@@ -180,10 +180,10 @@ export class EditorManager {
     this.emit({ type: 'play-stopping' });
 
     // Restore world state if we have a snapshot
-    if (this.worldSnapshot) {
+    if (this.sceneSnapshot) {
       const commands = this.createCommands();
-      this.worldSnapshot.restore(this.world, commands);
-      this.worldSnapshot = null;
+      this.sceneSnapshot.restore(this.scene, commands);
+      this.sceneSnapshot = null;
     }
 
     this._mode = 'edit';
@@ -246,13 +246,13 @@ export class EditorManager {
    * Check if there's a snapshot that can be restored
    */
   hasSnapshot(): boolean {
-    return this.worldSnapshot !== null;
+    return this.sceneSnapshot !== null;
   }
 
   /**
    * Get snapshot entity count (for debugging)
    */
   getSnapshotEntityCount(): number {
-    return this.worldSnapshot?.entityCount ?? 0;
+    return this.sceneSnapshot?.entityCount ?? 0;
   }
 }

@@ -3,23 +3,23 @@
  *
  * @example
  * ```ts
- * import { World, component } from '@voidscript/engine/ecs';
+ * import { Scene, component } from '@voidscript/engine/ecs';
  *
  * // Define components
  * const Position = component<{ x: number; y: number }>('Position');
  * const Velocity = component<{ x: number; y: number }>('Velocity');
  *
- * // Create world
- * const world = new World();
+ * // Create scene
+ * const scene = new Scene();
  *
  * // Spawn entities
- * world.spawn()
+ * scene.spawn()
  *   .with(Position, { x: 0, y: 0 })
  *   .with(Velocity, { x: 1, y: 0 })
  *   .build();
  *
  * // Query and iterate
- * world.query()
+ * scene.query()
  *   .all(Position, Velocity)
  *   .each((entity, pos, vel) => {
  *     pos.x += vel.x;
@@ -50,9 +50,9 @@ export {
 // Archetype system
 export { Archetype, ArchetypeGraph } from "./archetype.js";
 
-// World
-export { World, EntityBuilder } from "./world.js";
-export type { WorldEvent } from "./world.js";
+// Scene
+export { Scene, EntityBuilder } from "./scene.js";
+export type { SceneEvent } from "./scene.js";
 
 // Event system
 export { EventEmitter } from "./event-emitter.js";
@@ -117,7 +117,7 @@ export type { PrefabInstanceData } from "./components/prefab-instance.js";
 
 // Serialization
 export {
-  WorldSerializer,
+  SceneSerializer,
   DefaultSerializer,
   SetSerializer,
   ParentSerializer,
@@ -125,8 +125,8 @@ export {
   ComponentRegistryEntrySchema,
   SerializedComponentSchema,
   SerializedEntitySchema,
-  WorldMetadataSchema,
-  WorldSchema,
+  SceneMetadataSchema,
+  SceneSchema,
 } from "./serialization/index.js";
 export type {
   ComponentSerializer,
@@ -139,8 +139,8 @@ export type {
   ComponentRegistryEntry,
   SerializedComponent,
   SerializedEntity,
-  WorldMetadata,
-  WorldData,
+  SceneMetadata,
+  SceneData,
 } from "./serialization/index.js";
 
 // Prefab System

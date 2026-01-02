@@ -169,7 +169,7 @@ export function renderImGuiInspector(app: Application, entity?: Entity): void {
   // Set EditorLayout context for this frame
   setEditorLayoutContext({
     commands: app.getCommands(),
-    world: app.world,
+    scene: app.scene,
     renderer: currentRenderer,
     idPrefix: 'inspector',
   });
@@ -181,7 +181,7 @@ export function renderImGuiInspector(app: Application, entity?: Entity): void {
   if (ImGui.Begin('Inspector')) {
     // Check if a keyframe is selected in the animation editor - show keyframe editor instead
     if (hasSelectedKeyframe()) {
-      renderKeyframeEditor(currentRenderer, app.world);
+      renderKeyframeEditor(currentRenderer, app.scene);
     } else {
       // Keyboard shortcuts (only when window focused and not typing in text fields)
       if (
@@ -193,7 +193,7 @@ export function renderImGuiInspector(app: Application, entity?: Entity): void {
         if (Input.isCtrlPressed() && Input.isKeyJustPressed(KeyCode.KeyD)) {
           const duplicate = duplicateEntity(
             targetEntity,
-            app.world,
+            app.scene,
             app.getCommands(),
           );
           if (duplicate !== undefined) {
@@ -223,7 +223,7 @@ export function renderImGuiInspector(app: Application, entity?: Entity): void {
 }
 
 function renderEntityInspector(app: Application, entity: Entity): void {
-  const world = app.world;
+  const world = app.scene;
   const commands = app.getCommands();
 
   // Entity header
@@ -302,7 +302,7 @@ function renderComponentSection(
   componentType: ComponentType<any>,
   componentData: any,
 ): void {
-  const world = app.world;
+  const world = app.scene;
   const metadata = componentType.metadata;
 
   if (!componentData || !metadata) return;

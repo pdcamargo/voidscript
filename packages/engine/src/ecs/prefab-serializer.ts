@@ -1,19 +1,19 @@
 /**
  * PrefabSerializer - Handles saving and loading prefab assets
  *
- * Builds on top of WorldSerializer to provide prefab-specific functionality:
+ * Builds on top of SceneSerializer to provide prefab-specific functionality:
  * - Single root entity tracking
  * - Stable local entity IDs (UUIDs)
  * - Nested prefab GUID detection
  * - Component type dependency tracking
  */
 
-import type { World } from './world.js';
+import type { Scene } from './scene.js';
 import type { Command } from './command.js';
 import type { PrefabAsset, PrefabData, SavePrefabOptions } from './prefab-asset.js';
 import type { PrefabMetadata } from './asset-metadata.js';
 import { AssetType } from './asset-metadata.js';
-import { WorldSerializer } from './serialization/world-serializer.js';
+import { SceneSerializer } from './serialization/scene-serializer.js';
 import { Children } from './components/children.js';
 import { PrefabInstance } from './components/prefab-instance.js';
 import { component } from './component.js';
@@ -34,24 +34,24 @@ function generateUUID(): string {
  * PrefabSerializer - Orchestrates prefab saving and loading
  */
 export class PrefabSerializer {
-  private worldSerializer: WorldSerializer;
+  private worldSerializer: SceneSerializer;
 
   constructor() {
-    this.worldSerializer = new WorldSerializer();
+    this.worldSerializer = new SceneSerializer();
   }
 
   /**
    * Save an entity hierarchy as a prefab asset
    *
    * @param rootEntity - The root entity of the prefab (single root only)
-   * @param world - World instance
+   * @param world - Scene instance
    * @param commands - Command instance for queries
    * @param options - Save options (GUID, path, metadata)
    * @returns PrefabAsset ready to be serialized to YAML
    */
   savePrefab(
     rootEntity: number,
-    world: World,
+    world: Scene,
     commands: Command,
     options: SavePrefabOptions,
   ): PrefabAsset {
@@ -84,7 +84,7 @@ export class PrefabSerializer {
     }
 
     // Add temporary marker components with UUIDs to track entity remapping
-    // This is necessary because WorldSerializer may reorder entities (archetype-based iteration)
+    // This is necessary because SceneSerializer may reorder entities (archetype-based iteration)
     interface EntityMarkerData {
       uuid: string;
     }
@@ -115,12 +115,12 @@ export class PrefabSerializer {
       }
     }
 
-    // Serialize the prefab using WorldSerializer with entity filter
+    // Serialize the prefab using SceneSerializer with entity filter
     const worldData = this.worldSerializer.serialize(world, commands, allEntities);
 
     // Remap entityIdMap to use serialized sequential IDs (not runtime IDs)
-    // WorldSerializer creates a sequential ID mapping (0, 1, 2, ...) for serialized entities
-    // IMPORTANT: WorldSerializer may reorder entities (archetype-based iteration), so we need
+    // SceneSerializer creates a sequential ID mapping (0, 1, 2, ...) for serialized entities
+    // IMPORTANT: SceneSerializer may reorder entities (archetype-based iteration), so we need
     // to build the mapping from the actual serialized output, not from allEntities iteration order
     const remappedEntityIdMap: Record<number, string> = {};
     let rootSerializedId: number | undefined;
@@ -203,7 +203,7 @@ export class PrefabSerializer {
     return {
       version: '1.0.0',
       metadata,
-      world: worldData,
+      scene: worldData,
       prefabData,
     };
   }

@@ -5,7 +5,7 @@
  */
 
 import type { BundleSchema, BundleType } from './bundle.js';
-import type { World } from './world.js';
+import type { Scene } from './scene.js';
 import type { Command } from './command.js';
 import type { EntityHandle } from './command.js';
 import { Vector3 } from '../math/index.js';
@@ -90,7 +90,7 @@ function generateDefaultValue(
  */
 export function spawnBundleWithDefaults(
   bundleType: BundleType<any>,
-  world: World,
+  world: Scene,
   commands: Command,
 ): EntityHandle {
   const spawnData: any = {};

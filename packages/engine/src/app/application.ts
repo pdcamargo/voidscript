@@ -2,7 +2,7 @@
  * Application - Enhanced main application class with Layer system
  *
  * Integrates:
- * - ECS (World, Command, Scheduler)
+ * - ECS (Scene, Command, Scheduler)
  * - Layer stack for modular game logic
  * - Event system for input handling
  * - Three.js renderer
@@ -21,7 +21,7 @@
  * ```
  */
 
-import { World } from '../ecs/world.js';
+import { Scene } from '../ecs/scene.js';
 import { Command } from '../ecs/command.js';
 import { Scheduler, type SystemPhase } from '../ecs/scheduler.js';
 import type { SystemWrapper } from '../ecs/system.js';
@@ -155,8 +155,8 @@ import {
   type EditorConfig as EditorLayerConfig,
 } from '../editor/editor-layer.js';
 import type { MenuBarCallbacks } from './imgui/menu-bar.js';
-import type { WorldData } from '../ecs/serialization/schemas.js';
-import { WorldLoader } from './world-loader.js';
+import type { SceneData } from '../ecs/serialization/schemas.js';
+import { SceneLoader } from './scene-loader.js';
 import { preloadAssets } from '../ecs/asset-preloader.js';
 
 // Editor icon font
@@ -166,13 +166,13 @@ import { ICON_RANGES } from './imgui/editor-icons.js';
 /**
  * Default world configuration for loading a scene on startup
  */
-export interface DefaultWorldConfig {
+export interface DefaultSceneConfig {
   /**
-   * Path to world JSON file (fetched at runtime) OR inline WorldData object.
+   * Path to world JSON file (fetched at runtime) OR inline SceneData object.
    * - String path: Will be fetched using platform or native fetch
-   * - WorldData object: Will be used directly
+   * - SceneData object: Will be used directly
    */
-  source: string | WorldData;
+  source: string | SceneData;
 
   /**
    * Whether to auto-load on application start
@@ -309,9 +309,9 @@ export interface ApplicationConfig {
 
   /**
    * Default world to load on startup.
-   * Can be a path string (fetched) or inline WorldData object.
+   * Can be a path string (fetched) or inline SceneData object.
    */
-  defaultWorld?: DefaultWorldConfig;
+  defaultScene?: DefaultSceneConfig;
 
   /**
    * Editor configuration.
@@ -348,8 +348,8 @@ export class Application {
   // ECS
   // ============================================================================
 
-  /** ECS World (for advanced use - prefer using commands in systems) */
-  readonly world: World;
+  /** ECS Scene (for advanced use - prefer using commands in systems) */
+  readonly scene: Scene;
 
   /** System scheduler for ECS systems (private - use addSystem methods) */
   private readonly scheduler: Scheduler;
@@ -402,7 +402,7 @@ export class Application {
   private readonly config: ApplicationConfig;
 
   // ============================================================================
-  // Editor and World Loading
+  // Editor and Scene Loading
   // ============================================================================
 
   /** Platform abstraction for file operations */
@@ -423,11 +423,11 @@ export class Application {
     AssetDatabase.initialize(config.assets);
 
     // Initialize ECS
-    this.world = new World();
+    this.scene = new Scene();
     this.scheduler = new Scheduler();
     // Command needs to be created after this is partially initialized
     // but before addBuiltInSystems is called
-    this.commands = new Command(this.world, this);
+    this.commands = new Command(this.scene, this);
     this.layerStack = new LayerStack();
 
     // Initialize window with callback to check if ImGui wants keyboard input
@@ -540,13 +540,13 @@ export class Application {
     }
 
     // Load default world (after layers are attached so EditorLayer can cache path)
-    await this.loadDefaultWorld();
+    await this.loadDefaultScene();
 
     // Run startup systems
     this.scheduler.executeSystems('earlyStartup', { commands: this.commands });
     this.scheduler.executeSystems('startup', { commands: this.commands });
     this.scheduler.executeSystems('lateStartup', { commands: this.commands });
-    this.world.flushEvents();
+    this.scene.flushEvents();
 
     // Start game loop
     this.isRunning = true;
@@ -658,7 +658,7 @@ export class Application {
       }
 
       // Flush ECS events
-      this.world.flushEvents();
+      this.scene.flushEvents();
     }
 
     // === RENDER PHASE ===
@@ -810,7 +810,7 @@ export class Application {
     this.window.destroy();
 
     // Clear ECS
-    this.world.clear();
+    this.scene.clear();
     this.scheduler.clear();
 
     // Stop console interception
@@ -829,7 +829,7 @@ export class Application {
   }
 
   // ============================================================================
-  // Editor and World Loading (Internal)
+  // Editor and Scene Loading (Internal)
   // ============================================================================
 
   /** localStorage key for caching scene path */
@@ -862,7 +862,7 @@ export class Application {
     const editorConfig = this.config.editor as AppEditorConfig;
 
     // Create EditorManager
-    const editorManager = new EditorManager(this.world, () =>
+    const editorManager = new EditorManager(this.scene, () =>
       this.getCommands(),
     );
 
@@ -945,8 +945,8 @@ export class Application {
   /**
    * Load the default world (called from run())
    */
-  private async loadDefaultWorld(): Promise<void> {
-    const defaultWorldConfig = this.config.defaultWorld;
+  private async loadDefaultScene(): Promise<void> {
+    const defaultSceneConfig = this.config.defaultScene;
     const isEditorMode = this.isEditorEnabled();
 
     // In editor mode, check localStorage for cached scene path first
@@ -954,7 +954,7 @@ export class Application {
       const cachedPath = this.getCachedScenePath();
       if (cachedPath) {
         try {
-          const success = await this.loadWorldFromPath(cachedPath);
+          const success = await this.loadSceneFromPath(cachedPath);
           if (success) {
             return;
           }
@@ -969,25 +969,25 @@ export class Application {
     }
 
     // No default world config - nothing else to load
-    if (!defaultWorldConfig) {
+    if (!defaultSceneConfig) {
       return;
     }
 
     // Check if auto-load is enabled (default: true)
-    if (defaultWorldConfig.autoLoad === false) {
+    if (defaultSceneConfig.autoLoad === false) {
       return;
     }
 
     // Load default world
-    const loader = new WorldLoader({
+    const loader = new SceneLoader({
       platform: this.platform,
       assetMetadataResolver: (guid) => AssetDatabase.getMetadata(guid),
     });
 
     const result = await loader.load(
-      this.world,
+      this.scene,
       this.commands,
-      defaultWorldConfig.source,
+      defaultSceneConfig.source,
     );
 
     if (!result.success) {
@@ -1000,13 +1000,13 @@ export class Application {
   /**
    * Load world from a file path
    */
-  private async loadWorldFromPath(path: string): Promise<boolean> {
-    const loader = new WorldLoader({
+  private async loadSceneFromPath(path: string): Promise<boolean> {
+    const loader = new SceneLoader({
       platform: this.platform,
       assetMetadataResolver: (guid) => AssetDatabase.getMetadata(guid),
     });
 
-    const result = await loader.load(this.world, this.commands, path);
+    const result = await loader.load(this.scene, this.commands, path);
     return result.success;
   }
 
@@ -1381,7 +1381,7 @@ export class Application {
     const events = this.getResource(Events);
     if (events) {
       setupUIInteractionEvents(uiInteractionManager, events, (entity) => {
-        return this.world.getComponent(entity, UIInteraction);
+        return this.scene.getComponent(entity, UIInteraction);
       });
     }
 

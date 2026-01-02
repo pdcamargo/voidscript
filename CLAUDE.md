@@ -25,7 +25,44 @@ VoidScript is a TypeScript game engine built on Three.js with an Entity Componen
 ### Monorepo Structure
 
 - `packages/engine` - Core engine (`@voidscript/engine`)
+- `packages/editor` - Editor utilities (`@voidscript/editor`)
 - `apps/game` - Example game application using the engine
+
+### File Extensions
+
+VoidScript uses custom file extensions for asset types:
+
+| Extension | Asset Type | Description |
+|-----------|------------|-------------|
+| `.vscn` | Scene | Scene files (serialized ECS data) |
+| `.vsl` | Shader | VoidShader Language shader files |
+| `.vprefab` | Prefab | Prefab asset files |
+| `.vanim` | Animation | Animation clip files |
+| `.vanimsm` | StateMachine | Animation state machine files |
+
+**File Extensions Module:**
+
+Located at `packages/engine/src/constants/file-extensions.ts`:
+
+```typescript
+import { FileExtensions, getAssetTypeFromPath, validateFileExtension } from '@voidscript/engine';
+
+// Extension constants
+FileExtensions.Scene      // '.vscn'
+FileExtensions.Shader     // '.vsl'
+FileExtensions.Prefab     // '.vprefab'
+FileExtensions.Animation  // '.vanim'
+FileExtensions.StateMachine // '.vanimsm'
+
+// Get asset type from file path
+const assetType = getAssetTypeFromPath('/scenes/main.vscn'); // AssetType.Scene
+
+// Validate file has correct extension
+const result = validateFileExtension('/shaders/water.vsl', '.vsl');
+if (!result.valid) {
+  console.error(result.error);
+}
+```
 
 ### Engine Architecture
 
@@ -36,7 +73,7 @@ The engine has two main layers:
 - `component.ts` - Define components with `component<T>(name)`
 - `system.ts` - Define systems with `system(fn)`, supports `.runAfter()`, `.runBefore()`, `.runIf()`
 - `query.ts` - Query entities: `.all()`, `.any()`, `.none()`, `.exclusive()`, then `.each()` to iterate
-- `world.ts` - Entity/component storage with archetype-based grouping
+- `scene.ts` - Entity/component storage with archetype-based grouping
 - `command.ts` - High-level API: `commands.spawn().with(Component, data).build()`
 - `scheduler.ts` - System execution phases: startup, update, fixedUpdate, render, etc.
 
@@ -181,17 +218,17 @@ if (editorManager?.isPlaying()) {
 
 ### Play Mode Cleanup (Three.js Resource Management)
 
-**CRITICAL**: When stopping play mode, Three.js objects (meshes, materials, textures) must be disposed BEFORE the world is restored from snapshot. This is handled by the `play-stopping` event.
+**CRITICAL**: When stopping play mode, Three.js objects (meshes, materials, textures) must be disposed BEFORE the scene is restored from snapshot. This is handled by the `play-stopping` event.
 
 **Why this matters:**
-1. When `stop()` is called, `world.clear()` removes all entities
-2. World snapshot is restored with NEW entity IDs
+1. When `stop()` is called, `scene.clear()` removes all entities
+2. Scene snapshot is restored with NEW entity IDs
 3. If cleanup happens AFTER restore, render managers still have old entity IDs → orphaned Three.js objects in scene
 4. Result: Objects accumulate, post-processing stacks, memory leaks
 
 **EditorManager Events (in order):**
-- `play-stopping` - Fired BEFORE world restore. Use for cleanup!
-- `play-stopped` - Fired AFTER world restore
+- `play-stopping` - Fired BEFORE scene restore. Use for cleanup!
+- `play-stopped` - Fired AFTER scene restore
 
 **The cleanup is handled by `setupPlayModeCleanup()` in `play-mode-cleanup-system.ts`:**
 ```typescript
@@ -1424,6 +1461,101 @@ events.setAutoClear(false);   // Disable automatic cleanup (call maintain() manu
 - `eventWriter()` can be called anywhere with access to commands
 - Events use class names as keys, so ensure unique class names
 - The `Events` resource is registered automatically in `Application.addBuiltInSystems()`
+
+### Project Structure (Editor Package)
+
+The editor package provides utilities for managing VoidScript projects. The engine is a pure runtime - it doesn't manage "projects". Project management is handled by the editor.
+
+**Expected VoidScript Project Layout:**
+
+```
+my-game/
+├── project.voidscript.yaml          # Project metadata
+├── asset-manifest.yaml              # Asset registry (textures, audio, etc.)
+├── package.json                      # npm package (for user TypeScript code)
+├── tsconfig.json                     # TypeScript config
+├── src/                              # User content (code, assets, scenes, prefabs)
+│   └── ...                           # User can organize however they want
+├── settings/
+│   ├── engine/                       # Engine runtime settings
+│   │   ├── physics-2d.yaml
+│   │   ├── physics-3d.yaml
+│   │   └── audio.yaml
+│   └── editor/                       # Editor preferences (shared with team)
+│       └── preferences.yaml
+└── dist/                             # Build output (gitignored)
+```
+
+**Key Files:**
+- `packages/editor/src/project/project-config.ts` - Project schema and folder constants
+- `packages/editor/src/project/project-validator.ts` - Validation utilities
+- `packages/editor/src/project/project-detector.ts` - Recent projects management
+- `packages/editor/src/project/settings-schemas.ts` - Settings file schemas
+
+**Project Configuration (project.voidscript.yaml):**
+
+```yaml
+name: My Game
+version: 0.1.0
+engineVersion: 0.5.0
+defaultScene: src/scenes/main.vscn
+metadata:
+  author: Developer Name
+  description: A game built with VoidScript
+build:
+  outputDir: dist
+  targets: [web, desktop]
+```
+
+**Using Project Utilities:**
+
+```typescript
+import {
+  ProjectConfigSchema,
+  ProjectFolders,
+  isVoidScriptProject,
+  validateProjectConfig,
+  getRecentProjects,
+  createLocalStorageProjectStorage,
+} from '@voidscript/editor';
+
+// Check if a folder is a VoidScript project
+const files = ['project.voidscript.yaml', 'package.json', 'src'];
+if (isVoidScriptProject(files)) {
+  console.log('Valid VoidScript project!');
+}
+
+// Validate project config
+const result = validateProjectConfig(parsedYaml);
+if (result.valid) {
+  console.log('Config:', result.config);
+} else {
+  console.log('Errors:', result.errors);
+}
+
+// Manage recent projects
+const storage = createLocalStorageProjectStorage();
+const recentProjects = await getRecentProjects(storage);
+```
+
+**Settings Schemas:**
+
+```typescript
+import {
+  Physics2DSettingsSchema,
+  getDefaultPhysics2DSettings,
+  parsePhysics2DSettings,
+} from '@voidscript/editor';
+
+// Get default settings
+const defaults = getDefaultPhysics2DSettings();
+
+// Parse and validate settings from YAML
+const result = parsePhysics2DSettings(parsedYaml);
+if (result.success) {
+  console.log('Physics settings:', result.data);
+}
+```
 
 ## Code Style
 

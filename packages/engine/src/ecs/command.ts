@@ -1,9 +1,9 @@
 /**
- * Command - High-level API wrapper for World
+ * Command - High-level API wrapper for Scene
  * Provides cleaner syntax for entity/component operations
  */
 
-import { World } from "./world.js";
+import { Scene } from "./scene.js";
 import type { Entity } from "./entity.js";
 import type { ComponentType } from "./component.js";
 import { Parent } from "./components/parent.js";
@@ -138,7 +138,7 @@ export class EntityCommandBuilder {
 
   constructor(
     private command: Command,
-    private world: World
+    private world: Scene
   ) {
     // Reserve entity ID immediately so it's available before build()
     this.reservedEntity = world.reserveEntity();
@@ -236,7 +236,7 @@ export class EntityCommands {
   constructor(
     private entityId: Entity,
     private command: Command,
-    private world: World
+    private world: Scene
   ) {}
 
   /**
@@ -284,13 +284,13 @@ export class EntityCommands {
 
 /**
  * Command - Main command API
- * Wraps World with cleaner API and parent-child operations
+ * Wraps Scene with cleaner API and parent-child operations
  */
 export class Command {
   private systemIdentity?: object;
 
   constructor(
-    private world: World,
+    private world: Scene,
     private app?: Application
   ) {}
 
@@ -311,14 +311,14 @@ export class Command {
   }
 
   /**
-   * Query entities (delegates to World)
+   * Query entities (delegates to Scene)
    */
   query() {
     return this.world.query();
   }
 
   /**
-   * Get component from entity (delegates to World)
+   * Get component from entity (delegates to Scene)
    */
   getComponent<T>(entity: Entity, type: ComponentType<T>): T {
     const component = this.world.getComponent(entity, type);
@@ -329,7 +329,7 @@ export class Command {
   }
 
   /**
-   * Try to get component from entity (delegates to World)
+   * Try to get component from entity (delegates to Scene)
    * Returns undefined if entity doesn't have the component
    */
   tryGetComponent<T>(entity: Entity, type: ComponentType<T>): T | undefined {
@@ -337,21 +337,21 @@ export class Command {
   }
 
   /**
-   * Check if entity has component (delegates to World)
+   * Check if entity has component (delegates to Scene)
    */
   hasComponent<T>(entity: Entity, type: ComponentType<T>): boolean {
     return this.world.hasComponent(entity, type);
   }
 
   /**
-   * Check if entity is alive (delegates to World)
+   * Check if entity is alive (delegates to Scene)
    */
   isAlive(entity: Entity): boolean {
     return this.world.isAlive(entity);
   }
 
   /**
-   * Get entity count (delegates to World)
+   * Get entity count (delegates to Scene)
    */
   getEntityCount(): number {
     return this.world.getEntityCount();

@@ -171,7 +171,10 @@ export class EditorApplication {
       });
 
       // Get GL context from engine's renderer
-      this.gl = this.engine.getRenderer().getThreeRenderer().getContext() as WebGL2RenderingContext;
+      this.gl = this.engine
+        .getRenderer()
+        .getThreeRenderer()
+        .getContext() as WebGL2RenderingContext;
     } else {
       // Standalone mode: create our own WebGL context
       const gl = this.canvas.getContext('webgl2', {
@@ -296,13 +299,14 @@ export class EditorApplication {
       await this.engine.initialize();
 
       // Create editor managers
-      this.editorManager = new EditorManager(
-        this.engine.getWorld(),
-        () => this.engine!.createCommands(),
+      this.editorManager = new EditorManager(this.engine.getScene(), () =>
+        this.engine!.createCommands(),
       );
       this.engine.insertResource(this.editorManager);
 
-      this.editorCameraManager = new EditorCameraManager(this.engine.getRenderer());
+      this.editorCameraManager = new EditorCameraManager(
+        this.engine.getRenderer(),
+      );
       this.engine.insertResource(this.editorCameraManager);
 
       // Create editor camera for scene view
@@ -549,7 +553,8 @@ export class EditorApplication {
     // Handle canvas resize
     this.handleResize();
 
-    const shouldRenderEditor = time - this.lastEditorRenderTime >= this.editorRenderInterval;
+    const shouldRenderEditor =
+      time - this.lastEditorRenderTime >= this.editorRenderInterval;
 
     // Game logic runs at full FPS
     this.engine.updateOnly();
@@ -595,8 +600,14 @@ export class EditorApplication {
 
     // Offset dockspace to account for title bar height
     const titleBarHeight = this.titleBar.getHeight();
-    const adjustedPos = { x: dockspacePos.x, y: dockspacePos.y + titleBarHeight };
-    const adjustedSize = { x: dockspaceSize.x, y: dockspaceSize.y - titleBarHeight };
+    const adjustedPos = {
+      x: dockspacePos.x,
+      y: dockspacePos.y + titleBarHeight,
+    };
+    const adjustedSize = {
+      x: dockspaceSize.x,
+      y: dockspaceSize.y - titleBarHeight,
+    };
 
     // Create fullscreen dockspace window (below title bar)
     ImGui.SetNextWindowPos(adjustedPos, ImGui.Cond.Always);
@@ -652,7 +663,10 @@ export class EditorApplication {
     const displayWidth = this.canvas.clientWidth;
     const displayHeight = this.canvas.clientHeight;
 
-    if (this.canvas.width !== displayWidth || this.canvas.height !== displayHeight) {
+    if (
+      this.canvas.width !== displayWidth ||
+      this.canvas.height !== displayHeight
+    ) {
       this.canvas.width = displayWidth;
       this.canvas.height = displayHeight;
       this.gl.viewport(0, 0, displayWidth, displayHeight);

@@ -3,7 +3,7 @@
  * Integrates World, Command, Scheduler, and SchedulerRunner
  */
 
-import { World } from "./world.js";
+import { Scene } from "./scene.js";
 import { Command } from "./command.js";
 import { Scheduler } from "./scheduler.js";
 import { SchedulerRunner } from "./scheduler-runner.js";
@@ -31,8 +31,8 @@ import { SchedulerRunner } from "./scheduler-runner.js";
  * ```
  */
 export class Application {
-  /** ECS World */
-  readonly world: World;
+  /** ECS Scene */
+  readonly scene: Scene;
 
   /** Command API */
   readonly commands: Command;
@@ -45,11 +45,11 @@ export class Application {
 
   /**
    * Create a new Application
-   * @param world - Optional existing World to use (if not provided, creates new World)
+   * @param scene - Optional existing Scene to use (if not provided, creates new Scene)
    */
-  constructor(world?: World) {
-    this.world = world ?? new World();
-    this.commands = new Command(this.world);
+  constructor(scene?: Scene) {
+    this.scene = scene ?? new Scene();
+    this.commands = new Command(this.scene);
     this.scheduler = new Scheduler();
     this.runner = new SchedulerRunner(this.scheduler);
   }
@@ -59,7 +59,7 @@ export class Application {
    * Starts FPS detection, runs startup systems, and begins game loop
    */
   async run(): Promise<void> {
-    await this.runner.run(this.commands, this.world);
+    await this.runner.run(this.commands, this.scene);
   }
 
   /**
@@ -73,7 +73,7 @@ export class Application {
    * Clear all entities and systems
    */
   clear(): void {
-    this.world.clear();
+    this.scene.clear();
     this.scheduler.clear();
   }
 }

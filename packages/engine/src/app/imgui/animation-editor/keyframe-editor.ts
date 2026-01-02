@@ -25,7 +25,7 @@ import {
   getSelectedKeyframeIds,
 } from './animation-editor-state.js';
 import { Sprite2D } from '../../../ecs/components/rendering/sprite-2d.js';
-import { World } from '../../../ecs/world.js';
+import { Scene } from '../../../ecs/scene.js';
 import type { Color, SpriteValue } from '../../../animation/interpolation.js';
 import { EASING_NAMES } from './constants.js';
 import {
@@ -338,7 +338,7 @@ export function getFirstSelectedKeyframeId(): string | null {
  */
 export function renderKeyframeEditor(
   renderer: THREE.WebGLRenderer | null,
-  world?: World,
+  scene?: Scene,
 ): boolean {
   const keyframeId = getFirstSelectedKeyframeId();
   if (!keyframeId) return false;
@@ -354,7 +354,7 @@ export function renderKeyframeEditor(
   }
 
   // Get default texture from preview entity
-  const defaultTextureGuid = getPreviewEntityTextureGuid(world, state);
+  const defaultTextureGuid = getPreviewEntityTextureGuid(scene, state);
 
   // Header
   const selectedCount = getSelectedKeyframeIds().size;
@@ -390,13 +390,13 @@ export function renderKeyframeEditor(
 /**
  * Get the default texture GUID from the preview entity's Sprite2D component
  */
-function getPreviewEntityTextureGuid(world?: World, state?: AnimationEditorState | null): string | null {
-  if (!world || !state) return null;
+function getPreviewEntityTextureGuid(scene?: Scene, state?: AnimationEditorState | null): string | null {
+  if (!scene || !state) return null;
 
   const previewEntity = state.selectedEntity;
   if (previewEntity === null) return null;
 
-  const spriteData = world.getComponent(previewEntity, Sprite2D);
+  const spriteData = scene.getComponent(previewEntity, Sprite2D);
   if (!spriteData || !spriteData.texture) return null;
 
   return spriteData.texture.guid ?? null;

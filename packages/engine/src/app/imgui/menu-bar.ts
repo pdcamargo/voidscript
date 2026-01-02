@@ -38,14 +38,14 @@ export interface CustomMenu {
  * Each callback is invoked synchronously when the menu item is clicked.
  */
 export interface MenuBarCallbacks {
-  /** Called when New World menu item is clicked (creates new empty world) */
-  onNewWorld?: () => void;
-  /** Called when Save World menu item is clicked (saves to current path if available) */
-  onSaveWorld?: () => void;
-  /** Called when Save World As menu item is clicked (always shows dialog) */
-  onSaveWorldAs?: () => void;
-  /** Called when Load World menu item is clicked */
-  onLoadWorld?: () => void;
+  /** Called when New Scene menu item is clicked (creates new empty scene) */
+  onNewScene?: () => void;
+  /** Called when Save Scene menu item is clicked (saves to current path if available) */
+  onSaveScene?: () => void;
+  /** Called when Save Scene As menu item is clicked (always shows dialog) */
+  onSaveSceneAs?: () => void;
+  /** Called when Load Scene menu item is clicked */
+  onLoadScene?: () => void;
   /** Whether there's a current scene path (enables Save vs only Save As) */
   hasCurrentPath?: boolean;
   /** Whether the game is currently playing (disables save operations) */
@@ -91,14 +91,14 @@ function renderCustomMenuItems(items: CustomMenuItem[]): void {
 export function renderMainMenuBar(callbacks: MenuBarCallbacks): void {
   if (ImGui.BeginMainMenuBar()) {
     if (ImGui.BeginMenu('File')) {
-      // New World - only enabled if not playing
+      // New Scene - only enabled if not playing
       if (!callbacks.isPlaying) {
-        if (ImGui.MenuItem('New World', 'Ctrl+N')) {
-          callbacks.onNewWorld?.();
+        if (ImGui.MenuItem('New Scene', 'Ctrl+N')) {
+          callbacks.onNewScene?.();
         }
       } else {
         ImGui.BeginDisabled();
-        ImGui.MenuItem('New World', 'Ctrl+N');
+        ImGui.MenuItem('New Scene', 'Ctrl+N');
         ImGui.EndDisabled();
       }
 
@@ -106,7 +106,7 @@ export function renderMainMenuBar(callbacks: MenuBarCallbacks): void {
       const canSave = callbacks.hasCurrentPath && !callbacks.isPlaying;
       if (canSave) {
         if (ImGui.MenuItem('Save', 'Ctrl+S')) {
-          callbacks.onSaveWorld?.();
+          callbacks.onSaveScene?.();
         }
       } else {
         // Show disabled Save when no path or playing
@@ -118,7 +118,7 @@ export function renderMainMenuBar(callbacks: MenuBarCallbacks): void {
       // Save As - only enabled if not playing
       if (!callbacks.isPlaying) {
         if (ImGui.MenuItem('Save As...', 'Ctrl+Shift+S')) {
-          callbacks.onSaveWorldAs?.();
+          callbacks.onSaveSceneAs?.();
         }
       } else {
         // Show disabled Save As when playing
@@ -130,7 +130,7 @@ export function renderMainMenuBar(callbacks: MenuBarCallbacks): void {
       ImGui.Separator();
 
       if (ImGui.MenuItem('Load...', 'Ctrl+O')) {
-        callbacks.onLoadWorld?.();
+        callbacks.onLoadScene?.();
       }
 
       // Render custom file menu items

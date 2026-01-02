@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
- * WorldSerializer - Core serialization/deserialization for ECS World
+ * SceneSerializer - Core serialization/deserialization for ECS Scene
  *
  * Features:
  * - Two-pass deserialization with entity ID remapping
@@ -10,7 +10,7 @@
  * - Component registry tracking
  */
 
-import type { World } from '../world.js';
+import type { Scene } from '../scene.js';
 import type { Command } from '../command.js';
 import type { ComponentType } from '../component.js';
 import { globalComponentRegistry } from '../component.js';
@@ -31,14 +31,14 @@ import type {
   ComponentSerializerConfig,
 } from './types.js';
 import type {
-  WorldData,
+  SceneData,
   SerializedEntity,
   SerializedComponent,
   ComponentRegistryEntry,
   ResourceRegistryEntry,
   SerializedResource,
 } from './schemas.js';
-import { WorldSchema } from './schemas.js';
+import { SceneSchema } from './schemas.js';
 import { DefaultSerializer } from './custom-serializers.js';
 import { jsonToYaml, yamlToJson } from './yaml-utils.js';
 import { isAssetRef } from '../asset-ref.js';
@@ -47,9 +47,9 @@ import { RuntimeAssetManager } from '../runtime-asset-manager.js';
 import type { Application } from '../../app/application.js';
 
 /**
- * WorldSerializer - Orchestrates serialization/deserialization of ECS World
+ * SceneSerializer - Orchestrates serialization/deserialization of ECS Scene
  */
-export class WorldSerializer {
+export class SceneSerializer {
   private customSerializers = new Map<
     ComponentType<any>,
     ComponentSerializer
@@ -89,7 +89,7 @@ export class WorldSerializer {
    *
    * Phase 1: Only serialize instance-specific data:
    * - PrefabInstance: To know which prefab to instantiate
-   * - Transform3D: World position of the instance
+   * - Transform3D: Scene position of the instance
    * - LocalTransform3D: Position relative to parent
    * - Parent: Hierarchy relationship
    * - Name: Entity name (may be customized per-instance)
@@ -106,7 +106,7 @@ export class WorldSerializer {
    * Check if a component should be serialized for a prefab instance
    */
   private shouldSerializeComponentForPrefab(componentName: string): boolean {
-    return WorldSerializer.PREFAB_INSTANCE_COMPONENTS.has(componentName);
+    return SceneSerializer.PREFAB_INSTANCE_COMPONENTS.has(componentName);
   }
 
   /**
@@ -557,7 +557,8 @@ export class WorldSerializer {
 
     if (componentType?.metadata?.defaultValue) {
       const defaultVal = componentType.metadata.defaultValue;
-      const defaults = typeof defaultVal === 'function' ? defaultVal() : defaultVal;
+      const defaults =
+        typeof defaultVal === 'function' ? defaultVal() : defaultVal;
       // Deep clone defaults to avoid reference sharing
       result = structuredClone(defaults);
 
@@ -737,7 +738,7 @@ export class WorldSerializer {
         resourceTypeByName.set(entry.name, resourceType);
       } else if (!options.skipMissingComponents) {
         console.warn(
-          `[WorldSerializer] Resource type "${entry.name}" not found in registry`,
+          `[SceneSerializer] Resource type "${entry.name}" not found in registry`,
         );
       }
     }
@@ -766,7 +767,7 @@ export class WorldSerializer {
             instance = new resourceType.ctor();
           } catch (error) {
             console.warn(
-              `[WorldSerializer] Failed to create resource "${resourceType.name}": ${
+              `[SceneSerializer] Failed to create resource "${resourceType.name}": ${
                 error instanceof Error ? error.message : String(error)
               }`,
             );
@@ -860,18 +861,18 @@ export class WorldSerializer {
   }
 
   /**
-   * Serialize World to WorldData object
-   * @param world - World instance
+   * Serialize Scene to SceneData object
+   * @param scene - Scene instance
    * @param commands - Command instance for queries
    * @param entityFilter - Optional set of entity IDs to serialize (defaults to all entities)
    * @param app - Optional Application instance for resource serialization
    */
   serialize(
-    world: World,
+    scene: Scene,
     commands: Command,
     entityFilter?: Set<number>,
     app?: Application,
-  ): WorldData {
+  ): SceneData {
     // Build skip set for entities with skipChildrenSerialization components
     const skipEntities = this.buildSkipSet(commands, entityFilter);
 
@@ -954,7 +955,7 @@ export class WorldSerializer {
         // DEBUG: Check for duplicate entity handles in the same iteration
         if (seenEntities.has(entity)) {
           console.error(
-            `[WorldSerializer] DUPLICATE ENTITY HANDLE! Entity ${entity} appeared twice in query iteration`,
+            `[SceneSerializer] DUPLICATE ENTITY HANDLE! Entity ${entity} appeared twice in query iteration`,
           );
         }
         seenEntities.add(entity);
@@ -1006,7 +1007,7 @@ export class WorldSerializer {
             if (existingEntities) {
               existingEntities.push(entity);
               console.error(
-                `[WorldSerializer] SHARED COMPONENT DATA! Component ${componentType.name} data object is shared between entities: ${existingEntities.join(', ')}`,
+                `[SceneSerializer] SHARED COMPONENT DATA! Component ${componentType.name} data object is shared between entities: ${existingEntities.join(', ')}`,
               );
             } else {
               componentDataObjects.set(data, [entity]);
@@ -1050,7 +1051,7 @@ export class WorldSerializer {
         }
 
         // Get generation for entity validation
-        const generation = world.getGeneration(entity);
+        const generation = scene.getGeneration(entity);
 
         entities.push({
           id: entityMapping.get(entity)!,
@@ -1063,7 +1064,7 @@ export class WorldSerializer {
     for (const [name, entityIds] of nameToEntities) {
       if (entityIds.length > 1 && name.includes('Forest')) {
         console.warn(
-          `[WorldSerializer] POTENTIAL CORRUPTION: Multiple entities (${entityIds.join(', ')}) have the same name "${name}"`,
+          `[SceneSerializer] POTENTIAL CORRUPTION: Multiple entities (${entityIds.join(', ')}) have the same name "${name}"`,
         );
       }
     }
@@ -1086,7 +1087,7 @@ export class WorldSerializer {
         createdAt: new Date().toISOString(),
         modifiedAt: new Date().toISOString(),
         entityCount: entities.length,
-        archetypeCount: world.getArchetypeCount(),
+        archetypeCount: scene.getArchetypeCount(),
       },
       resourceRegistry:
         resourceRegistry.length > 0 ? resourceRegistry : undefined,
@@ -1095,14 +1096,14 @@ export class WorldSerializer {
   }
 
   /**
-   * Deserialize WorldData into World
+   * Deserialize SceneData into Scene
    * Two-pass:
    * 1. Create all entities and add components (simple data)
    * 2. Fix up entity references using entityMapping
    * @param app - Optional Application instance for resource deserialization
    */
   deserialize(
-    world: World,
+    scene: Scene,
     commands: Command,
     data: unknown,
     options: DeserializeOptions = {},
@@ -1115,7 +1116,7 @@ export class WorldSerializer {
     } = options;
 
     // Validate data
-    const parseResult = WorldSchema.safeParse(data);
+    const parseResult = SceneSchema.safeParse(data);
     if (!parseResult.success) {
       return {
         success: false,
@@ -1127,14 +1128,14 @@ export class WorldSerializer {
       };
     }
 
-    const worldData = parseResult.data;
+    const sceneData = parseResult.data;
     const warnings: string[] = [];
     let entitiesCreated = 0;
     let entitiesSkipped = 0;
 
-    // Clear world if replace mode
+    // Clear scene if replace mode
     if (mode === 'replace') {
-      world.clear();
+      scene.clear();
     }
 
     // Build component type lookup (by ID and name) using global registry
@@ -1142,7 +1143,7 @@ export class WorldSerializer {
     const componentTypeByName = new Map<string, ComponentType<any>>();
 
     // Build lookup maps from registry using global component registry
-    for (const entry of worldData.componentRegistry) {
+    for (const entry of sceneData.componentRegistry) {
       // Try to find matching component type by name in global registry
       let componentType: ComponentType<any> | undefined;
 
@@ -1194,7 +1195,7 @@ export class WorldSerializer {
       nameData?: any;
     }> = [];
 
-    for (const serializedEntity of worldData.entities) {
+    for (const serializedEntity of sceneData.entities) {
       try {
         // Check if this entity has a PrefabInstance component
         const prefabInstanceComponent = serializedEntity.components.find(
@@ -1293,7 +1294,7 @@ export class WorldSerializer {
         if (!prefabManager.isLoaded(prefabInfo.prefabGuid)) {
           warnings.push(
             `Prefab "${prefabInfo.prefabGuid}" not loaded for entity ${prefabInfo.serializedEntity.id}. ` +
-              `Prefabs must be preloaded before world deserialization.`,
+              `Prefabs must be preloaded before scene deserialization.`,
           );
           continue;
         }
@@ -1305,7 +1306,7 @@ export class WorldSerializer {
         // Instantiate the prefab
         const result = prefabManager.instantiate(
           prefabInfo.prefabGuid,
-          world,
+          scene,
           commands,
           {
             assetMetadataResolver: options.assetMetadataResolver,
@@ -1335,7 +1336,7 @@ export class WorldSerializer {
             if (existingTransform) {
               Object.assign(existingTransform, transformData);
             } else {
-              world.addComponent(
+              scene.addComponent(
                 result.rootEntity,
                 transformType,
                 transformData,
@@ -1365,7 +1366,7 @@ export class WorldSerializer {
             if (existingLocalTransform) {
               Object.assign(existingLocalTransform, localTransformData);
             } else {
-              world.addComponent(
+              scene.addComponent(
                 result.rootEntity,
                 localTransformType,
                 localTransformData,
@@ -1385,7 +1386,7 @@ export class WorldSerializer {
             if (existingName) {
               Object.assign(existingName, prefabInfo.nameData);
             } else {
-              world.addComponent(
+              scene.addComponent(
                 result.rootEntity,
                 nameType,
                 prefabInfo.nameData,
@@ -1482,7 +1483,7 @@ export class WorldSerializer {
             componentData = serializedComponent.data;
           }
 
-          world.addComponent(entity, componentType, componentData);
+          scene.addComponent(entity, componentType, componentData);
         } catch (error) {
           if (continueOnError) {
             warnings.push(
@@ -1509,7 +1510,7 @@ export class WorldSerializer {
       assetMetadataResolver: options.assetMetadataResolver,
     };
 
-    for (const serializedEntity of worldData.entities) {
+    for (const serializedEntity of sceneData.entities) {
       const newEntityId = entityMapping.get(serializedEntity.id);
       if (newEntityId === undefined) {
         continue; // Entity was skipped
@@ -1549,11 +1550,11 @@ export class WorldSerializer {
     }
 
     // Deserialize resources if app is provided and data has resources
-    if (app && worldData.resourceRegistry && worldData.resources) {
+    if (app && sceneData.resourceRegistry && sceneData.resources) {
       this.deserializeResources(
         app,
-        worldData.resourceRegistry,
-        worldData.resources,
+        sceneData.resourceRegistry,
+        sceneData.resources,
         deserializationContext,
         options,
       );
@@ -1571,8 +1572,8 @@ export class WorldSerializer {
   /**
    * Serialize to JSON string
    */
-  serializeToString(world: World, commands: Command, pretty = false): string {
-    const data = this.serialize(world, commands);
+  serializeToString(scene: Scene, commands: Command, pretty = false): string {
+    const data = this.serialize(scene, commands);
     return JSON.stringify(data, null, pretty ? 2 : 0);
   }
 
@@ -1580,14 +1581,14 @@ export class WorldSerializer {
    * Deserialize from JSON string
    */
   deserializeFromString(
-    world: World,
+    scene: Scene,
     commands: Command,
     json: string,
     options?: DeserializeOptions,
   ): DeserializeResult {
     try {
       const data = JSON.parse(json);
-      return this.deserialize(world, commands, data, options);
+      return this.deserialize(scene, commands, data, options);
     } catch (error) {
       return {
         success: false,
@@ -1603,8 +1604,8 @@ export class WorldSerializer {
   /**
    * Serialize to YAML string
    */
-  serializeToYaml(world: World, commands: Command): string {
-    const json = this.serializeToString(world, commands, false);
+  serializeToYaml(scene: Scene, commands: Command): string {
+    const json = this.serializeToString(scene, commands, false);
     return jsonToYaml(json);
   }
 
@@ -1612,14 +1613,14 @@ export class WorldSerializer {
    * Deserialize from YAML string
    */
   deserializeFromYaml(
-    world: World,
+    scene: Scene,
     commands: Command,
     yaml: string,
     options?: DeserializeOptions,
   ): DeserializeResult {
     try {
       const json = yamlToJson(yaml);
-      return this.deserializeFromString(world, commands, json, options);
+      return this.deserializeFromString(scene, commands, json, options);
     } catch (error) {
       return {
         success: false,
@@ -1633,28 +1634,30 @@ export class WorldSerializer {
   }
 
   /**
-   * Clone a world by serializing and deserializing
+   * Clone a scene by serializing and deserializing
    */
   clone(
-    sourceWorld: World,
+    sourceScene: Scene,
     sourceCommands: Command,
   ): {
-    world: World;
+    scene: Scene;
     commands: Command;
     result: DeserializeResult;
   } {
-    const World = sourceWorld.constructor as new () => World;
-    const targetWorld = new World();
-    const Command = sourceCommands.constructor as new (world: World) => Command;
-    const targetCommands = new Command(targetWorld);
+    const SceneCtor = sourceScene.constructor as new () => Scene;
+    const targetScene = new SceneCtor();
+    const CommandCtor = sourceCommands.constructor as new (
+      scene: Scene,
+    ) => Command;
+    const targetCommands = new CommandCtor(targetScene);
 
-    const data = this.serialize(sourceWorld, sourceCommands);
-    const result = this.deserialize(targetWorld, targetCommands, data, {
+    const data = this.serialize(sourceScene, sourceCommands);
+    const result = this.deserialize(targetScene, targetCommands, data, {
       mode: 'replace',
     });
 
     return {
-      world: targetWorld,
+      scene: targetScene,
       commands: targetCommands,
       result,
     };
@@ -1663,9 +1666,9 @@ export class WorldSerializer {
   /**
    * Get serialization stats
    */
-  getStats(world: World, commands: Command): SerializationStats {
+  getStats(scene: Scene, commands: Command): SerializationStats {
     const startTime = performance.now();
-    const data = this.serialize(world, commands);
+    const data = this.serialize(scene, commands);
     const serializeTime = performance.now() - startTime;
 
     const jsonString = JSON.stringify(data);

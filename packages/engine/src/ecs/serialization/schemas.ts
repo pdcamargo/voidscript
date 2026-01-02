@@ -1,5 +1,5 @@
 /**
- * Zod schemas for ECS world serialization
+ * Zod schemas for ECS scene serialization
  */
 
 import { z } from "zod";
@@ -36,10 +36,10 @@ export const SerializedEntitySchema = z.object({
 });
 
 /**
- * World metadata schema
+ * Scene metadata schema
  * Optional metadata for editor and debugging
  */
-export const WorldMetadataSchema = z
+export const SceneMetadataSchema = z
   .object({
     createdAt: z.string().optional(),
     modifiedAt: z.string().optional(),
@@ -68,14 +68,14 @@ export const SerializedResourceSchema = z.object({
 });
 
 /**
- * Complete world serialization schema
+ * Complete scene serialization schema
  */
-export const WorldSchema = z.object({
+export const SceneSchema = z.object({
   version: z.string().default("1.0.0"),
   componentRegistry: z.array(ComponentRegistryEntrySchema),
   entities: z.array(SerializedEntitySchema),
-  metadata: WorldMetadataSchema,
-  // Resources are optional for backward compatibility with old world files
+  metadata: SceneMetadataSchema,
+  // Resources are optional for backward compatibility with old scene files
   resourceRegistry: z.array(ResourceRegistryEntrySchema).optional(),
   resources: z.array(SerializedResourceSchema).optional(),
 });
@@ -88,7 +88,7 @@ export type ComponentRegistryEntry = z.infer<
 >;
 export type SerializedComponent = z.infer<typeof SerializedComponentSchema>;
 export type SerializedEntity = z.infer<typeof SerializedEntitySchema>;
-export type WorldMetadata = z.infer<typeof WorldMetadataSchema>;
+export type SceneMetadata = z.infer<typeof SceneMetadataSchema>;
 export type ResourceRegistryEntry = z.infer<typeof ResourceRegistryEntrySchema>;
 export type SerializedResource = z.infer<typeof SerializedResourceSchema>;
-export type WorldData = z.infer<typeof WorldSchema>;
+export type SceneData = z.infer<typeof SceneSchema>;

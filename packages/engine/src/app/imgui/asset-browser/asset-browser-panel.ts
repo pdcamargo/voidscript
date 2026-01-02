@@ -442,6 +442,7 @@ function renderAssetPlaceholder(assetType: AssetType, size: number): void {
     [AssetType.TiledMap]: { x: 0.6, y: 0.6, z: 0.2, w: 1 }, // Yellow
     [AssetType.Prefab]: { x: 0.4, y: 0.4, z: 0.8, w: 1 }, // Light blue
     [AssetType.Material]: { x: 0.7, y: 0.3, z: 0.3, w: 1 }, // Red
+    [AssetType.Scene]: { x: 0.3, y: 0.7, z: 0.5, w: 1 }, // Teal
     [AssetType.BlueprintScript]: { x: 0.5, y: 0.5, z: 0.5, w: 1 }, // Gray
     [AssetType.BlueprintShader]: { x: 0.5, y: 0.5, z: 0.5, w: 1 }, // Gray
     [AssetType.BlueprintAnimation]: { x: 0.5, y: 0.5, z: 0.5, w: 1 }, // Gray

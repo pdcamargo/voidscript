@@ -1,5 +1,5 @@
 /**
- * WorldSerializer Tests
+ * SceneSerializer Tests
  *
  * Comprehensive test suite covering:
  * - Basic serialization/deserialization
@@ -12,10 +12,10 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
-import { World } from "../world.js";
+import { Scene } from "../scene.js";
 import { Command } from "../command.js";
 import { component } from "../component.js";
-import { WorldSerializer } from "./world-serializer.js";
+import { SceneSerializer } from "./scene-serializer.js";
 import { Parent } from "../components/parent.js";
 import { Children } from "../components/children.js";
 import { RuntimeAsset } from "../runtime-asset.js";
@@ -54,19 +54,19 @@ const Velocity = component<VelocityData>("Velocity");
 const Health = component<HealthData>("Health");
 const Tag = component<TagData>("Tag");
 
-describe("WorldSerializer - Basic Serialization", () => {
-  let world: World;
+describe("SceneSerializer - Basic Serialization", () => {
+  let scene: Scene;
   let commands: Command;
-  let serializer: WorldSerializer;
+  let serializer: SceneSerializer;
 
   beforeEach(() => {
-    world = new World();
-    commands = new Command(world);
-    serializer = new WorldSerializer();
+    scene = new Scene();
+    commands = new Command(scene);
+    serializer = new SceneSerializer();
   });
 
-  it("should serialize empty world", () => {
-    const data = serializer.serialize(world, commands);
+  it("should serialize empty scene", () => {
+    const data = serializer.serialize(scene, commands);
 
     expect(data.version).toBe("1.0.0");
     expect(data.entities).toEqual([]);
@@ -78,7 +78,7 @@ describe("WorldSerializer - Basic Serialization", () => {
   it("should serialize single entity with one component", () => {
     commands.spawn().with(Position, { x: 10, y: 20 }).build();
 
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
     expect(data.entities.length).toBe(1);
     expect(data.componentRegistry.length).toBe(1);
@@ -96,7 +96,7 @@ describe("WorldSerializer - Basic Serialization", () => {
       .with(Health, { current: 50, max: 100 })
       .build();
 
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
     expect(data.entities.length).toBe(1);
     expect(data.componentRegistry.length).toBe(3);
@@ -116,7 +116,7 @@ describe("WorldSerializer - Basic Serialization", () => {
         .build();
     }
 
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
     expect(data.entities.length).toBe(10);
     expect(data.metadata?.entityCount).toBe(10);
@@ -131,46 +131,46 @@ describe("WorldSerializer - Basic Serialization", () => {
       .with(Velocity, { x: 4, y: 4 })
       .build();
 
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
     expect(data.entities.length).toBe(3);
     expect(data.componentRegistry.length).toBe(2); // Position and Velocity
   });
 });
 
-describe("WorldSerializer - Basic Deserialization", () => {
-  let world: World;
+describe("SceneSerializer - Basic Deserialization", () => {
+  let scene: Scene;
   let commands: Command;
-  let serializer: WorldSerializer;
+  let serializer: SceneSerializer;
 
   beforeEach(() => {
-    world = new World();
-    commands = new Command(world);
-    serializer = new WorldSerializer();
+    scene = new Scene();
+    commands = new Command(scene);
+    serializer = new SceneSerializer();
   });
 
-  it("should deserialize empty world", () => {
-    const data = serializer.serialize(world, commands);
+  it("should deserialize empty scene", () => {
+    const data = serializer.serialize(scene, commands);
 
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
 
-    const result = serializer.deserialize(targetWorld, targetCommands, data);
+    const result = serializer.deserialize(targetScene, targetCommands, data);
 
     expect(result.success).toBe(true);
     expect(result.entitiesCreated).toBe(0);
     expect(result.entitiesSkipped).toBe(0);
-    expect(targetWorld.getEntityCount()).toBe(0);
+    expect(targetScene.getEntityCount()).toBe(0);
   });
 
   it("should deserialize single entity with one component", () => {
     commands.spawn().with(Position, { x: 10, y: 20 }).build();
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
 
-    const result = serializer.deserialize(targetWorld, targetCommands, data);
+    const result = serializer.deserialize(targetScene, targetCommands, data);
 
     if (!result.success) {
       console.log("Deserialization failed:", result.error);
@@ -179,7 +179,7 @@ describe("WorldSerializer - Basic Deserialization", () => {
 
     expect(result.success).toBe(true);
     expect(result.entitiesCreated).toBe(1);
-    expect(targetWorld.getEntityCount()).toBe(1);
+    expect(targetScene.getEntityCount()).toBe(1);
 
     // Verify component data
     targetCommands
@@ -198,76 +198,76 @@ describe("WorldSerializer - Basic Deserialization", () => {
         .with(Position, { x: i, y: i * 2 })
         .build();
     }
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
 
-    const result = serializer.deserialize(targetWorld, targetCommands, data);
+    const result = serializer.deserialize(targetScene, targetCommands, data);
 
     expect(result.success).toBe(true);
     expect(result.entitiesCreated).toBe(10);
-    expect(targetWorld.getEntityCount()).toBe(10);
+    expect(targetScene.getEntityCount()).toBe(10);
   });
 
   it("should deserialize in replace mode (clear existing entities)", () => {
-    // Create entities in target world
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
+    // Create entities in target scene
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
     for (let i = 0; i < 5; i++) {
       targetCommands.spawn().with(Position, { x: 0, y: 0 }).build();
     }
-    expect(targetWorld.getEntityCount()).toBe(5);
+    expect(targetScene.getEntityCount()).toBe(5);
 
     // Serialize source with 3 entities
     for (let i = 0; i < 3; i++) {
       commands.spawn().with(Position, { x: i, y: i }).build();
     }
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
     // Deserialize in replace mode
-    const result = serializer.deserialize(targetWorld, targetCommands, data, {
+    const result = serializer.deserialize(targetScene, targetCommands, data, {
       mode: "replace",
     });
 
     expect(result.success).toBe(true);
-    expect(targetWorld.getEntityCount()).toBe(3); // Replaced, not merged
+    expect(targetScene.getEntityCount()).toBe(3); // Replaced, not merged
   });
 
   it("should deserialize in merge mode (keep existing entities)", () => {
-    // Create entities in target world
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
+    // Create entities in target scene
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
     for (let i = 0; i < 5; i++) {
       targetCommands.spawn().with(Position, { x: 0, y: 0 }).build();
     }
-    expect(targetWorld.getEntityCount()).toBe(5);
+    expect(targetScene.getEntityCount()).toBe(5);
 
     // Serialize source with 3 entities
     for (let i = 0; i < 3; i++) {
       commands.spawn().with(Position, { x: i, y: i }).build();
     }
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
     // Deserialize in merge mode
-    const result = serializer.deserialize(targetWorld, targetCommands, data, {
+    const result = serializer.deserialize(targetScene, targetCommands, data, {
       mode: "merge",
     });
 
     expect(result.success).toBe(true);
-    expect(targetWorld.getEntityCount()).toBe(8); // 5 + 3
+    expect(targetScene.getEntityCount()).toBe(8); // 5 + 3
   });
 });
 
-describe("WorldSerializer - Round-trip Correctness", () => {
-  let world: World;
+describe("SceneSerializer - Round-trip Correctness", () => {
+  let scene: Scene;
   let commands: Command;
-  let serializer: WorldSerializer;
+  let serializer: SceneSerializer;
 
   beforeEach(() => {
-    world = new World();
-    commands = new Command(world);
-    serializer = new WorldSerializer();
+    scene = new Scene();
+    commands = new Command(scene);
+    serializer = new SceneSerializer();
   });
 
   it("should maintain component data through round-trip", () => {
@@ -281,10 +281,10 @@ describe("WorldSerializer - Round-trip Correctness", () => {
       commands.spawn().with(Position, pos).build();
     }
 
-    const data = serializer.serialize(world, commands);
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
-    serializer.deserialize(targetWorld, targetCommands, data);
+    const data = serializer.serialize(scene, commands);
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
+    serializer.deserialize(targetScene, targetCommands, data);
 
     // Verify all positions
     const positions: PositionData[] = [];
@@ -309,10 +309,10 @@ describe("WorldSerializer - Round-trip Correctness", () => {
       .with(Health, { current: 50, max: 100 })
       .build();
 
-    const data = serializer.serialize(world, commands);
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
-    serializer.deserialize(targetWorld, targetCommands, data);
+    const data = serializer.serialize(scene, commands);
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
+    serializer.deserialize(targetScene, targetCommands, data);
 
     targetCommands
       .query()
@@ -327,31 +327,31 @@ describe("WorldSerializer - Round-trip Correctness", () => {
   it("should handle JSON string round-trip", () => {
     commands.spawn().with(Position, { x: 10, y: 20 }).build();
 
-    const jsonString = serializer.serializeToString(world, commands);
+    const jsonString = serializer.serializeToString(scene, commands);
     expect(typeof jsonString).toBe("string");
 
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
     const result = serializer.deserializeFromString(
-      targetWorld,
+      targetScene,
       targetCommands,
       jsonString
     );
 
     expect(result.success).toBe(true);
-    expect(targetWorld.getEntityCount()).toBe(1);
+    expect(targetScene.getEntityCount()).toBe(1);
   });
 
   it("should handle pretty-printed JSON", () => {
     commands.spawn().with(Position, { x: 10, y: 20 }).build();
 
-    const jsonString = serializer.serializeToString(world, commands, true);
+    const jsonString = serializer.serializeToString(scene, commands, true);
     expect(jsonString).toContain("\n"); // Has newlines from pretty print
 
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
     const result = serializer.deserializeFromString(
-      targetWorld,
+      targetScene,
       targetCommands,
       jsonString
     );
@@ -360,15 +360,15 @@ describe("WorldSerializer - Round-trip Correctness", () => {
   });
 });
 
-describe("WorldSerializer - Parent-Child Hierarchies", () => {
-  let world: World;
+describe("SceneSerializer - Parent-Child Hierarchies", () => {
+  let scene: Scene;
   let commands: Command;
-  let serializer: WorldSerializer;
+  let serializer: SceneSerializer;
 
   beforeEach(() => {
-    world = new World();
-    commands = new Command(world);
-    serializer = new WorldSerializer();
+    scene = new Scene();
+    commands = new Command(scene);
+    serializer = new SceneSerializer();
   });
 
   it("should serialize parent-child relationship", () => {
@@ -376,7 +376,7 @@ describe("WorldSerializer - Parent-Child Hierarchies", () => {
     const child = commands.spawn().with(Position, { x: 10, y: 10 }).build();
     parent.addChild(child.id());
 
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
     // Should have Parent and Children components
     const componentNames = new Set(data.componentRegistry.map((c) => c.name));
@@ -389,17 +389,17 @@ describe("WorldSerializer - Parent-Child Hierarchies", () => {
     const child = commands.spawn().with(Position, { x: 10, y: 10 }).build();
     parent.addChild(child.id());
 
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
-    const result = serializer.deserialize(targetWorld, targetCommands, data);
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
+    const result = serializer.deserialize(targetScene, targetCommands, data);
 
     if (!result.success) {
       console.error("Deserialization error:", result.error);
     }
     expect(result.success).toBe(true);
-    expect(targetWorld.getEntityCount()).toBe(2);
+    expect(targetScene.getEntityCount()).toBe(2);
 
     // Find parent entity (has Children component)
     let parentEntity = 0;
@@ -433,10 +433,10 @@ describe("WorldSerializer - Parent-Child Hierarchies", () => {
     parent.addChild(child2.id());
     parent.addChild(child3.id());
 
-    const data = serializer.serialize(world, commands);
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
-    serializer.deserialize(targetWorld, targetCommands, data);
+    const data = serializer.serialize(scene, commands);
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
+    serializer.deserialize(targetScene, targetCommands, data);
 
     // Verify parent has 3 children
     targetCommands
@@ -455,13 +455,13 @@ describe("WorldSerializer - Parent-Child Hierarchies", () => {
     grandparent.addChild(parent.id());
     parent.addChild(child.id());
 
-    const data = serializer.serialize(world, commands);
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
-    const result = serializer.deserialize(targetWorld, targetCommands, data);
+    const data = serializer.serialize(scene, commands);
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
+    const result = serializer.deserialize(targetScene, targetCommands, data);
 
     expect(result.success).toBe(true);
-    expect(targetWorld.getEntityCount()).toBe(3);
+    expect(targetScene.getEntityCount()).toBe(3);
 
     // Verify hierarchy
     let grandparentEntity = 0;
@@ -498,15 +498,15 @@ describe("WorldSerializer - Parent-Child Hierarchies", () => {
   });
 });
 
-describe("WorldSerializer - Custom Serializers", () => {
-  let world: World;
+describe("SceneSerializer - Custom Serializers", () => {
+  let scene: Scene;
   let commands: Command;
-  let serializer: WorldSerializer;
+  let serializer: SceneSerializer;
 
   beforeEach(() => {
-    world = new World();
-    commands = new Command(world);
-    serializer = new WorldSerializer();
+    scene = new Scene();
+    commands = new Command(scene);
+    serializer = new SceneSerializer();
   });
 
   it("should use SetSerializer for Set components", () => {
@@ -518,10 +518,10 @@ describe("WorldSerializer - Custom Serializers", () => {
       .with(Tag, { tags: new Set(["player", "alive"]) })
       .build();
 
-    const data = serializer.serialize(world, commands);
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
-    serializer.deserialize(targetWorld, targetCommands, data);
+    const data = serializer.serialize(scene, commands);
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
+    serializer.deserialize(targetScene, targetCommands, data);
 
     targetCommands
       .query()
@@ -551,13 +551,13 @@ describe("WorldSerializer - Custom Serializers", () => {
 
     commands.spawn().with(Position, { x: 10, y: 20 }).build();
 
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
     // Check serialized data is doubled
     expect(data.entities[0]?.components[0]?.data).toEqual({ x: 20, y: 40 });
 
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
-    serializer.deserialize(targetWorld, targetCommands, data);
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
+    serializer.deserialize(targetScene, targetCommands, data);
 
     // Check deserialized data is halved back
     targetCommands
@@ -570,23 +570,23 @@ describe("WorldSerializer - Custom Serializers", () => {
   });
 });
 
-describe("WorldSerializer - Error Handling", () => {
-  let world: World;
+describe("SceneSerializer - Error Handling", () => {
+  let scene: Scene;
   let commands: Command;
-  let serializer: WorldSerializer;
+  let serializer: SceneSerializer;
 
   beforeEach(() => {
-    world = new World();
-    commands = new Command(world);
-    serializer = new WorldSerializer();
+    scene = new Scene();
+    commands = new Command(scene);
+    serializer = new SceneSerializer();
   });
 
   it("should fail on invalid JSON", () => {
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
 
     const result = serializer.deserializeFromString(
-      targetWorld,
+      targetScene,
       targetCommands,
       "not valid json"
     );
@@ -596,13 +596,13 @@ describe("WorldSerializer - Error Handling", () => {
   });
 
   it("should fail on schema validation error", () => {
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
 
     const invalidData = { invalid: "data" };
 
     const result = serializer.deserialize(
-      targetWorld,
+      targetScene,
       targetCommands,
       invalidData
     );
@@ -613,7 +613,7 @@ describe("WorldSerializer - Error Handling", () => {
 
   it("should skip missing components with skipMissingComponents option", () => {
     commands.spawn().with(Position, { x: 10, y: 20 }).build();
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
     // Modify data to reference non-existent component
     data.componentRegistry.push({ id: 999, name: "NonExistent" });
@@ -623,21 +623,21 @@ describe("WorldSerializer - Error Handling", () => {
       data: { foo: "bar" },
     });
 
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
 
-    const result = serializer.deserialize(targetWorld, targetCommands, data, {
+    const result = serializer.deserialize(targetScene, targetCommands, data, {
       skipMissingComponents: true,
     });
 
     expect(result.success).toBe(true);
     expect(result.warnings.length).toBeGreaterThan(0);
-    expect(targetWorld.getEntityCount()).toBe(1);
+    expect(targetScene.getEntityCount()).toBe(1);
   });
 
   it("should fail on missing component without skipMissingComponents", () => {
     commands.spawn().with(Position, { x: 10, y: 20 }).build();
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
     // Modify data to reference non-existent component
     data.componentRegistry.push({ id: 999, name: "NonExistent" });
@@ -647,10 +647,10 @@ describe("WorldSerializer - Error Handling", () => {
       data: { foo: "bar" },
     });
 
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
 
-    const result = serializer.deserialize(targetWorld, targetCommands, data, {
+    const result = serializer.deserialize(targetScene, targetCommands, data, {
       skipMissingComponents: false,
     });
 
@@ -658,18 +658,18 @@ describe("WorldSerializer - Error Handling", () => {
   });
 });
 
-describe("WorldSerializer - Utility Methods", () => {
-  let world: World;
+describe("SceneSerializer - Utility Methods", () => {
+  let scene: Scene;
   let commands: Command;
-  let serializer: WorldSerializer;
+  let serializer: SceneSerializer;
 
   beforeEach(() => {
-    world = new World();
-    commands = new Command(world);
-    serializer = new WorldSerializer();
+    scene = new Scene();
+    commands = new Command(scene);
+    serializer = new SceneSerializer();
   });
 
-  it("should clone world", () => {
+  it("should clone scene", () => {
     for (let i = 0; i < 5; i++) {
       commands
         .spawn()
@@ -677,12 +677,12 @@ describe("WorldSerializer - Utility Methods", () => {
         .build();
     }
 
-    const { world: clonedWorld, commands: clonedCommands } = serializer.clone(
-      world,
+    const { scene: clonedScene, commands: clonedCommands } = serializer.clone(
+      scene,
       commands
     );
 
-    expect(clonedWorld.getEntityCount()).toBe(5);
+    expect(clonedScene.getEntityCount()).toBe(5);
 
     // Verify cloned data
     const positions: PositionData[] = [];
@@ -705,7 +705,7 @@ describe("WorldSerializer - Utility Methods", () => {
         .build();
     }
 
-    const stats = serializer.getStats(world, commands);
+    const stats = serializer.getStats(scene, commands);
 
     expect(stats.entityCount).toBe(100);
     expect(stats.componentCount).toBe(200); // 100 entities * 2 components
@@ -715,15 +715,15 @@ describe("WorldSerializer - Utility Methods", () => {
   });
 });
 
-describe("WorldSerializer - Performance", () => {
-  let world: World;
+describe("SceneSerializer - Performance", () => {
+  let scene: Scene;
   let commands: Command;
-  let serializer: WorldSerializer;
+  let serializer: SceneSerializer;
 
   beforeEach(() => {
-    world = new World();
-    commands = new Command(world);
-    serializer = new WorldSerializer();
+    scene = new Scene();
+    commands = new Command(scene);
+    serializer = new SceneSerializer();
   });
 
   it("should serialize 10k entities quickly (<50ms)", () => {
@@ -736,7 +736,7 @@ describe("WorldSerializer - Performance", () => {
     }
 
     const start = performance.now();
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
     const elapsed = performance.now() - start;
 
     console.log(`Serialized 10k entities in ${elapsed.toFixed(2)}ms`);
@@ -753,30 +753,30 @@ describe("WorldSerializer - Performance", () => {
         .build();
     }
 
-    const data = serializer.serialize(world, commands);
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
+    const data = serializer.serialize(scene, commands);
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
 
     const start = performance.now();
-    const result = serializer.deserialize(targetWorld, targetCommands, data);
+    const result = serializer.deserialize(targetScene, targetCommands, data);
     const elapsed = performance.now() - start;
 
     console.log(`Deserialized 10k entities in ${elapsed.toFixed(2)}ms`);
     expect(elapsed).toBeLessThan(52);
     expect(result.success).toBe(true);
-    expect(targetWorld.getEntityCount()).toBe(10000);
+    expect(targetScene.getEntityCount()).toBe(10000);
   });
 });
 
-describe("WorldSerializer - Property-Level Serialization Config", () => {
-  let world: World;
+describe("SceneSerializer - Property-Level Serialization Config", () => {
+  let scene: Scene;
   let commands: Command;
-  let serializer: WorldSerializer;
+  let serializer: SceneSerializer;
 
   beforeEach(() => {
-    world = new World();
-    commands = new Command(world);
-    serializer = new WorldSerializer();
+    scene = new Scene();
+    commands = new Command(scene);
+    serializer = new SceneSerializer();
   });
 
   it("should serialize only configured properties", () => {
@@ -796,7 +796,7 @@ describe("WorldSerializer - Property-Level Serialization Config", () => {
       .with(TestComponent, { serialized: 42, notSerialized: "ignored" })
       .build();
 
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
     expect(data.entities[0]?.components[0]?.data).toEqual({ serialized: 42 });
     expect(data.entities[0]?.components[0]?.data).not.toHaveProperty(
@@ -821,7 +821,7 @@ describe("WorldSerializer - Property-Level Serialization Config", () => {
 
     commands.spawn().with(TestComponent, { x: 10, y: 20 }).build();
 
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
     expect(data.entities[0]?.components[0]?.data).toEqual({ x: 10 });
     expect(data.entities[0]?.components[0]?.data).not.toHaveProperty("y");
@@ -836,7 +836,7 @@ describe("WorldSerializer - Property-Level Serialization Config", () => {
 
     commands.spawn().with(NoConfigComponent, { value: 123 }).build();
 
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
     // Without property config, falls back to default serializer (pass-through)
     expect(data.entities[0]?.components[0]?.data).toEqual({ value: 123 });
@@ -856,7 +856,7 @@ describe("WorldSerializer - Property-Level Serialization Config", () => {
 
     commands.spawn().with(NullishComponent, { value: null }).build();
 
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
     expect(data.entities[0]?.components[0]?.data).toEqual({});
   });
@@ -875,7 +875,7 @@ describe("WorldSerializer - Property-Level Serialization Config", () => {
 
     commands.spawn().with(NullishComponent, { value: null }).build();
 
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
     expect(data.entities[0]?.components[0]?.data).toEqual({ value: null });
   });
@@ -894,7 +894,7 @@ describe("WorldSerializer - Property-Level Serialization Config", () => {
 
     commands.spawn().with(NullishComponent, { value: null }).build();
 
-    expect(() => serializer.serialize(world, commands)).toThrow();
+    expect(() => serializer.serialize(scene, commands)).toThrow();
   });
 
   it("should handle serializeAs renaming", () => {
@@ -911,7 +911,7 @@ describe("WorldSerializer - Property-Level Serialization Config", () => {
 
     commands.spawn().with(RenameComponent, { internalName: 100 }).build();
 
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
     expect(data.entities[0]?.components[0]?.data).toEqual({
       externalName: 100,
@@ -935,11 +935,11 @@ describe("WorldSerializer - Property-Level Serialization Config", () => {
 
     commands.spawn().with(RenameComponent, { internalName: 200 }).build();
 
-    const data = serializer.serialize(world, commands);
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
+    const data = serializer.serialize(scene, commands);
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
 
-    const result = serializer.deserialize(targetWorld, targetCommands, data);
+    const result = serializer.deserialize(targetScene, targetCommands, data);
 
     expect(result.success).toBe(true);
 
@@ -967,7 +967,7 @@ describe("WorldSerializer - Property-Level Serialization Config", () => {
     const assetRef = { guid: "12345678-1234-4234-8234-123456789abc" };
     commands.spawn().with(SpriteComponent, { texture: assetRef }).build();
 
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
     expect(data.entities[0]?.components[0]?.data).toEqual({
       texture: { guid: "12345678-1234-4234-8234-123456789abc" },
@@ -1011,7 +1011,7 @@ describe("WorldSerializer - Property-Level Serialization Config", () => {
     );
     commands.spawn().with(SpriteComponent, { texture: runtimeAsset }).build();
 
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
     expect(data.entities[0]?.components[0]?.data).toEqual({
       texture: { guid: "12345678-1234-4234-8234-123456789abc" },
@@ -1050,13 +1050,13 @@ describe("WorldSerializer - Property-Level Serialization Config", () => {
     );
     commands.spawn().with(SpriteComponent, { texture: runtimeAsset }).build();
 
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
-    // Create a new world and deserialize
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
+    // Create a new scene and deserialize
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
 
-    const result = serializer.deserialize(targetWorld, targetCommands, data, {
+    const result = serializer.deserialize(targetScene, targetCommands, data, {
       mode: "replace",
     });
 
@@ -1137,17 +1137,17 @@ describe("WorldSerializer - Property-Level Serialization Config", () => {
       .with(ModelComponent, { mesh: meshAsset, texture: sharedAsset })
       .build();
 
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
-    // Create a new world and deserialize
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
+    // Create a new scene and deserialize
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
 
     // Clear RuntimeAssetManager to test singleton creation during deserialization
     RuntimeAssetManager.clear();
     RuntimeAssetManager.initialize();
 
-    const result = serializer.deserialize(targetWorld, targetCommands, data, {
+    const result = serializer.deserialize(targetScene, targetCommands, data, {
       mode: "replace",
     });
 
@@ -1190,7 +1190,7 @@ describe("WorldSerializer - Property-Level Serialization Config", () => {
       .with(TagComponent, { tags: new Set(["player", "enemy"]) })
       .build();
 
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
     expect((data.entities[0]?.components[0]?.data as any).tags).toEqual([
       "player",
@@ -1215,11 +1215,11 @@ describe("WorldSerializer - Property-Level Serialization Config", () => {
       .with(TagComponent, { tags: new Set(["a", "b", "c"]) })
       .build();
 
-    const data = serializer.serialize(world, commands);
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
+    const data = serializer.serialize(scene, commands);
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
 
-    const result = serializer.deserialize(targetWorld, targetCommands, data);
+    const result = serializer.deserialize(targetScene, targetCommands, data);
 
     expect(result.success).toBe(true);
 
@@ -1251,7 +1251,7 @@ describe("WorldSerializer - Property-Level Serialization Config", () => {
       .with(ArrayComponent, { items: [1, 2, 3] })
       .build();
 
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
     expect(data.entities[0]?.components[0]?.data).toEqual({ items: [1, 2, 3] });
   });
@@ -1273,7 +1273,7 @@ describe("WorldSerializer - Property-Level Serialization Config", () => {
       .with(SetComponent, { values: new Set([10, 20, 30]) })
       .build();
 
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
     expect((data.entities[0]?.components[0]?.data as any).values).toEqual([
       10, 20, 30,
@@ -1297,7 +1297,7 @@ describe("WorldSerializer - Property-Level Serialization Config", () => {
 
     commands.spawn().with(CustomComponent, { value: 50 }).build();
 
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
     expect(data.entities[0]?.components[0]?.data).toEqual({ value: 100 });
   });
@@ -1319,11 +1319,11 @@ describe("WorldSerializer - Property-Level Serialization Config", () => {
 
     commands.spawn().with(CustomComponent, { value: 7 }).build();
 
-    const data = serializer.serialize(world, commands);
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
+    const data = serializer.serialize(scene, commands);
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
 
-    const result = serializer.deserialize(targetWorld, targetCommands, data);
+    const result = serializer.deserialize(targetScene, targetCommands, data);
 
     expect(result.success).toBe(true);
 
@@ -1371,7 +1371,7 @@ describe("WorldSerializer - Property-Level Serialization Config", () => {
       })
       .build();
 
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
     expect(data.entities[0]?.components[0]?.data).toEqual({
       _id: 1,
@@ -1420,11 +1420,11 @@ describe("WorldSerializer - Property-Level Serialization Config", () => {
       })
       .build();
 
-    const data = serializer.serialize(world, commands);
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
+    const data = serializer.serialize(scene, commands);
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
 
-    const result = serializer.deserialize(targetWorld, targetCommands, data);
+    const result = serializer.deserialize(targetScene, targetCommands, data);
 
     expect(result.success).toBe(true);
 
@@ -1464,7 +1464,7 @@ describe("WorldSerializer - Property-Level Serialization Config", () => {
       })
       .build();
 
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
     expect((data.entities[0]?.components[0]?.data as any).textures).toEqual([
       { guid: "11111111-1111-4111-8111-111111111111" },
@@ -1493,7 +1493,7 @@ describe("WorldSerializer - Property-Level Serialization Config", () => {
       .with(AssetSetComponent, { assets: new Set([asset1, asset2]) })
       .build();
 
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
     // The serialized data should have assets as an array (Set converted to array)
     const assetsData = (data.entities[0]?.components[0]?.data as any).assets;
@@ -1567,7 +1567,7 @@ describe("WorldSerializer - Property-Level Serialization Config", () => {
       })
       .build();
 
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
     expect((data.entities[0]?.components[0]?.data as any).textures).toEqual([
       { guid: "11111111-1111-4111-8111-111111111111" },
@@ -1626,7 +1626,7 @@ describe("WorldSerializer - Property-Level Serialization Config", () => {
       .with(AssetSetComponent, { assets: new Set([asset1, asset2]) })
       .build();
 
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
     // The serialized data should have assets as an array (Set converted to array)
     const assetsData = (data.entities[0]?.components[0]?.data as any).assets;
@@ -1643,11 +1643,11 @@ describe("WorldSerializer - Property-Level Serialization Config", () => {
 
     commands.spawn().with(OldStyleComponent, { x: 100, y: 200 }).build();
 
-    const data = serializer.serialize(world, commands);
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
+    const data = serializer.serialize(scene, commands);
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
 
-    const result = serializer.deserialize(targetWorld, targetCommands, data);
+    const result = serializer.deserialize(targetScene, targetCommands, data);
 
     expect(result.success).toBe(true);
 
@@ -1661,10 +1661,10 @@ describe("WorldSerializer - Property-Level Serialization Config", () => {
   });
 });
 
-describe("WorldSerializer - Nested Object Reference Independence", () => {
-  let world: World;
+describe("SceneSerializer - Nested Object Reference Independence", () => {
+  let scene: Scene;
   let commands: Command;
-  let serializer: WorldSerializer;
+  let serializer: SceneSerializer;
 
   // Component with nested plain objects similar to SpriteAreaGenerator
   interface SpriteAreaLikeData {
@@ -1687,9 +1687,9 @@ describe("WorldSerializer - Nested Object Reference Independence", () => {
   );
 
   beforeEach(() => {
-    world = new World();
-    commands = new Command(world);
-    serializer = new WorldSerializer();
+    scene = new Scene();
+    commands = new Command(scene);
+    serializer = new SceneSerializer();
   });
 
   it("should not share object references between serialized entities", () => {
@@ -1727,7 +1727,7 @@ describe("WorldSerializer - Nested Object Reference Independence", () => {
       })
       .build();
 
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
     // Verify all entities have different data
     expect(data.entities.length).toBe(3);
@@ -1792,13 +1792,13 @@ describe("WorldSerializer - Nested Object Reference Independence", () => {
       .build();
 
     // Serialize and deserialize
-    const data = serializer.serialize(world, commands);
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
-    const result = serializer.deserialize(targetWorld, targetCommands, data);
+    const data = serializer.serialize(scene, commands);
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
+    const result = serializer.deserialize(targetScene, targetCommands, data);
 
     expect(result.success).toBe(true);
-    expect(targetWorld.getEntityCount()).toBe(3);
+    expect(targetScene.getEntityCount()).toBe(3);
 
     // Collect all deserialized entities
     const entities: SpriteAreaLikeData[] = [];
@@ -1859,10 +1859,10 @@ describe("WorldSerializer - Nested Object Reference Independence", () => {
       .build();
 
     // Serialize and deserialize
-    const data = serializer.serialize(world, commands);
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
-    serializer.deserialize(targetWorld, targetCommands, data);
+    const data = serializer.serialize(scene, commands);
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
+    serializer.deserialize(targetScene, targetCommands, data);
 
     // Get references to the deserialized components
     const components: SpriteAreaLikeData[] = [];
@@ -1918,7 +1918,7 @@ describe("WorldSerializer - Nested Object Reference Independence", () => {
       })
       .build();
 
-    const data = serializer.serialize(world, commands);
+    const data = serializer.serialize(scene, commands);
 
     const entity1Data = data.entities[0]?.components[0]?.data as DeeplyNestedData;
     const entity2Data = data.entities[1]?.components[0]?.data as DeeplyNestedData;
@@ -1936,10 +1936,10 @@ describe("WorldSerializer - Nested Object Reference Independence", () => {
   });
 });
 
-describe("WorldSerializer - YAML Round-trip Reference Independence", () => {
-  let world: World;
+describe("SceneSerializer - YAML Round-trip Reference Independence", () => {
+  let scene: Scene;
   let commands: Command;
-  let serializer: WorldSerializer;
+  let serializer: SceneSerializer;
 
   // Component with nested plain objects that could be aliased in YAML
   interface SpriteAreaLikeData {
@@ -1962,9 +1962,9 @@ describe("WorldSerializer - YAML Round-trip Reference Independence", () => {
   );
 
   beforeEach(() => {
-    world = new World();
-    commands = new Command(world);
-    serializer = new WorldSerializer();
+    scene = new Scene();
+    commands = new Command(scene);
+    serializer = new SceneSerializer();
   });
 
   it("should preserve unique entity data through YAML round-trip", () => {
@@ -2003,18 +2003,18 @@ describe("WorldSerializer - YAML Round-trip Reference Independence", () => {
       .build();
 
     // Serialize to YAML and back
-    const yaml = serializer.serializeToYaml(world, commands);
+    const yaml = serializer.serializeToYaml(scene, commands);
 
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
     const result = serializer.deserializeFromYaml(
-      targetWorld,
+      targetScene,
       targetCommands,
       yaml
     );
 
     expect(result.success).toBe(true);
-    expect(targetWorld.getEntityCount()).toBe(3);
+    expect(targetScene.getEntityCount()).toBe(3);
 
     // Collect all entities and verify they have unique data
     const entities: SpriteAreaLikeData[] = [];
@@ -2081,7 +2081,7 @@ describe("WorldSerializer - YAML Round-trip Reference Independence", () => {
       })
       .build();
 
-    const yaml = serializer.serializeToYaml(world, commands);
+    const yaml = serializer.serializeToYaml(scene, commands);
 
     // YAML should NOT contain anchors (&) or aliases (*)
     // These are used by the yaml library to represent shared references
@@ -2089,9 +2089,9 @@ describe("WorldSerializer - YAML Round-trip Reference Independence", () => {
     expect(yaml).not.toContain("*");
 
     // Deserialize and verify entities are still independent
-    const targetWorld = new World();
-    const targetCommands = new Command(targetWorld);
-    serializer.deserializeFromYaml(targetWorld, targetCommands, yaml);
+    const targetScene = new Scene();
+    const targetCommands = new Command(targetScene);
+    serializer.deserializeFromYaml(targetScene, targetCommands, yaml);
 
     const components: SpriteAreaLikeData[] = [];
     targetCommands
@@ -2127,22 +2127,22 @@ describe("WorldSerializer - YAML Round-trip Reference Independence", () => {
       .build();
 
     // Round-trip 1
-    let yaml = serializer.serializeToYaml(world, commands);
-    let targetWorld = new World();
-    let targetCommands = new Command(targetWorld);
-    serializer.deserializeFromYaml(targetWorld, targetCommands, yaml);
+    let yaml = serializer.serializeToYaml(scene, commands);
+    let targetScene = new Scene();
+    let targetCommands = new Command(targetScene);
+    serializer.deserializeFromYaml(targetScene, targetCommands, yaml);
 
     // Round-trip 2
-    yaml = serializer.serializeToYaml(targetWorld, targetCommands);
-    targetWorld = new World();
-    targetCommands = new Command(targetWorld);
-    serializer.deserializeFromYaml(targetWorld, targetCommands, yaml);
+    yaml = serializer.serializeToYaml(targetScene, targetCommands);
+    targetScene = new Scene();
+    targetCommands = new Command(targetScene);
+    serializer.deserializeFromYaml(targetScene, targetCommands, yaml);
 
     // Round-trip 3
-    yaml = serializer.serializeToYaml(targetWorld, targetCommands);
-    targetWorld = new World();
-    targetCommands = new Command(targetWorld);
-    serializer.deserializeFromYaml(targetWorld, targetCommands, yaml);
+    yaml = serializer.serializeToYaml(targetScene, targetCommands);
+    targetScene = new Scene();
+    targetCommands = new Command(targetScene);
+    serializer.deserializeFromYaml(targetScene, targetCommands, yaml);
 
     // Verify data is still correct after 3 round-trips
     targetCommands

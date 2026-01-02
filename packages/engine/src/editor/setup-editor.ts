@@ -130,7 +130,7 @@ export function setupEditor(
 
   // Create EditorManager
   const editorManager = new EditorManager(
-    app.world,
+    app.scene,
     () => app.getCommands()
   );
 

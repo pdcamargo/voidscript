@@ -1,12 +1,12 @@
 /**
- * World Snapshot System
+ * Scene Snapshot System
  *
- * Provides lightweight serialization of World state for editor UI rendering.
+ * Provides lightweight serialization of Scene state for editor UI rendering.
  * Unlike full scene serialization, snapshots capture current entity state
  * without metadata or asset resolution complexity.
  */
 
-import type { World } from "./world.js";
+import type { Scene } from "./scene.js";
 import type { Command } from "./command.js";
 import type { Entity } from "./entity.js";
 import { Parent } from "./components/parent.js";
@@ -30,9 +30,9 @@ export interface EntitySnapshot {
 }
 
 /**
- * Lightweight World snapshot for editor UI
+ * Lightweight Scene snapshot for editor UI
  */
-export interface WorldSnapshot {
+export interface SceneSnapshot {
   /** All entities with their component data */
   entities: EntitySnapshot[];
 
@@ -47,7 +47,7 @@ export interface WorldSnapshot {
 }
 
 /**
- * Serialize World to snapshot for editor UI rendering
+ * Serialize Scene to snapshot for editor UI rendering
  *
  * This is a lightweight serialization that captures:
  * - Entity IDs
@@ -59,21 +59,21 @@ export interface WorldSnapshot {
  * - Resolve asset metadata
  * - Handle entity ID remapping
  *
- * @param world - The ECS World to snapshot
+ * @param scene - The ECS Scene to snapshot
  * @param commands - The Command interface
- * @returns Immutable snapshot of current World state
+ * @returns Immutable snapshot of current Scene state
  */
-export function createWorldSnapshot(
-  world: World,
+export function createSceneSnapshot(
+  scene: Scene,
   commands: Command
-): WorldSnapshot {
+): SceneSnapshot {
   const entities: EntitySnapshot[] = [];
   const rootEntityIds: Entity[] = [];
 
   // Iterate all entities
-  world.query().each((entityId: Entity) => {
+  scene.query().each((entityId: Entity) => {
     // Get all components for this entity
-    const componentsMap = world.getAllComponents(entityId);
+    const componentsMap = scene.getAllComponents(entityId);
 
     // Extract component data (component type name → data)
     const components = new Map<string, unknown>();
@@ -116,7 +116,7 @@ export function createWorldSnapshot(
  * Get entity snapshot by ID
  */
 export function getEntityFromSnapshot(
-  snapshot: WorldSnapshot,
+  snapshot: SceneSnapshot,
   entityId: Entity
 ): EntitySnapshot | undefined {
   return snapshot.entities.find((e) => e.id === entityId);
@@ -126,7 +126,7 @@ export function getEntityFromSnapshot(
  * Get root entities from snapshot
  */
 export function getRootEntitiesFromSnapshot(
-  snapshot: WorldSnapshot
+  snapshot: SceneSnapshot
 ): EntitySnapshot[] {
   return snapshot.rootEntityIds.map((id) => {
     const entity = getEntityFromSnapshot(snapshot, id);
@@ -141,7 +141,7 @@ export function getRootEntitiesFromSnapshot(
  * Get children of an entity from snapshot
  */
 export function getChildrenFromSnapshot(
-  snapshot: WorldSnapshot,
+  snapshot: SceneSnapshot,
   parentId: Entity
 ): EntitySnapshot[] {
   const parent = getEntityFromSnapshot(snapshot, parentId);
@@ -151,3 +151,4 @@ export function getChildrenFromSnapshot(
     .map((childId) => getEntityFromSnapshot(snapshot, childId))
     .filter((child): child is EntitySnapshot => child !== undefined);
 }
+
