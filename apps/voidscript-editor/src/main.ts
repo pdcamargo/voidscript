@@ -19,7 +19,7 @@ const ICON_FONT_URL = '/assets/Font Awesome 7 Free-Solid-900.otf';
 async function main() {
   const app = new EditorApplication({
     canvas: 'render-canvas',
-    editorFPS: 30,
+    editorFPS: 45,
     fonts: {
       mainFontUrl: MAIN_FONT_URL,
       iconFontUrl: ICON_FONT_URL,

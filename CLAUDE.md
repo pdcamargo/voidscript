@@ -1431,43 +1431,59 @@ events.setAutoClear(false);   // Disable automatic cleanup (call maintain() manu
 - Prefer type inference when obvious
 - When console logging objects, always use `JSON.stringify`
 
-## ImGui Binding Limitations (jsimgui)
+## ImVec2Helpers (Custom ImGui Bindings)
 
-**CRITICAL**: The jsimgui WASM bindings have issues with functions that return `ImVec2` directly. These functions will throw runtime errors like `Cannot call ImGui_GetWindowPos due to unbound types: 8ImVec2_t`.
+**CRITICAL**: We have custom ImGui bindings in `packages/jsimgui/src/imgui/api/ts/end.ts`. The `ImVec2Helpers` object provides functions that return `{x, y}` objects for position and size queries.
 
-### Functions that DON'T work (throw runtime errors):
-- `ImGui.GetWindowPos()` - throws unbound type error
-- `ImGui.GetWindowSize()` - throws unbound type error
-- `ImGui.GetCursorScreenPos()` - throws unbound type error
-- `ImGui.GetCursorPos()` - throws unbound type error
-- `ImGui.GetItemRectMin()` - throws unbound type error
-- `ImGui.GetItemRectMax()` - throws unbound type error
-- `ImGui.GetMousePos()` - throws unbound type error
+**ALWAYS use `ImVec2Helpers` for these operations:**
 
-### Functions that DO work:
-- `ImGui.GetWindowWidth()` - returns number
-- `ImGui.GetWindowHeight()` - returns number
-- `ImGui.GetCursorPosX()` - returns number
-- `ImGui.GetCursorPosY()` - returns number
-- `ImGui.GetScrollX()` - returns number
-- `ImGui.GetScrollY()` - returns number
-- `ImGui.GetFrameHeight()` - returns number
-- `ImGui.GetMainViewport().Pos` - works (property access on bound object)
-- `ImGui.GetMainViewport().Size` - works (property access on bound object)
-- `ImGui.GetIO().MousePos` - works (property access on bound object)
-
-### Workaround Pattern:
-Instead of `GetCursorScreenPos()`, calculate manually:
 ```typescript
-// DON'T do this - will throw:
-// const pos = ImGui.GetCursorScreenPos();
+import { ImVec2Helpers } from '@voidscript/imgui';
 
-// DO this instead:
-const mainViewport = ImGui.GetMainViewport();
-const io = ImGui.GetIO();
-// Use mainViewport.Pos, mainViewport.Size, io.MousePos for coordinates
-// Use GetCursorPosX(), GetCursorPosY() for window-local positions
+// Viewport functions
+ImVec2Helpers.GetMainViewportPos()      // { x, y } - main viewport position
+ImVec2Helpers.GetMainViewportSize()     // { x, y } - main viewport size
+ImVec2Helpers.GetMainViewportWorkPos()  // { x, y } - work area position
+ImVec2Helpers.GetMainViewportWorkSize() // { x, y } - work area size
+
+// Window functions
+ImVec2Helpers.GetWindowPos()            // { x, y } - current window position
+ImVec2Helpers.GetWindowSize()           // { x, y } - current window size
+ImVec2Helpers.GetContentRegionAvail()   // { x, y } - available content region
+
+// Cursor functions
+ImVec2Helpers.GetCursorScreenPos()      // { x, y } - cursor in screen coordinates
+ImVec2Helpers.GetCursorPos()            // { x, y } - cursor in window-local coordinates
+ImVec2Helpers.GetCursorStartPos()       // { x, y } - initial cursor position
+
+// Item rect functions
+ImVec2Helpers.GetItemRectMin()          // { x, y } - last item top-left
+ImVec2Helpers.GetItemRectMax()          // { x, y } - last item bottom-right
+ImVec2Helpers.GetItemRectSize()         // { x, y } - last item size
+
+// Mouse functions
+ImVec2Helpers.GetMousePos()             // { x, y } - current mouse position
+ImVec2Helpers.GetMouseDragDelta(button, threshold) // { x, y } - drag delta
+ImVec2Helpers.GetMousePosOnOpeningCurrentPopup()   // { x, y }
+
+// Text measurement
+ImVec2Helpers.CalcTextSize(text)        // { x, y } - text dimensions
 ```
+
+**Example usage:**
+```typescript
+const cursorPos = ImVec2Helpers.GetCursorScreenPos();
+const contentSize = ImVec2Helpers.GetContentRegionAvail();
+
+// Use for drawing
+drawList.AddLine(
+  { x: cursorPos.x, y: cursorPos.y },
+  { x: cursorPos.x + contentSize.x, y: cursorPos.y },
+  colorU32
+);
+```
+
+**Key file:** `packages/jsimgui/src/imgui/api/ts/end.ts`
 
 ## Game-Specific Documentation
 

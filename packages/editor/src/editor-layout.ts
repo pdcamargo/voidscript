@@ -8,6 +8,7 @@
 import { ImGui, ImVec2Helpers } from '@voidscript/imgui';
 import type { Color } from './types.js';
 import { EditorColors } from './editor-colors.js';
+import { ThemeManager } from './theme/theme-manager.js';
 
 /**
  * Tab definition for verticalTabLayout
@@ -78,6 +79,20 @@ export interface TextOptions {
 }
 
 /**
+ * Options for the divider() method
+ */
+export interface DividerOptions {
+  /** Margin above the separator in pixels (default: 8) */
+  marginTop?: number;
+  /** Margin below the separator in pixels (default: 8) */
+  marginBottom?: number;
+  /** Custom separator color (default: theme's imguiSeparator) */
+  color?: Color;
+  /** Thickness of the separator line in pixels (default: 1) */
+  thickness?: number;
+}
+
+/**
  * Static utility class for rendering editor UI elements
  */
 export class EditorLayout {
@@ -123,6 +138,62 @@ export class EditorLayout {
    */
   static separator(): void {
     ImGui.Separator();
+  }
+
+  /**
+   * Add a horizontal divider line with configurable spacing.
+   * Uses the theme's separator color by default.
+   *
+   * @param options - Optional configuration for margins, color, and thickness
+   *
+   * @example
+   * ```typescript
+   * // Default spacing (8px top and bottom)
+   * EditorLayout.divider();
+   *
+   * // Custom margins
+   * EditorLayout.divider({ marginTop: 12, marginBottom: 4 });
+   *
+   * // No top margin (touching content above)
+   * EditorLayout.divider({ marginTop: 0 });
+   * ```
+   */
+  static divider(options?: DividerOptions): void {
+    const marginTop = options?.marginTop ?? 16;
+    const marginBottom = options?.marginBottom ?? 16;
+    const color = options?.color ?? ThemeManager.getColor('imguiSeparator');
+    const thickness = options?.thickness ?? 1;
+
+    // Add top margin
+    if (marginTop > 0) {
+      ImGui.Dummy({ x: 0, y: marginTop });
+    }
+
+    // Draw the separator line using the draw list for precise control
+    const drawList = ImGui.GetWindowDrawList();
+    const cursorPos = ImVec2Helpers.GetCursorScreenPos();
+    const contentRegionAvail = ImGui.GetContentRegionAvail();
+
+    const startX = cursorPos.x;
+    const endX = cursorPos.x + contentRegionAvail.x;
+    const y = cursorPos.y + thickness / 2;
+
+    const colorU32 = ImGui.ColorConvertFloat4ToU32({
+      x: color.r,
+      y: color.g,
+      z: color.b,
+      w: color.a ?? 1.0,
+    });
+
+    drawList.AddLine({ x: startX, y }, { x: endX, y }, colorU32, thickness);
+
+    // Advance cursor past the line
+    ImGui.Dummy({ x: 0, y: thickness });
+
+    // Add bottom margin
+    if (marginBottom > 0) {
+      ImGui.Dummy({ x: 0, y: marginBottom });
+    }
   }
 
   /**

@@ -146,6 +146,7 @@ export class TitleBar {
 
     if (ImGui.Begin('##TitleBar', null, windowFlags)) {
       this.renderContent(displayWidth);
+      EditorLayout.divider({ marginTop: 6, marginBottom: 6 });
     }
     ImGui.End();
 
