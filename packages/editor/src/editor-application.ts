@@ -17,12 +17,15 @@ import {
 } from '@voidscript/engine';
 import type { Scene } from '@voidscript/renderer';
 import type { EditorPanel } from './editor-panel.js';
+import type { EditorDialog } from './editor-dialog.js';
 import { MenuManager } from './menu-manager.js';
 import { PanelStateManager } from './panel-state-manager.js';
 import { EditorCamera } from './editor-camera.js';
 import { EditorFonts } from './editor-fonts.js';
 import { TitleBar } from './title-bar.js';
 import { initOSInfo } from './os-info.js';
+import { ThemeManager } from './theme/theme-manager.js';
+import { EditorPreferencesDialog } from './editor-preferences-dialog.js';
 
 /**
  * Font configuration for the editor
@@ -88,6 +91,7 @@ export class EditorApplication {
   private canvas: HTMLCanvasElement;
   private gl: WebGL2RenderingContext;
   private panels: EditorPanel[] = [];
+  private dialogs: EditorDialog[] = [];
   private isRunning = false;
   private clearColor: { r: number; g: number; b: number; a: number };
   private animationFrameId: number | null = null;
@@ -231,6 +235,50 @@ export class EditorApplication {
   }
 
   /**
+   * Register a dialog to be rendered each frame.
+   * Also registers the dialog with the menu manager if it has a menuPath.
+   *
+   * @param dialog - The dialog instance to register
+   */
+  registerDialog(dialog: EditorDialog): void {
+    this.dialogs.push(dialog);
+
+    // Set application reference so dialog can access engine, renderer, etc.
+    dialog.setApplication(this);
+
+    // Register with menu manager for native menu integration (if menuPath is set)
+    if (dialog.menuPath) {
+      this.menuManager.registerMenuAction({
+        path: dialog.menuPath,
+        shortcut: dialog.shortcut,
+        action: () => dialog.open(),
+      });
+    }
+  }
+
+  /**
+   * Unregister a dialog
+   *
+   * @param dialog - The dialog instance to remove
+   * @returns true if the dialog was found and removed
+   */
+  unregisterDialog(dialog: EditorDialog): boolean {
+    const index = this.dialogs.indexOf(dialog);
+    if (index !== -1) {
+      this.dialogs.splice(index, 1);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Get all registered dialogs
+   */
+  getDialogs(): readonly EditorDialog[] {
+    return this.dialogs;
+  }
+
+  /**
    * Initialize ImGui and start the render loop.
    * This method returns a promise that resolves when the application stops.
    *
@@ -275,6 +323,12 @@ export class EditorApplication {
       );
     }
 
+    // Initialize theme manager (load persisted theme)
+    await ThemeManager.initialize();
+
+    // Register built-in dialogs
+    this.registerDialog(new EditorPreferencesDialog());
+
     // Build and set native Tauri menu bar
     await this.menuManager.buildAndSetMenu();
 
@@ -286,6 +340,9 @@ export class EditorApplication {
 
     // Initialize ImGui
     await this.initializeImGui();
+
+    // Apply theme to ImGui (must be after ImGui is initialized)
+    ThemeManager.applyToImGui();
 
     // Load fonts if configured
     if (this.fontConfig) {
@@ -573,6 +630,11 @@ export class EditorApplication {
       // Render all registered panels inside the dockspace
       for (const panel of this.panels) {
         panel.render();
+      }
+
+      // Render all registered dialogs (modal popups)
+      for (const dialog of this.dialogs) {
+        dialog.render();
       }
 
       // Check for panel state changes and auto-save

@@ -45,11 +45,19 @@ export {
   getFormattedTitle,
 } from './project-info.js';
 
-// Panel base class
+// Window base classes
+export { EditorWindow, type EditorWindowConfig } from './editor-window.js';
 export { EditorPanel, type EditorPanelConfig } from './editor-panel.js';
+export { EditorDialog, type EditorDialogConfig } from './editor-dialog.js';
 
 // Layout utilities
-export { EditorLayout, type TextOptions } from './editor-layout.js';
+export {
+  EditorLayout,
+  type TextOptions,
+  type VerticalTab,
+  type VerticalTabLayoutOptions,
+  type VerticalTabLayoutResult,
+} from './editor-layout.js';
 
 // Enums and flags
 export { EditorPanelFocusFlags } from './focus-flags.js';
@@ -57,6 +65,26 @@ export { EditorPanelFocusFlags } from './focus-flags.js';
 // Managers
 export { MenuManager, type MenuActionConfig } from './menu-manager.js';
 export { PanelStateManager } from './panel-state-manager.js';
+
+// Theme system
+export { ThemeManager } from './theme/theme-manager.js';
+export type {
+  ThemeColors,
+  ThemeColorKey,
+  ThemePreset,
+  PersistedThemeData,
+} from './theme/theme-types.js';
+export {
+  BUILT_IN_PRESETS,
+  getBuiltInPreset,
+  getDefaultPreset,
+} from './theme/theme-presets.js';
+
+// File system abstraction
+export { EditorFileSystem, type FileSystemResult } from './editor-file-system.js';
+
+// Dialogs
+export { EditorPreferencesDialog } from './editor-preferences-dialog.js';
 
 // Viewport utilities
 export {

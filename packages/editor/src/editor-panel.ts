@@ -7,17 +7,13 @@
 
 import { ImGui, ImVec2Helpers } from '@voidscript/imgui';
 import { EditorPanelFocusFlags } from './focus-flags.js';
+import { EditorWindow, type EditorWindowConfig } from './editor-window.js';
 import type { Vec2 } from './types.js';
-import type { EditorApplication } from './editor-application.js';
 
 /**
  * Configuration options for EditorPanel
  */
-export interface EditorPanelConfig {
-  /** Unique identifier for ImGui (used in window ID) */
-  id: string;
-  /** Window title displayed in the title bar */
-  title: string;
+export interface EditorPanelConfig extends EditorWindowConfig {
   /** Initial window size (optional, only applied on first render) */
   initialSize?: Vec2;
   /** ImGui window flags (optional) */
@@ -62,13 +58,7 @@ export interface EditorPanelConfig {
  * }
  * ```
  */
-export abstract class EditorPanel {
-  /** Unique identifier for this panel */
-  protected readonly id: string;
-
-  /** Window title */
-  protected readonly title: string;
-
+export abstract class EditorPanel extends EditorWindow {
   /** Initial window size (applied once on first render) */
   protected readonly initialSize?: Vec2;
 
@@ -84,14 +74,8 @@ export abstract class EditorPanel {
   /** Default open state (used when no persisted state exists) */
   public readonly defaultOpen: boolean;
 
-  /** Current open state of the panel */
-  private _isOpen: boolean;
-
   /** Whether to request focus on next render */
   private shouldFocus = false;
-
-  /** Tracks if the window was open in the previous frame */
-  private wasOpen = false;
 
   /** Current mouse position relative to window content */
   private currentMousePosition: Vec2 = { x: 0, y: 0 };
@@ -114,17 +98,13 @@ export abstract class EditorPanel {
   /** Previous content height for resize detection */
   private previousContentHeight = 0;
 
-  /** Reference to the parent EditorApplication (set when registered) */
-  private _application: EditorApplication | null = null;
-
   /**
    * Create a new EditorPanel
    *
    * @param config - Panel configuration
    */
   constructor(config: EditorPanelConfig) {
-    this.id = config.id;
-    this.title = config.title;
+    super(config);
     this.initialSize = config.initialSize;
     this.windowFlags = config.flags ?? 0;
     this.menuPath = config.menuPath;
@@ -132,18 +112,6 @@ export abstract class EditorPanel {
     this.defaultOpen = config.defaultOpen ?? true;
     this._isOpen = this.defaultOpen;
   }
-
-  /**
-   * Called when the panel is first opened.
-   * Override to perform initialization logic.
-   */
-  protected onOpened(): void {}
-
-  /**
-   * Called when the panel is closed.
-   * Override to perform cleanup logic.
-   */
-  protected onClosed(): void {}
 
   /**
    * Called when the panel content area is resized.
@@ -163,7 +131,7 @@ export abstract class EditorPanel {
    * Must be implemented by subclasses.
    * The ImGui window is already open when this is called.
    */
-  protected abstract onRender(): void;
+  protected abstract override onRender(): void;
 
   /**
    * Get the current mouse position relative to the panel content area.
@@ -245,77 +213,13 @@ export abstract class EditorPanel {
   }
 
   /**
-   * Get the unique identifier for this panel.
-   */
-  public getId(): string {
-    return this.id;
-  }
-
-  /**
-   * Get the window title for this panel.
-   */
-  public getTitle(): string {
-    return this.title;
-  }
-
-  /**
-   * Get whether the panel is currently open.
-   */
-  public get isOpen(): boolean {
-    return this._isOpen;
-  }
-
-  /**
-   * Set the open state of the panel.
-   * Use open() or close() methods for programmatic control with focus handling.
-   */
-  public set isOpen(value: boolean) {
-    this._isOpen = value;
-  }
-
-  /**
    * Open the panel and bring it to focus.
    * Called when user clicks the menu item or uses keyboard shortcut.
    */
-  public open(): void {
+  public override open(): void {
     this._isOpen = true;
     // Request focus on next frame - ImGui will handle this when render() is called
     this.shouldFocus = true;
-  }
-
-  /**
-   * Close the panel.
-   * Usually triggered by clicking the X button in the title bar.
-   */
-  public close(): void {
-    this._isOpen = false;
-  }
-
-  /**
-   * Get the parent EditorApplication.
-   * Only available after the panel has been registered with an application.
-   *
-   * @throws Error if the panel has not been registered with an application
-   * @returns The parent EditorApplication
-   */
-  protected getApplication(): EditorApplication {
-    if (!this._application) {
-      throw new Error(
-        `Panel "${this.id}" has not been registered with an EditorApplication. ` +
-          `Call app.registerPanel() before accessing getApplication().`,
-      );
-    }
-    return this._application;
-  }
-
-  /**
-   * Set the parent application reference.
-   * Called internally by EditorApplication when registering the panel.
-   *
-   * @internal
-   */
-  public setApplication(app: EditorApplication): void {
-    this._application = app;
   }
 
   /**
@@ -324,7 +228,7 @@ export abstract class EditorPanel {
    *
    * @internal
    */
-  render(): void {
+  override render(): void {
     // Skip rendering if panel is closed
     if (!this._isOpen) {
       // Reset lifecycle tracking when closed

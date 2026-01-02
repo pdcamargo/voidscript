@@ -7,6 +7,47 @@
 
 import { ImGui, ImVec2Helpers } from '@voidscript/imgui';
 import type { Color } from './types.js';
+import { EditorColors } from './editor-colors.js';
+
+/**
+ * Tab definition for verticalTabLayout
+ */
+export interface VerticalTab {
+  /** Unique identifier for the tab */
+  id: string;
+  /** Display label for the tab */
+  label: string;
+  /** Optional icon to show before label */
+  icon?: string;
+}
+
+/**
+ * Options for verticalTabLayout
+ */
+export interface VerticalTabLayoutOptions {
+  /** Width of the tab column in pixels (default: 150) */
+  tabWidth?: number;
+  /** Height of each tab button in pixels (default: 32) */
+  tabHeight?: number;
+  /** Tab background color */
+  tabBgColor?: Color;
+  /** Selected tab background color */
+  selectedTabBgColor?: Color;
+  /** Hovered tab background color */
+  hoveredTabBgColor?: Color;
+}
+
+/**
+ * Result from verticalTabLayout
+ */
+export interface VerticalTabLayoutResult {
+  /** The currently selected tab ID (may have changed if user clicked a new tab) */
+  selectedTabId: string;
+  /** Call this to begin the content area - returns true if content should be rendered */
+  beginContent: () => boolean;
+  /** Call this to end the content area */
+  endContent: () => void;
+}
 
 /**
  * Options for icon buttons
@@ -438,5 +479,168 @@ export class EditorLayout {
    */
   static dummy(width: number, height: number): void {
     ImGui.Dummy({ x: width, y: height });
+  }
+
+  /**
+   * Create a vertical tab layout (tabs on left, content on right).
+   * Godot-style layout for dialogs and settings panels.
+   *
+   * @param id - Unique identifier for this tab layout
+   * @param tabs - Array of tab definitions
+   * @param activeTabId - Currently active tab ID
+   * @param options - Optional layout configuration
+   * @returns Object with selectedTabId and content rendering functions
+   *
+   * @example
+   * ```typescript
+   * const tabs = [
+   *   { id: 'appearance', label: 'Appearance' },
+   *   { id: 'shortcuts', label: 'Keyboard Shortcuts' },
+   * ];
+   *
+   * const result = EditorLayout.verticalTabLayout('prefs', tabs, this.activeTab);
+   * this.activeTab = result.selectedTabId;
+   *
+   * if (result.beginContent()) {
+   *   if (this.activeTab === 'appearance') {
+   *     // Render appearance settings
+   *   }
+   *   result.endContent();
+   * }
+   * ```
+   */
+  static verticalTabLayout(
+    id: string,
+    tabs: VerticalTab[],
+    activeTabId: string,
+    options?: VerticalTabLayoutOptions,
+  ): VerticalTabLayoutResult {
+    const tabWidth = options?.tabWidth ?? 150;
+    const tabHeight = options?.tabHeight ?? 32;
+
+    // Colors with defaults from theme
+    const tabBgColor = options?.tabBgColor ?? { r: 0, g: 0, b: 0, a: 0 };
+    const selectedTabBgColor = options?.selectedTabBgColor ?? EditorColors.BUTTON_HOVER;
+    const hoveredTabBgColor = options?.hoveredTabBgColor ?? {
+      r: selectedTabBgColor.r * 0.7,
+      g: selectedTabBgColor.g * 0.7,
+      b: selectedTabBgColor.b * 0.7,
+      a: selectedTabBgColor.a ?? 1,
+    };
+
+    let newSelectedTabId = activeTabId;
+    const contentChildId = `${id}_content`;
+
+    // Get available content region
+    const availableHeight = ImGui.GetContentRegionAvail().y;
+
+    // Left side: Tab column (no border, no flags)
+    ImGui.BeginChild(`${id}_tabs`, { x: tabWidth, y: availableHeight }, 0);
+
+    for (const tab of tabs) {
+      const isSelected = tab.id === activeTabId;
+      const buttonLabel = tab.icon ? `${tab.icon}  ${tab.label}` : tab.label;
+
+      // Style for tab button
+      if (isSelected) {
+        this.pushStyleColor(ImGui.Col.Button, selectedTabBgColor);
+        this.pushStyleColor(ImGui.Col.ButtonHovered, selectedTabBgColor);
+        this.pushStyleColor(ImGui.Col.ButtonActive, selectedTabBgColor);
+      } else {
+        this.pushStyleColor(ImGui.Col.Button, tabBgColor);
+        this.pushStyleColor(ImGui.Col.ButtonHovered, hoveredTabBgColor);
+        this.pushStyleColor(ImGui.Col.ButtonActive, selectedTabBgColor);
+      }
+
+      // Full-width button
+      if (ImGui.Button(`${buttonLabel}###${id}_tab_${tab.id}`, { x: tabWidth - 16, y: tabHeight })) {
+        newSelectedTabId = tab.id;
+      }
+
+      this.popStyleColor(3);
+    }
+
+    ImGui.EndChild();
+
+    // Same line to put content to the right
+    ImGui.SameLine();
+
+    // Return functions for content rendering
+    return {
+      selectedTabId: newSelectedTabId,
+      beginContent: () => {
+        // Right side: Content area
+        // Use remaining width and full height
+        const contentWidth = ImGui.GetContentRegionAvail().x;
+        // Use ChildFlags.Borders (1) for a bordered child window
+        return ImGui.BeginChild(contentChildId, { x: contentWidth, y: availableHeight }, 1);
+      },
+      endContent: () => {
+        ImGui.EndChild();
+      },
+    };
+  }
+
+  /**
+   * Render a color picker field with label
+   *
+   * @param label - Label to display
+   * @param color - Current color value (will be mutated if changed)
+   * @param options - Optional configuration
+   * @returns true if the color was changed
+   *
+   * @example
+   * ```typescript
+   * if (EditorLayout.colorField('Background', this.bgColor)) {
+   *   console.log('Color changed!');
+   * }
+   * ```
+   */
+  static colorField(
+    label: string,
+    color: Color,
+    options?: { tooltip?: string },
+  ): boolean {
+    // Create a mutable array for ImGui
+    const colorArray: [number, number, number, number] = [
+      color.r,
+      color.g,
+      color.b,
+      color.a ?? 1,
+    ];
+
+    const changed = ImGui.ColorEdit4(label, colorArray, ImGui.ColorEditFlags.AlphaBar);
+
+    if (changed) {
+      color.r = colorArray[0];
+      color.g = colorArray[1];
+      color.b = colorArray[2];
+      color.a = colorArray[3];
+    }
+
+    if (options?.tooltip && ImGui.IsItemHovered()) {
+      ImGui.SetTooltip(options.tooltip);
+    }
+
+    return changed;
+  }
+
+  /**
+   * Render a collapsing header section
+   *
+   * @param label - Header label
+   * @param defaultOpen - Whether to start open (default: false)
+   * @returns true if the section is expanded
+   *
+   * @example
+   * ```typescript
+   * if (EditorLayout.collapsingHeader('Advanced Settings')) {
+   *   // Render advanced settings content
+   * }
+   * ```
+   */
+  static collapsingHeader(label: string, defaultOpen: boolean = false): boolean {
+    const flags = defaultOpen ? ImGui.TreeNodeFlags.DefaultOpen : 0;
+    return ImGui.CollapsingHeader(label, flags);
   }
 }
