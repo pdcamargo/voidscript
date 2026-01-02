@@ -5,8 +5,8 @@
  * instead of raw GUIDs. The same GUID always resolves to the same RuntimeAsset instance
  * via RuntimeAssetManager.
  *
- * RuntimeAsset automatically selects the correct loader from AssetLoaderRegistry based
- * on the asset's metadata type when load() is called.
+ * In core, RuntimeAsset provides the base class. Engine extends this with
+ * AssetLoaderRegistry integration for automatic loader selection.
  *
  * @example
  * ```typescript
@@ -16,8 +16,8 @@
  * // Use in component
  * const sprite = { texture: asset };
  *
- * // Load data (no loader argument needed!)
- * await asset.load();
+ * // Load data with a loader function
+ * await asset.load(myLoaderFn);
  *
  * // Access loaded data via .data property
  * if (asset.data) {
@@ -26,8 +26,13 @@
  * ```
  */
 
-import type { AssetMetadata, GUID, AssetType } from "./asset-metadata.js";
-import { AssetLoaderRegistry } from "./asset-loader-registry.js";
+import type { GUID, BaseAssetMetadata, AssetLoaderFn } from "./asset-types.js";
+
+/**
+ * Static loader registry for RuntimeAsset
+ * Engine sets this via RuntimeAsset.setLoaderRegistry()
+ */
+let globalLoaderRegistry: ((assetType: string) => AssetLoaderFn | undefined) | null = null;
 
 /**
  * RuntimeAsset class - holds asset metadata and loaded data
@@ -39,7 +44,7 @@ export class RuntimeAsset<T = any> {
   readonly guid: GUID;
 
   /** Asset metadata (path, type, import settings, etc.) */
-  readonly metadata: AssetMetadata;
+  readonly metadata: BaseAssetMetadata;
 
   /** Whether asset data is loaded into memory */
   private _isLoaded: boolean = false;
@@ -50,9 +55,19 @@ export class RuntimeAsset<T = any> {
   /** Promise for in-progress loading (prevents duplicate loads) */
   private _loadingPromise: Promise<void> | null = null;
 
-  constructor(guid: GUID, metadata: AssetMetadata) {
+  constructor(guid: GUID, metadata: BaseAssetMetadata) {
     this.guid = guid;
     this.metadata = metadata;
+  }
+
+  /**
+   * Set the global loader registry function.
+   * Called by engine during initialization to provide loader lookup.
+   *
+   * @param registry Function that returns a loader for an asset type, or undefined if not found
+   */
+  static setLoaderRegistry(registry: (assetType: string) => AssetLoaderFn | undefined): void {
+    globalLoaderRegistry = registry;
   }
 
   /**
@@ -62,7 +77,7 @@ export class RuntimeAsset<T = any> {
    * such as Tiled animations created from tileset data.
    *
    * @param guid Unique identifier for this asset
-   * @param type Asset type (used for metadata)
+   * @param type Asset type string (e.g., 'animation', 'texture')
    * @param data The pre-loaded data
    * @returns RuntimeAsset instance with isLoaded=true and data already set
    *
@@ -71,20 +86,20 @@ export class RuntimeAsset<T = any> {
    * const clip = new AnimationClip('walk', 1.0);
    * const asset = RuntimeAsset.createLoaded<AnimationClip>(
    *   'generated-walk-animation',
-   *   AssetType.Animation,
+   *   'animation',
    *   clip
    * );
    * // asset.isLoaded === true
    * // asset.data === clip
    * ```
    */
-  static createLoaded<T>(guid: GUID, type: AssetType, data: T): RuntimeAsset<T> {
+  static createLoaded<T>(guid: GUID, type: string, data: T): RuntimeAsset<T> {
     // Create minimal metadata for the asset type
-    const metadata: AssetMetadata = {
+    const metadata: BaseAssetMetadata = {
       guid,
       path: `generated://${guid}`,
       type,
-    } as AssetMetadata;
+    };
 
     const asset = new RuntimeAsset<T>(guid, metadata);
     // Manually set the loaded state
@@ -161,10 +176,11 @@ export class RuntimeAsset<T = any> {
   /**
    * Load asset data into memory
    *
-   * Automatically selects the correct loader from AssetLoaderRegistry based on
-   * the asset's metadata type. Can be called multiple times safely - returns
-   * the same promise if already loading, and does nothing if already loaded.
+   * Uses the global loader registry (set by engine) to find the appropriate loader.
+   * Can be called multiple times safely - returns the same promise if already loading,
+   * and does nothing if already loaded.
    *
+   * @param loaderFn Optional explicit loader function. If not provided, uses the global registry.
    * @returns Promise that resolves when loading completes
    * @throws Error if no loader is registered for this asset type
    *
@@ -182,7 +198,7 @@ export class RuntimeAsset<T = any> {
    * }
    * ```
    */
-  async load(): Promise<void> {
+  async load(loaderFn?: AssetLoaderFn<T>): Promise<void> {
     // If already loaded, do nothing
     if (this._isLoaded) {
       return;
@@ -193,11 +209,21 @@ export class RuntimeAsset<T = any> {
       return this._loadingPromise;
     }
 
-    // Get loader for this asset type
-    const assetType = this.metadata.type as AssetType;
-    const loaderFn = AssetLoaderRegistry.get(assetType);
+    // Get loader - use provided one or look up from registry
+    const assetType = this.metadata.type;
+    let loader = loaderFn;
 
-    if (!loaderFn) {
+    if (!loader) {
+      if (!globalLoaderRegistry) {
+        throw new Error(
+          `No loader registry configured. Call RuntimeAsset.setLoaderRegistry() first, ` +
+          `or provide an explicit loader function to load().`
+        );
+      }
+      loader = globalLoaderRegistry(assetType);
+    }
+
+    if (!loader) {
       throw new Error(
         `No loader registered for asset type "${assetType}". ` +
         `Register a loader using AssetLoaderRegistry.register(AssetType.${assetType}, loaderFn)`
@@ -207,7 +233,7 @@ export class RuntimeAsset<T = any> {
     // Start loading
     this._loadingPromise = (async () => {
       try {
-        this._data = await loaderFn(this);
+        this._data = await loader!(this);
         this._isLoaded = true;
       } finally {
         this._loadingPromise = null;

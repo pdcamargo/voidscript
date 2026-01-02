@@ -5,8 +5,8 @@
  * external resources like the renderer, commands, or unique ID generation.
  */
 
-import type { Command } from '../../ecs/command.js';
-import type { Scene } from '../../ecs/scene.js';
+import type { Command } from '@voidscript/core';
+import type { Scene } from '@voidscript/core';
 import type * as THREE from 'three';
 
 /**

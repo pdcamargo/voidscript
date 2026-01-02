@@ -13,21 +13,21 @@
  * Runs in the startup phase (once per object layer).
  */
 
-import { system } from '../../ecs/system.js';
-import type { Entity } from '../../ecs/entity.js';
-import type { Command } from '../../ecs/command.js';
+import { system } from '@voidscript/core';
+import type { Entity } from '@voidscript/core';
+import type { Command } from '@voidscript/core';
 import * as tiled from '@kayahr/tiled';
 import { TiledMap, type TiledMapData } from '../../ecs/components/tiled/tiled-map.js';
 import { TiledObjectLayer, type TiledObjectLayerData } from '../../ecs/components/tiled/tiled-object-layer.js';
 import { TiledObject } from '../../ecs/components/tiled/tiled-object.js';
 import { Transform3D } from '../../ecs/components/rendering/transform-3d.js';
 import { LocalTransform3D } from '../../ecs/components/rendering/local-transform-3d.js';
-import { Parent } from '../../ecs/components/parent.js';
+import { Parent } from '@voidscript/core';
 import { Sprite2D } from '../../ecs/components/rendering/sprite-2d.js';
 import { AnimationController } from '../../ecs/components/animation/animation-controller.js';
 import { TiledAssetRegistry } from '../tiled-asset-registry.js';
-import { RuntimeAsset } from '../../ecs/runtime-asset.js';
-import { AssetType } from '../../ecs/asset-metadata.js';
+import { RuntimeAsset } from '@voidscript/core';
+import { AssetType } from '../../ecs/asset/asset-metadata.js';
 import type { AnimationClip } from '../../animation/animation-clip.js';
 import {
   tiledCoordsToWorld,

@@ -13,7 +13,7 @@
  */
 
 import RAPIER from '@dimforge/rapier2d';
-import { system } from '../../ecs/system.js';
+import { system } from '@voidscript/core';
 import { isGameplayActive } from '../../editor/system-conditions.js';
 import { Physics2DContext } from './physics-2d-context.js';
 import { RigidBody2D } from './components/rigidbody-2d.js';
@@ -35,8 +35,8 @@ import { CollisionGroups2D } from './components/collision-groups-2d.js';
 import { ActiveHooks2D } from './components/active-hooks-2d.js';
 import { ActiveHooksFlags } from '../collision/physics-hooks.js';
 import type { ColliderShape2D } from '../types.js';
-import type { Command } from '../../ecs/command.js';
-import type { Entity } from '../../ecs/entity.js';
+import type { Command } from '@voidscript/core';
+import type { Entity } from '@voidscript/core';
 
 /**
  * Helper to create Rapier collider descriptor from shape definition

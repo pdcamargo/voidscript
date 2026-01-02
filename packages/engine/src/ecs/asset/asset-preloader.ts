@@ -5,11 +5,11 @@
  * Assets are loaded using the registered loaders from AssetLoaderRegistry.
  */
 
-import type { Scene } from './scene.js';
-import type { Command } from './command.js';
-import type { RuntimeAsset } from './runtime-asset.js';
-import type { ComponentType } from './component.js';
-import { RuntimeAssetManager } from './runtime-asset-manager.js';
+import type { Scene } from '@voidscript/core';
+import type { Command } from '@voidscript/core';
+import type { RuntimeAsset } from '@voidscript/core';
+import type { ComponentType } from '@voidscript/core';
+import { RuntimeAssetManager } from '@voidscript/core';
 import type { GUID } from './asset-metadata.js';
 
 /**

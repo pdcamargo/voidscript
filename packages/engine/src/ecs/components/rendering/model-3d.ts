@@ -7,7 +7,7 @@
  * IMPORTANT: This component MUST be used with Transform3D component.
  */
 
-import { component } from "../../component.js";
+import { component } from "@voidscript/core";
 
 export type PrimitiveType = "cube" | "sphere" | "plane" | "cylinder" | "capsule";
 

@@ -24,7 +24,7 @@
  * ```
  */
 
-import { component } from '../../../ecs/component.js';
+import { component } from '@voidscript/core';
 import * as THREE from 'three';
 
 export interface DesiredMovement3DData {

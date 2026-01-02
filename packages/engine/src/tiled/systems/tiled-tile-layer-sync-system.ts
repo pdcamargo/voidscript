@@ -11,9 +11,9 @@
  * Runs in the render phase (every frame).
  */
 
-import { system } from '../../ecs/system.js';
-import type { Entity } from '../../ecs/entity.js';
-import type { Command } from '../../ecs/command.js';
+import { system } from '@voidscript/core';
+import type { Entity } from '@voidscript/core';
+import type { Command } from '@voidscript/core';
 import { Transform3D } from '../../ecs/components/rendering/transform-3d.js';
 import { RenderObject } from '../../ecs/components/rendering/render-object.js';
 import { TiledTileLayer } from '../../ecs/components/tiled/tiled-tile-layer.js';

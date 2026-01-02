@@ -20,7 +20,7 @@
  * @see https://rapier.rs/docs/user_guides/javascript/character_controller
  */
 
-import { component } from '../../../ecs/component.js';
+import { component } from '@voidscript/core';
 import * as THREE from 'three';
 import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 

@@ -49,8 +49,8 @@
  */
 
 import { ImGui } from '@voidscript/imgui';
-import { component } from '../../ecs/component.js';
-import { Events } from '../../ecs/events.js';
+import { component } from '@voidscript/core';
+import { Events } from '@voidscript/core';
 import { renderEventNamePicker } from '../../app/imgui/event-name-picker.js';
 
 export interface UIInteractionData {

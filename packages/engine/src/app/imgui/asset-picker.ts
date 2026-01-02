@@ -10,10 +10,10 @@
  */
 
 import { ImGui, ImGuiImplWeb, ImTextureRef } from '@voidscript/imgui';
-import { AssetDatabase } from '../../ecs/asset-database.js';
-import { RuntimeAssetManager } from '../../ecs/runtime-asset-manager.js';
-import { AssetType, type AssetMetadata, isTextureMetadata } from '../../ecs/asset-metadata.js';
-import type { RuntimeAsset } from '../../ecs/runtime-asset.js';
+import { AssetDatabase } from '../../ecs/asset/asset-database.js';
+import { RuntimeAssetManager } from '@voidscript/core';
+import { AssetType, type AssetMetadata, isTextureMetadata } from '../../ecs/asset/asset-metadata.js';
+import type { RuntimeAsset } from '@voidscript/core';
 import * as THREE from 'three';
 
 // ============================================================================

@@ -18,7 +18,7 @@ import {
   TextureWrap,
   isTextureMetadata,
   AssetMetadata,
-} from '../ecs/asset-metadata.js';
+} from '../ecs/asset/asset-metadata.js';
 
 /**
  * Texture loading options

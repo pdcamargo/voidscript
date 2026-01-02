@@ -42,8 +42,8 @@ import {
   componentConfig,
   requiredProperty,
   optionalProperty,
-} from '../bundle.js';
-import { registerBundle } from '../bundle-registry.js';
+} from '@voidscript/core';
+import { registerBundle } from '@voidscript/core';
 import { Transform3D } from '../components/rendering/transform-3d.js';
 import { Camera, type CameraData } from '../components/rendering/camera.js';
 import { MainCamera } from '../components/rendering/main-camera.js';
@@ -52,7 +52,7 @@ import {
   type BlendCurve,
   type CameraBrainUpdateMode,
 } from '../components/rendering/camera-brain.js';
-import { Name } from '../components/name.js';
+import { Name } from '@voidscript/core';
 import { Vector3 } from '../../math/index.js';
 
 export const MainCameraBundle = registerBundle('MainCamera', {

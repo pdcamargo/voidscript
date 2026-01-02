@@ -13,7 +13,7 @@
  * Only enable for objects that truly need it.
  */
 
-import { component } from '../../ecs/component.js';
+import { component } from '@voidscript/core';
 import { EditorLayout } from '../../app/imgui/editor-layout.js';
 
 export interface CcdData {

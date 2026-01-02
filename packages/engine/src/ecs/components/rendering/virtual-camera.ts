@@ -36,8 +36,8 @@
  * ```
  */
 
-import { component } from "../../component.js";
-import type { Entity } from "../../entity.js";
+import { component } from "@voidscript/core";
+import type { Entity } from "@voidscript/core";
 import { EditorLayout } from "../../../app/imgui/editor-layout.js";
 import { VirtualCameraBounds } from "./virtual-camera-bounds.js";
 
@@ -287,7 +287,7 @@ export const VirtualCamera = component<VirtualCameraData>(
           componentData.boundsEntity,
           {
             allowNone: true,
-            requiredComponents: [VirtualCameraBounds as unknown as import("../../component.js").ComponentType<unknown>],
+            requiredComponents: [VirtualCameraBounds as unknown as import("@voidscript/core").ComponentType<unknown>],
             tooltip: "Entity with VirtualCameraBounds component"
           }
         );

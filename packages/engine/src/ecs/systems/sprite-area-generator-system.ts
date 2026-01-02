@@ -8,25 +8,24 @@
  * due to skipChildrenSerialization on the SpriteAreaGenerator component.
  */
 
-import { system } from '../system.js';
-import type { Command } from '../command.js';
+import { system } from '@voidscript/core';
+import type { Command } from '@voidscript/core';
 import {
   SpriteAreaGenerator,
   SpriteAreaGeneratorGenerated,
   type SpriteAreaGeneratorData,
 } from '../components/generators/sprite-area-generator.js';
-import { Children } from '../components/children.js';
-import { Parent } from '../components/parent.js';
+import { Children, Parent } from '@voidscript/core';
 import { LocalTransform3D } from '../components/rendering/local-transform-3d.js';
 import { Transform3D } from '../components/rendering/transform-3d.js';
 import { Sprite2D } from '../components/rendering/sprite-2d.js';
-import { AssetDatabase } from '../asset-database.js';
+import { AssetDatabase } from '../asset/asset-database.js';
 import {
   isTextureMetadata,
   isTiledSpriteDefinition,
   isRectSpriteDefinition,
-} from '../asset-metadata.js';
-import { globalComponentRegistry } from '../component.js';
+} from '../asset/asset-metadata.js';
+import { globalComponentRegistry } from '@voidscript/core';
 import { SeededRandom } from '../../math/seeded-random.js';
 import { Vector3 } from '../../math/vector3.js';
 

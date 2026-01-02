@@ -19,14 +19,14 @@
  * ```
  */
 
-import type { RuntimeAsset } from './runtime-asset.js';
+import type { RuntimeAsset } from '@voidscript/core';
 import type { TextureMetadata, Model3DMetadata, TiledMapMetadata } from './asset-metadata.js';
 import { AssetType } from './asset-metadata.js';
-import { getTextureLoader } from '../loaders/texture-loader.js';
+import { getTextureLoader } from '../../loaders/texture-loader.js';
 import {
   FileExtensions,
   enforceFileExtension,
-} from '../constants/file-extensions.js';
+} from '../../constants/file-extensions.js';
 import * as THREE from 'three';
 import type * as tiled from '@kayahr/tiled';
 
@@ -194,7 +194,7 @@ AssetLoaderRegistry.register(AssetType.Animation, async (asset) => {
   }
 
   // Dynamically import to avoid circular dependencies
-  const { parseAnimationClipJson } = await import('../animation/animation-json-parser.js');
+  const { parseAnimationClipJson } = await import('../../animation/animation-json-parser.js');
   return parseAnimationClipJson(json);
 });
 
@@ -234,8 +234,8 @@ AssetLoaderRegistry.register(AssetType.Prefab, async (asset) => {
   const text = await response.text();
 
   // Dynamically import to avoid circular dependencies
-  const { yamlToJson, isYamlFile } = await import('./serialization/yaml-utils.js');
-  const { PrefabManager } = await import('./prefab-manager.js');
+  const { yamlToJson, isYamlFile } = await import('@voidscript/core');
+  const { PrefabManager } = await import('@voidscript/core');
 
   let prefabData;
 
@@ -296,7 +296,7 @@ AssetLoaderRegistry.register(AssetType.Shader, async (asset) => {
   const source = await response.text();
 
   // Dynamically import to avoid circular dependencies
-  const { ShaderAsset } = await import('../shader/shader-asset.js');
+  const { ShaderAsset } = await import('../../shader/shader-asset.js');
   const { isShaderMetadata } = await import('./asset-metadata.js');
 
   const shaderAsset = ShaderAsset.fromSource(source);
@@ -360,7 +360,7 @@ AssetLoaderRegistry.register(AssetType.StateMachine, async (asset) => {
   }
 
   // Dynamically import to avoid circular dependencies
-  const { parseStateMachineJson } = await import('../animation/state-machine/state-machine-parser.js');
+  const { parseStateMachineJson } = await import('../../animation/state-machine/state-machine-parser.js');
   const { isStateMachineMetadata } = await import('./asset-metadata.js');
 
   const stateMachine = parseStateMachineJson(json);

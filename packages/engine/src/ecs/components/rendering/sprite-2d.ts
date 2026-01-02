@@ -13,16 +13,16 @@
  * - Optional THREE.js lighting support
  */
 
-import { component } from '../../component.js';
-import { RuntimeAsset } from '../../runtime-asset.js';
-import { AssetDatabase } from '../../asset-database.js';
+import { component } from '@voidscript/core';
+import { RuntimeAsset } from '@voidscript/core';
+import { AssetDatabase } from '../../asset/asset-database.js';
 import {
   isTextureMetadata,
   isTiledSpriteDefinition,
   isRectSpriteDefinition,
   type TextureMetadata,
   type SpriteDefinition,
-} from '../../asset-metadata.js';
+} from '../../asset/asset-metadata.js';
 import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 import {
   renderSpritePickerModal,

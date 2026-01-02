@@ -12,9 +12,7 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
-import { Scene } from "./scene.js";
-import { component } from "./component.js";
-import { entityId, entityGeneration } from "./entity.js";
+import { Scene, component, entityId, entityGeneration } from "@voidscript/core";
 
 // Define test components
 interface PositionData {

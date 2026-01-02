@@ -22,14 +22,14 @@
  */
 
 import * as THREE from 'three';
-import type { Entity } from '../ecs/entity.js';
+import type { Entity } from '@voidscript/core';
 import type { Renderer } from '../app/renderer.js';
 import type * as tiled from '@kayahr/tiled';
 import { TilemapMeshBasicMaterial, TilemapMeshLambertMaterial } from '../rendering/sprite/index.js';
 import type { TilesetInfo } from '../ecs/components/tiled/tiled-map.js';
 import type { TiledTileLayerData } from '../ecs/components/tiled/tiled-tile-layer.js';
 import { decodeTileLayerData, extractGidAndFlips } from './tiled-utils.js';
-import type { RuntimeAsset } from '../ecs/runtime-asset.js';
+import type { RuntimeAsset } from '@voidscript/core';
 
 /**
  * Internal tilemap entry tracking a Three.js mesh and its state

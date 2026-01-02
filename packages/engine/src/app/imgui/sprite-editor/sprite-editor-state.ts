@@ -10,9 +10,9 @@
  * Sprite creation is now done via form inputs in the properties panel.
  */
 
-import type { SpriteDefinition, TextureMetadata } from '../../../ecs/asset-metadata.js';
-import { AssetDatabase } from '../../../ecs/asset-database.js';
-import { isTextureMetadata } from '../../../ecs/asset-metadata.js';
+import type { SpriteDefinition, TextureMetadata } from '../../../ecs/asset/asset-metadata.js';
+import { AssetDatabase } from '../../../ecs/asset/asset-database.js';
+import { isTextureMetadata } from '../../../ecs/asset/asset-metadata.js';
 
 // ============================================================================
 // Types

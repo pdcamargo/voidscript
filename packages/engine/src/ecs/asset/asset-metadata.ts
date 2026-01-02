@@ -5,12 +5,14 @@
  * These types are used by RuntimeAsset and RuntimeAssetManager.
  */
 
-import { Vector3 } from '../math/index.js';
+import { Vector3 } from '../../math/index.js';
+import type {
+  GUID,
+  BaseAssetMetadata as CoreBaseAssetMetadata,
+} from '@voidscript/core';
 
-/**
- * GUID type (UUID v4)
- */
-export type GUID = string;
+// Re-export GUID from core
+export type { GUID } from '@voidscript/core';
 
 /**
  * Asset type discriminator
@@ -61,17 +63,9 @@ export enum ModelFormat {
 
 /**
  * Base asset metadata interface
+ * Extends core's minimal BaseAssetMetadata with editor-specific fields
  */
-export interface BaseAssetMetadata {
-  /** Unique identifier (UUID v4) */
-  guid: GUID;
-
-  /** Relative path from project root */
-  path: string;
-
-  /** Asset type discriminator */
-  type: string;
-
+export interface BaseAssetMetadata extends CoreBaseAssetMetadata {
   /** When the asset was imported (ISO 8601 datetime) */
   importedAt: string;
 
@@ -599,11 +593,14 @@ export type AssetMetadata =
   | BlueprintAudioMetadata
   | UnknownAssetMetadata;
 
+// Type guard input: accepts core's BaseAssetMetadata or engine's AssetMetadata
+type TypeGuardInput = { type: string };
+
 /**
  * Type guard for TextureMetadata
  */
 export function isTextureMetadata(
-  metadata: AssetMetadata,
+  metadata: TypeGuardInput,
 ): metadata is TextureMetadata {
   return metadata.type === AssetType.Texture;
 }
@@ -612,7 +609,7 @@ export function isTextureMetadata(
  * Type guard for MaterialMetadata
  */
 export function isMaterialMetadata(
-  metadata: AssetMetadata,
+  metadata: TypeGuardInput,
 ): metadata is MaterialMetadata {
   return metadata.type === AssetType.Material;
 }
@@ -621,7 +618,7 @@ export function isMaterialMetadata(
  * Type guard for PrefabMetadata
  */
 export function isPrefabMetadata(
-  metadata: AssetMetadata,
+  metadata: TypeGuardInput,
 ): metadata is PrefabMetadata {
   return metadata.type === AssetType.Prefab;
 }
@@ -630,7 +627,7 @@ export function isPrefabMetadata(
  * Type guard for Model3DMetadata
  */
 export function isModel3DMetadata(
-  metadata: AssetMetadata,
+  metadata: TypeGuardInput,
 ): metadata is Model3DMetadata {
   return metadata.type === AssetType.Model3D;
 }
@@ -639,7 +636,7 @@ export function isModel3DMetadata(
  * Type guard for BlueprintScriptMetadata
  */
 export function isBlueprintScriptMetadata(
-  metadata: AssetMetadata,
+  metadata: TypeGuardInput,
 ): metadata is BlueprintScriptMetadata {
   return metadata.type === AssetType.BlueprintScript;
 }
@@ -648,7 +645,7 @@ export function isBlueprintScriptMetadata(
  * Type guard for BlueprintShaderMetadata
  */
 export function isBlueprintShaderMetadata(
-  metadata: AssetMetadata,
+  metadata: TypeGuardInput,
 ): metadata is BlueprintShaderMetadata {
   return metadata.type === AssetType.BlueprintShader;
 }
@@ -657,7 +654,7 @@ export function isBlueprintShaderMetadata(
  * Type guard for BlueprintAnimationMetadata
  */
 export function isBlueprintAnimationMetadata(
-  metadata: AssetMetadata,
+  metadata: TypeGuardInput,
 ): metadata is BlueprintAnimationMetadata {
   return metadata.type === AssetType.BlueprintAnimation;
 }
@@ -666,7 +663,7 @@ export function isBlueprintAnimationMetadata(
  * Type guard for BlueprintAudioMetadata
  */
 export function isBlueprintAudioMetadata(
-  metadata: AssetMetadata,
+  metadata: TypeGuardInput,
 ): metadata is BlueprintAudioMetadata {
   return metadata.type === AssetType.BlueprintAudio;
 }
@@ -675,7 +672,7 @@ export function isBlueprintAudioMetadata(
  * Type guard for TiledMapMetadata
  */
 export function isTiledMapMetadata(
-  metadata: AssetMetadata,
+  metadata: TypeGuardInput,
 ): metadata is TiledMapMetadata {
   return metadata.type === AssetType.TiledMap;
 }
@@ -684,7 +681,7 @@ export function isTiledMapMetadata(
  * Type guard for AnimationMetadata
  */
 export function isAnimationMetadata(
-  metadata: AssetMetadata,
+  metadata: TypeGuardInput,
 ): metadata is AnimationMetadata {
   return metadata.type === AssetType.Animation;
 }
@@ -693,7 +690,7 @@ export function isAnimationMetadata(
  * Type guard for AudioAssetMetadata
  */
 export function isAudioAssetMetadata(
-  metadata: AssetMetadata,
+  metadata: TypeGuardInput,
 ): metadata is AudioAssetMetadata {
   return metadata.type === AssetType.Audio;
 }
@@ -702,7 +699,7 @@ export function isAudioAssetMetadata(
  * Type guard for ShaderMetadata
  */
 export function isShaderMetadata(
-  metadata: AssetMetadata,
+  metadata: TypeGuardInput,
 ): metadata is ShaderMetadata {
   return metadata.type === AssetType.Shader;
 }
@@ -711,7 +708,7 @@ export function isShaderMetadata(
  * Type guard for StateMachineMetadata
  */
 export function isStateMachineMetadata(
-  metadata: AssetMetadata,
+  metadata: TypeGuardInput,
 ): metadata is StateMachineMetadata {
   return metadata.type === AssetType.StateMachine;
 }
@@ -720,7 +717,7 @@ export function isStateMachineMetadata(
  * Type guard for SceneMetadata
  */
 export function isSceneMetadata(
-  metadata: AssetMetadata,
+  metadata: TypeGuardInput,
 ): metadata is SceneMetadata {
   return metadata.type === AssetType.Scene;
 }
@@ -729,7 +726,7 @@ export function isSceneMetadata(
  * Type guard for UnknownAssetMetadata
  */
 export function isUnknownAssetMetadata(
-  metadata: AssetMetadata,
+  metadata: TypeGuardInput,
 ): metadata is UnknownAssetMetadata {
   return metadata.type === AssetType.Unknown;
 }

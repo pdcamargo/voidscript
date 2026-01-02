@@ -5,7 +5,7 @@
  * No base class required - any object can be a component.
  */
 
-import type { ComponentSerializerConfig } from './serialization/types.js';
+import type { ComponentSerializerConfig } from '../serialization/types.js';
 import type { Command } from './command.js';
 import type { Entity } from './entity.js';
 /**

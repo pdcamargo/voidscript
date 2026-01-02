@@ -8,8 +8,8 @@
  * a default material (green color as placeholder).
  */
 
-import { component } from "../../component.js";
-import { RuntimeAsset } from "../../runtime-asset.js";
+import { component } from "@voidscript/core";
+import { RuntimeAsset } from "@voidscript/core";
 
 export interface Material3DData {
   /**

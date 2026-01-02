@@ -14,7 +14,7 @@
  * - Angular: radians/second (rotation axis vector, magnitude = rotation speed)
  */
 
-import { component } from '../../../ecs/component.js';
+import { component } from '@voidscript/core';
 import * as THREE from 'three';
 import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 

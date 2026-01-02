@@ -6,7 +6,7 @@
  * render systems that use shader materials.
  */
 
-import { system } from '../system.js';
+import { system } from '@voidscript/core';
 import { ShaderManager } from '../../shader/shader-manager.js';
 import { Application } from '../../app/application.js';
 

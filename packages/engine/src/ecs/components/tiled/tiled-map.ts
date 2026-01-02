@@ -21,15 +21,15 @@
  * ```
  */
 
-import { component } from '../../component.js';
-import type { Entity } from '../../entity.js';
+import { component } from '@voidscript/core';
+import type { Entity } from '@voidscript/core';
 import type * as tiled from '@kayahr/tiled';
 import * as THREE from 'three';
 import type { AnimationClip } from '../../../animation/animation-clip.js';
-import type { EntityCommandBuilder } from '../../command.js';
-import type { Command } from '../../command.js';
-import type { RuntimeAsset } from '../../runtime-asset.js';
-import { AssetType } from '../../asset-metadata.js';
+import type { EntityCommandBuilder } from '@voidscript/core';
+import type { Command } from '@voidscript/core';
+import type { RuntimeAsset } from '@voidscript/core';
+import { AssetType } from '../../asset/asset-metadata.js';
 
 /**
  * Information about a loaded tileset

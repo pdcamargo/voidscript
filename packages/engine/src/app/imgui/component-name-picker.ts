@@ -1,6 +1,6 @@
 import { ImGui, ImVec2 } from '@voidscript/imgui';
-import { globalComponentRegistry } from '../../ecs/component.js';
-import type { ComponentType } from '../../ecs/component.js';
+import { globalComponentRegistry } from '@voidscript/core';
+import type { ComponentType } from '@voidscript/core';
 
 export interface ComponentNamePickerOptions {
   /** Popup ID (must be unique) */

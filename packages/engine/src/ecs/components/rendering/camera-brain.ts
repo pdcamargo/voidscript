@@ -20,8 +20,8 @@
  * ```
  */
 
-import { component } from "../../component.js";
-import type { Entity } from "../../entity.js";
+import { component } from "@voidscript/core";
+import type { Entity } from "@voidscript/core";
 import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 import { ImGui } from "@voidscript/imgui";
 

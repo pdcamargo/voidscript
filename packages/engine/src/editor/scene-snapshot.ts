@@ -5,11 +5,11 @@
  * it when stopping playback.
  */
 
-import type { Scene } from '../ecs/scene.js';
-import type { Command } from '../ecs/command.js';
-import { SceneSerializer } from '../ecs/serialization/scene-serializer.js';
-import type { SceneData } from '../ecs/serialization/schemas.js';
-import { AssetDatabase } from '../ecs/asset-database.js';
+import type { Scene } from '@voidscript/core';
+import type { Command } from '@voidscript/core';
+import { SceneSerializer } from '@voidscript/core';
+import type { SceneData } from '@voidscript/core';
+import { AssetDatabase } from '../ecs/asset/asset-database.js';
 
 /**
  * SceneSnapshot - Serialized scene state that can be restored

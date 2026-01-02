@@ -19,7 +19,7 @@
  * ```
  */
 
-import { component } from '../../../ecs/component.js';
+import { component } from '@voidscript/core';
 
 export interface ContactForceEventThreshold3DData {
   /**

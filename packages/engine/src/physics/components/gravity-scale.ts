@@ -11,7 +11,7 @@
  * - scale = -1.0: Reversed gravity (floats up)
  */
 
-import { component } from '../../ecs/component.js';
+import { component } from '@voidscript/core';
 import { EditorLayout } from '../../app/imgui/editor-layout.js';
 
 export interface GravityScaleData {

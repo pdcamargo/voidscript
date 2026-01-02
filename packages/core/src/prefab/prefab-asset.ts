@@ -5,8 +5,21 @@
  * Prefabs are reusable entity templates that can be instantiated multiple times.
  */
 
-import type { PrefabMetadata } from './asset-metadata.js';
-import type { SceneData } from './serialization/schemas.js';
+import type { SceneData } from '../serialization/schemas.js';
+import type { BaseAssetMetadata } from '../ecs/asset-types.js';
+
+/**
+ * Prefab-specific metadata (extends BaseAssetMetadata)
+ * Full PrefabMetadata with AssetType enum is defined in engine
+ */
+export interface PrefabMetadata extends BaseAssetMetadata {
+  /** Number of entities in the prefab */
+  entityCount: number;
+  /** Component types used in the prefab (for dependency tracking) */
+  componentTypes: string[];
+  /** GUIDs of nested prefabs referenced within this prefab */
+  nestedPrefabs: string[];
+}
 
 /**
  * Prefab file format (.prefab.yaml)

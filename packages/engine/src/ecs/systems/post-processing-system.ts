@@ -10,12 +10,12 @@
  * Actual rendering happens via renderer.renderPipeline() called by Application/EditorLayer.
  */
 
-import { system } from "../system.js";
+import { system } from '@voidscript/core';
 import { PostProcessing, type PostProcessingData } from "../components/rendering/post-processing.js";
 import { PostProcessingManager } from "../../post-processing/managers/post-processing-manager.js";
 import { EditorManager } from "../../editor/editor-manager.js";
 import { Render3DManager } from "./renderer-sync-system.js";
-import type { Entity } from "../entity.js";
+import type { Entity } from '@voidscript/core';
 
 // Track the last known post-processing entity for detecting changes
 let lastPostProcessingEntity: Entity | null = null;

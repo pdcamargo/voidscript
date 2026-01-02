@@ -81,6 +81,12 @@ importers:
       three:
         specifier: ^0.181.0
         version: 0.181.2
+      yaml:
+        specifier: ^2.8.0
+        version: 2.8.2
+      zod:
+        specifier: ^3.24.4
+        version: 3.25.76
     devDependencies:
       '@types/three':
         specifier: ^0.181.0

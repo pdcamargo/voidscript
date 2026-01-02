@@ -16,7 +16,7 @@
  * the new entities have different IDs and the managers can't find the old objects.
  */
 
-import type { Command } from '../command.js';
+import type { Command } from '@voidscript/core';
 import { EditorManager } from '../../editor/editor-manager.js';
 import { Render3DManager } from './renderer-sync-system.js';
 import { SpriteRenderManager } from './sprite-sync-system.js';

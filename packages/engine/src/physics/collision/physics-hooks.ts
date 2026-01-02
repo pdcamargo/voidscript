@@ -26,7 +26,7 @@
  * ```
  */
 
-import type { Entity } from '../../ecs/entity.js';
+import type { Entity } from '@voidscript/core';
 import * as THREE from 'three';
 
 /**

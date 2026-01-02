@@ -18,7 +18,7 @@
  * - Collider2D: Add collision shape
  */
 
-import { component } from '../../../ecs/component.js';
+import { component } from '@voidscript/core';
 import type { BodyType } from '../../types.js';
 import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 

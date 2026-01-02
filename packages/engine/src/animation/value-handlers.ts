@@ -9,18 +9,18 @@
  * to be resolved to actual texture/tile data.
  */
 
-import type { Entity } from '../ecs/entity.js';
-import type { Command } from '../ecs/command.js';
+import type { Entity } from '@voidscript/core';
+import type { Command } from '@voidscript/core';
 import type { SpriteValue } from './interpolation.js';
-import { AssetDatabase } from '../ecs/asset-database.js';
+import { AssetDatabase } from '../ecs/asset/asset-database.js';
 import {
   isTextureMetadata,
   isTiledSpriteDefinition,
   isRectSpriteDefinition,
   type SpriteDefinition,
   type TextureMetadata,
-} from '../ecs/asset-metadata.js';
-import { RuntimeAsset } from '../ecs/runtime-asset.js';
+} from '../ecs/asset/asset-metadata.js';
+import { RuntimeAsset } from '@voidscript/core';
 
 // ============================================================================
 // Types

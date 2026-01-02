@@ -12,8 +12,8 @@
  */
 
 import * as THREE from 'three';
-import { system } from '../system.js';
-import type { Entity } from '../entity.js';
+import { system } from '@voidscript/core';
+import type { Entity } from '@voidscript/core';
 import type { Renderer } from '../../app/renderer.js';
 import { Transform3D } from '../components/rendering/transform-3d.js';
 import { SkyGradient2D, type SkyGradient2DData, type GradientStop } from '../components/rendering/sky-gradient.js';

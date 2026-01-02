@@ -9,7 +9,7 @@
  */
 
 import * as THREE from 'three';
-import type { Entity } from '../ecs/entity.js';
+import type { Entity } from '@voidscript/core';
 import { HELPER_LAYER } from '../constants/layers.js';
 import { Collider2DHelper } from '../rendering/helpers/Collider2DHelper.js';
 import { Collider3DHelper } from '../rendering/helpers/Collider3DHelper.js';

@@ -10,7 +10,7 @@
  * In edit mode, tweens are paused.
  */
 
-import { system } from '../system.js';
+import { system } from '@voidscript/core';
 import { TweenManager } from '../../animation/tween.js';
 import { isGameplayActive } from '../../editor/system-conditions.js';
 

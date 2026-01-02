@@ -8,8 +8,8 @@
  * The renderer sync system will only render entities that have both.
  */
 
-import { component } from "../../component.js";
-import { RuntimeAsset } from "../../runtime-asset.js";
+import { component } from "@voidscript/core";
+import { RuntimeAsset } from "@voidscript/core";
 
 // ============================================================================
 // Geometry Type Definitions

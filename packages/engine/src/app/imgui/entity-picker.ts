@@ -22,10 +22,8 @@
  */
 
 import { ImGui } from "@voidscript/imgui";
-import type { Command } from "../../ecs/command.js";
-import type { Entity } from "../../ecs/entity.js";
-import type { ComponentType } from "../../ecs/component.js";
-import { Name } from "../../ecs/components/name.js";
+import type { Command, Entity, ComponentType } from "@voidscript/core";
+import { Name } from "@voidscript/core";
 
 export interface EntityPickerOptions {
   /** Label for the picker (used as ImGui ID) */

@@ -18,7 +18,7 @@
  * - density: Mass per unit area (mass = density × area)
  */
 
-import { component } from '../../../ecs/component.js';
+import { component } from '@voidscript/core';
 import type { ColliderShape2D } from '../../types.js';
 import * as THREE from 'three';
 import { EditorLayout } from '../../../app/imgui/editor-layout.js';

@@ -6,24 +6,24 @@
  */
 
 import type { Application } from '../application.js';
-import type { Entity } from '../../ecs/entity.js';
+import type { Entity } from '@voidscript/core';
 import { Parent, Children, Name, Transform3D, LocalTransform3D } from '../../ecs/components/index.js';
-import { PrefabInstance } from '../../ecs/components/prefab-instance.js';
+import { PrefabInstance } from '@voidscript/core';
 import { Vector3 } from '../../math/index.js';
 import { ImGui } from '@voidscript/imgui';
 import { setSelectedEntity, getSelectedEntity } from './inspector.js';
-import { duplicateEntity } from '../../ecs/entity-utils.js';
-import { globalBundleRegistry } from '../../ecs/bundle-registry.js';
+import { duplicateEntity } from '@voidscript/core';
+import { globalBundleRegistry } from '@voidscript/core';
 import { spawnBundleWithDefaults } from '../../ecs/bundle-utils.js';
 import { parseQuery, type ParsedQuery } from './entity-query-parser.js';
 import { evaluateQuery } from './entity-query-evaluator.js';
-import { PrefabManager } from '../../ecs/prefab-manager.js';
-import { PrefabSerializer } from '../../ecs/prefab-serializer.js';
-import { AssetDatabase } from '../../ecs/asset-database.js';
-import { AssetType, isPrefabMetadata } from '../../ecs/asset-metadata.js';
-import { RuntimeAssetManager } from '../../ecs/runtime-asset-manager.js';
-import type { RuntimeAsset } from '../../ecs/runtime-asset.js';
-import type { PrefabAsset } from '../../ecs/prefab-asset.js';
+import { PrefabManager } from '@voidscript/core';
+import { PrefabSerializer } from '@voidscript/core';
+import { AssetDatabase } from '../../ecs/asset/asset-database.js';
+import { AssetType, isPrefabMetadata } from '../../ecs/asset/asset-metadata.js';
+import { RuntimeAssetManager } from '@voidscript/core';
+import type { RuntimeAsset } from '@voidscript/core';
+import type { PrefabAsset } from '@voidscript/core';
 import type { EditorPlatform } from '../../editor/editor-platform.js';
 
 /**

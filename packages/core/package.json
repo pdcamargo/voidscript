@@ -10,7 +10,9 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "three": "^0.181.0"
+    "three": "^0.181.0",
+    "yaml": "^2.8.0",
+    "zod": "^3.24.4"
   },
   "devDependencies": {
     "@types/three": "^0.181.0",

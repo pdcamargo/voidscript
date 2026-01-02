@@ -9,7 +9,7 @@
  */
 
 import { LoopMode } from '../../../animation/animation-clip.js';
-import type { Entity } from '../../../ecs/entity.js';
+import type { Entity } from '@voidscript/core';
 import type { Color, SpriteValue } from '../../../animation/interpolation.js';
 import { InterpolationMode, inferInterpolationMode } from '../../../animation/interpolation.js';
 import { parsePropertyPath } from '../../../animation/property-path.js';
@@ -22,7 +22,7 @@ import { AnimationController, playAnimation, stopAnimation } from '../../../ecs/
 import { AnimationClip, type TrackValue, type GroupedTrackValues } from '../../../animation/animation-clip.js';
 import { PropertyTrack } from '../../../animation/property-track.js';
 import { getEasingFunction } from '../../../animation/property-track.js';
-import type { Command } from '../../../ecs/command.js';
+import type { Command } from '@voidscript/core';
 
 // ============================================================================
 // Types

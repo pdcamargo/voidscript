@@ -10,15 +10,8 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { Scene } from "./scene.js";
-import { Command } from "./command.js";
+import { Scene, Command, system, Scheduler, component, Parent, Children, type SystemArguments } from "@voidscript/core";
 import { Application } from "./application.js";
-import { system } from "./system.js";
-import { Scheduler } from "./scheduler.js";
-import { component } from "./component.js";
-import { Parent } from "./components/parent.js";
-import { Children } from "./components/children.js";
-import type { SystemArguments } from "./system.js";
 
 // Test components
 interface PositionData {

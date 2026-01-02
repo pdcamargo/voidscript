@@ -6,11 +6,8 @@
  * without metadata or asset resolution complexity.
  */
 
-import type { Scene } from "./scene.js";
-import type { Command } from "./command.js";
-import type { Entity } from "./entity.js";
-import { Parent } from "./components/parent.js";
-import { Children } from "./components/children.js";
+import type { Scene, Command, Entity } from "@voidscript/core";
+import { Parent, Children } from "@voidscript/core";
 
 /**
  * Entity snapshot with components and hierarchy info

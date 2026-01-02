@@ -7,19 +7,19 @@
 
 import * as THREE from 'three';
 import type { Application } from '../application.js';
-import type { Entity } from '../../ecs/entity.js';
-import type { ComponentType } from '../../ecs/component.js';
-import type { PropertySerializerConfig } from '../../ecs/serialization/types.js';
-import { globalComponentRegistry } from '../../ecs/component.js';
+import type { Entity } from '@voidscript/core';
+import type { ComponentType } from '@voidscript/core';
+import type { PropertySerializerConfig } from '@voidscript/core';
+import { globalComponentRegistry } from '@voidscript/core';
 import { Vector3 } from '../../math/vector3.js';
 import { ImGui } from '@voidscript/imgui';
 import { Name } from '../../ecs/components/index.js';
-import { AssetDatabase } from '../../ecs/asset-database.js';
-import { RuntimeAssetManager } from '../../ecs/runtime-asset-manager.js';
-import { AssetType } from '../../ecs/asset-metadata.js';
-import type { RuntimeAsset } from '../../ecs/runtime-asset.js';
+import { AssetDatabase } from '../../ecs/asset/asset-database.js';
+import { RuntimeAssetManager } from '@voidscript/core';
+import { AssetType } from '../../ecs/asset/asset-metadata.js';
+import type { RuntimeAsset } from '@voidscript/core';
 import { Input, KeyCode } from '../input.js';
-import { duplicateEntity } from '../../ecs/entity-utils.js';
+import { duplicateEntity } from '@voidscript/core';
 import {
   openComponentPicker,
   renderComponentPicker,

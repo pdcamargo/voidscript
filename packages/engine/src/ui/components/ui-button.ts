@@ -7,8 +7,8 @@
 
 import * as THREE from 'three';
 import { ImGui } from '@voidscript/imgui';
-import { component } from '../../ecs/component.js';
-import type { RuntimeAsset } from '../../ecs/runtime-asset.js';
+import { component } from '@voidscript/core';
+import type { RuntimeAsset } from '@voidscript/core';
 import type ThreeMeshUI from 'three-mesh-ui';
 import type { UIAnchor, UIPivot, UIContentDirection, UIJustifyContent, UIAlignItems, UIPadding } from './ui-block.js';
 

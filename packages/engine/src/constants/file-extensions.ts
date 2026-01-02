@@ -5,7 +5,7 @@
  * Used by asset loaders for validation and type detection.
  */
 
-import { AssetType } from '../ecs/asset-metadata.js';
+import { AssetType } from '../ecs/asset/asset-metadata.js';
 
 /**
  * VoidScript file extensions for assets and scenes.

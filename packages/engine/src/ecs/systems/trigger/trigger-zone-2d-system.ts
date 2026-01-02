@@ -7,7 +7,7 @@
  * Runs AFTER physics2DCollisionEventSystem to process collision events.
  */
 
-import { system } from '../../system.js';
+import { system } from '@voidscript/core';
 import { isGameplayActive } from '../../../editor/system-conditions.js';
 import { physics2DCollisionEventSystem } from '../../../physics/2d/physics-2d-collision-event-system.js';
 import {

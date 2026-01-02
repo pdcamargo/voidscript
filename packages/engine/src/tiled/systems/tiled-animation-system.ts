@@ -10,7 +10,7 @@
  * In edit mode, tiled animations are paused.
  */
 
-import { system } from '../../ecs/system.js';
+import { system } from '@voidscript/core';
 import { TiledObject } from '../../ecs/components/tiled/tiled-object.js';
 import {
   AnimationController,

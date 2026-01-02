@@ -7,8 +7,8 @@
  * This enables the animation system to animate any serializable component property.
  */
 
-import { globalComponentRegistry, type ComponentType } from '../ecs/component.js';
-import type { PropertySerializerConfig } from '../ecs/serialization/types.js';
+import { globalComponentRegistry, type ComponentType } from '@voidscript/core';
+import type { PropertySerializerConfig } from '@voidscript/core';
 
 // ============================================================================
 // Types

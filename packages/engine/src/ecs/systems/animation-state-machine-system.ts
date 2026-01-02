@@ -10,7 +10,7 @@
  * - Or no editor (pure game, always runs)
  */
 
-import { system } from '../system.js';
+import { system } from '@voidscript/core';
 import {
   AnimationController,
   getCurrentClip,
@@ -29,8 +29,8 @@ import {
   type AnimationTransition,
   type AnimationState,
 } from '../../animation/state-machine/index.js';
-import type { Entity } from '../entity.js';
-import type { Command } from '../command.js';
+import type { Entity } from '@voidscript/core';
+import type { Command } from '@voidscript/core';
 import { isGameplayActive } from '../../editor/system-conditions.js';
 
 // ============================================================================

@@ -25,7 +25,7 @@ import {
   getSelectedKeyframeIds,
 } from './animation-editor-state.js';
 import { Sprite2D } from '../../../ecs/components/rendering/sprite-2d.js';
-import { Scene } from '../../../ecs/scene.js';
+import { Scene } from '@voidscript/core';
 import type { Color, SpriteValue } from '../../../animation/interpolation.js';
 import { EASING_NAMES } from './constants.js';
 import {
@@ -33,9 +33,9 @@ import {
   resolveComponentType,
   getPropertyConfig,
 } from '../../../animation/property-path.js';
-import type { PropertySerializerConfig } from '../../../ecs/serialization/types.js';
-import { AssetDatabase } from '../../../ecs/asset-database.js';
-import { RuntimeAssetManager } from '../../../ecs/runtime-asset-manager.js';
+import type { PropertySerializerConfig } from '@voidscript/core';
+import { AssetDatabase } from '../../../ecs/asset/asset-database.js';
+import { RuntimeAssetManager } from '@voidscript/core';
 import {
   AssetType,
   isTextureMetadata,
@@ -43,7 +43,7 @@ import {
   type SpriteDefinition,
   isTiledSpriteDefinition,
   isRectSpriteDefinition,
-} from '../../../ecs/asset-metadata.js';
+} from '../../../ecs/asset/asset-metadata.js';
 
 // ============================================================================
 // Types

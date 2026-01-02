@@ -7,8 +7,8 @@
  * This system runs in the render phase, before cameraBrainSystem.
  */
 
-import { system } from "../system.js";
-import type { Entity } from "../entity.js";
+import { system } from '@voidscript/core';
+import type { Entity } from '@voidscript/core';
 import { Transform3D } from "../components/rendering/transform-3d.js";
 import { Camera } from "../components/rendering/camera.js";
 import { MainCamera } from "../components/rendering/main-camera.js";

@@ -8,20 +8,19 @@
  * - Nested prefab support
  */
 
-import type { Scene } from './scene.js';
-import type { Command } from './command.js';
+import type { Scene } from '../ecs/scene.js';
+import type { Command } from '../ecs/command.js';
 import type {
   PrefabAsset,
   InstantiatePrefabOptions,
   InstantiatePrefabResult,
 } from './prefab-asset.js';
 import { PrefabSerializer } from './prefab-serializer.js';
-import { SceneSerializer } from './serialization/scene-serializer.js';
-import { PrefabInstance, type PrefabInstanceData } from './components/prefab-instance.js';
-import { Parent } from './components/parent.js';
-import { Transform3D } from './components/rendering/index.js';
-import { globalComponentRegistry } from './component.js';
-import type { RuntimeAsset } from './runtime-asset.js';
+import { SceneSerializer } from '../serialization/scene-serializer.js';
+import { PrefabInstance, type PrefabInstanceData } from '../ecs/components/prefab-instance.js';
+import { Parent } from '../ecs/components/parent.js';
+import { globalComponentRegistry } from '../ecs/component.js';
+import type { RuntimeAsset } from '../ecs/runtime-asset.js';
 
 /**
  * Generate a UUID v4
@@ -296,24 +295,31 @@ export class PrefabManager {
     };
     commands.entity(rootEntity).addComponent(PrefabInstance, prefabInstanceData);
 
-    // Pass 4: Apply transform to root
+    // Pass 4: Apply transform to root (look up Transform3D by name to avoid engine dependency)
     if (options?.position || options?.rotation || options?.scale) {
-      const transform = commands.tryGetComponent(rootEntity, Transform3D);
-      if (transform) {
-        if (options.position) {
-          transform.position.x = options.position.x;
-          transform.position.y = options.position.y;
-          transform.position.z = options.position.z;
-        }
-        if (options.rotation) {
-          transform.rotation.x = options.rotation.x;
-          transform.rotation.y = options.rotation.y;
-          transform.rotation.z = options.rotation.z;
-        }
-        if (options.scale) {
-          transform.scale.x = options.scale.x;
-          transform.scale.y = options.scale.y;
-          transform.scale.z = options.scale.z;
+      const Transform3D = globalComponentRegistry.getByName('Transform3D');
+      if (Transform3D) {
+        const transform = commands.tryGetComponent(rootEntity, Transform3D) as {
+          position: { x: number; y: number; z: number };
+          rotation: { x: number; y: number; z: number };
+          scale: { x: number; y: number; z: number };
+        } | undefined;
+        if (transform) {
+          if (options.position) {
+            transform.position.x = options.position.x;
+            transform.position.y = options.position.y;
+            transform.position.z = options.position.z;
+          }
+          if (options.rotation) {
+            transform.rotation.x = options.rotation.x;
+            transform.rotation.y = options.rotation.y;
+            transform.rotation.z = options.rotation.z;
+          }
+          if (options.scale) {
+            transform.scale.x = options.scale.x;
+            transform.scale.y = options.scale.y;
+            transform.scale.z = options.scale.z;
+          }
         }
       }
     }

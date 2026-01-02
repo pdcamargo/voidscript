@@ -13,7 +13,7 @@
 
 import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier2d';
-import { system } from '../../ecs/system.js';
+import { system } from '@voidscript/core';
 import { isGameplayActive } from '../../editor/system-conditions.js';
 import { Physics2DContext } from './physics-2d-context.js';
 import { RigidBody2D } from './components/rigidbody-2d.js';

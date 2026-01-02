@@ -24,10 +24,10 @@
  * ```
  */
 
-import { Scene } from '../ecs/scene.js';
-import { Command } from '../ecs/command.js';
-import { Scheduler, type SystemPhase } from '../ecs/scheduler.js';
-import type { SystemWrapper } from '../ecs/system.js';
+import { Scene } from '@voidscript/core';
+import { Command } from '@voidscript/core';
+import { Scheduler, type SystemPhase } from '@voidscript/core';
+import type { SystemWrapper } from '@voidscript/core';
 import { Layer, LayerStack } from './layer.js';
 import { Window, type WindowConfig } from './window.js';
 import { Renderer, type RendererConfig } from './renderer.js';
@@ -74,10 +74,10 @@ import {
   tiledTilesetCollisionSystem,
   tiledObjectCollisionSystem,
 } from '../tiled/systems/index.js';
-import { AssetDatabase, type AssetsConfig } from '../ecs/asset-database.js';
-import { PrefabManager } from '../ecs/prefab-manager.js';
+import { AssetDatabase, type AssetsConfig } from '../ecs/asset/asset-database.js';
+import { PrefabManager } from '@voidscript/core';
 import { PostProcessingManager } from '../post-processing/managers/post-processing-manager.js';
-import { isInitializableResource } from '../ecs/resource.js';
+import { isInitializableResource } from '@voidscript/core';
 
 // Physics systems (2D and 3D)
 import {
@@ -142,10 +142,10 @@ import { audioSyncSystem } from '../ecs/systems/audio-sync-system.js';
 import { spriteAreaGeneratorSystem } from '../ecs/systems/sprite-area-generator-system.js';
 
 // Event system
-import { Events, type EventClass } from '../ecs/events.js';
+import { Events, type EventClass } from '@voidscript/core';
 
 // Asset preloading
-import { preloadAssets } from '../ecs/asset-preloader.js';
+import { preloadAssets } from '../ecs/asset/asset-preloader.js';
 
 /**
  * Physics configuration

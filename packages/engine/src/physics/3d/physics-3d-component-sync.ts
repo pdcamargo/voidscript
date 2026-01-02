@@ -14,7 +14,7 @@
 
 import RAPIER from '@dimforge/rapier3d';
 import * as THREE from 'three';
-import { system } from '../../ecs/system.js';
+import { system } from '@voidscript/core';
 import { isGameplayActive } from '../../editor/system-conditions.js';
 import { Physics3DContext } from './physics-3d-context.js';
 import { RigidBody3D } from './components/rigidbody-3d.js';
@@ -36,8 +36,8 @@ import { CollisionGroups3D } from './components/collision-groups-3d.js';
 import { ActiveHooks3D } from './components/active-hooks-3d.js';
 import { ActiveHooksFlags } from '../collision/physics-hooks.js';
 import type { ColliderShape3D } from '../types.js';
-import type { Command } from '../../ecs/command.js';
-import type { Entity } from '../../ecs/entity.js';
+import type { Command } from '@voidscript/core';
+import type { Entity } from '@voidscript/core';
 
 /**
  * Helper to create Rapier collider descriptor from shape definition

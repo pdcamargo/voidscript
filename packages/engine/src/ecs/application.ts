@@ -3,10 +3,7 @@
  * Integrates World, Command, Scheduler, and SchedulerRunner
  */
 
-import { Scene } from "./scene.js";
-import { Command } from "./command.js";
-import { Scheduler } from "./scheduler.js";
-import { SchedulerRunner } from "./scheduler-runner.js";
+import { Scene, Command, Scheduler, SchedulerRunner } from "@voidscript/core";
 
 /**
  * Application - Main entry point for ECS applications

@@ -1,5 +1,5 @@
 import { ImGui, ImVec2 } from '@voidscript/imgui';
-import type { Events } from '../../ecs/events.js';
+import type { Events } from '@voidscript/core';
 
 export interface EventNamePickerOptions {
   /** Popup ID (must be unique) */

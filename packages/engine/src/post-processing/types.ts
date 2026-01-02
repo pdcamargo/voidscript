@@ -5,7 +5,7 @@
  * Each effect has enabled/order fields plus effect-specific settings.
  */
 
-import type { Entity } from "../ecs/entity.js";
+import type { Entity } from "@voidscript/core";
 
 // ============================================================================
 // Base Configuration

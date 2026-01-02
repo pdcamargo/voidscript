@@ -4,10 +4,10 @@
  * Helper functions for spawning bundles in the editor with sensible defaults.
  */
 
-import type { BundleSchema, BundleType } from './bundle.js';
-import type { Scene } from './scene.js';
-import type { Command } from './command.js';
-import type { EntityHandle } from './command.js';
+import type { BundleSchema, BundleType } from '@voidscript/core';
+import type { Scene } from '@voidscript/core';
+import type { Command } from '@voidscript/core';
+import type { EntityHandle } from '@voidscript/core';
 import { Vector3 } from '../math/index.js';
 
 /**

@@ -11,7 +11,7 @@
 import * as THREE from 'three';
 import ThreeMeshUI from 'three-mesh-ui';
 import type { Renderer } from '../app/renderer.js';
-import type { Entity } from '../ecs/entity.js';
+import type { Entity } from '@voidscript/core';
 
 /**
  * UI coordinate origin options

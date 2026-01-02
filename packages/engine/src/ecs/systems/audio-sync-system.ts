@@ -19,7 +19,7 @@
  * ```
  */
 
-import { system } from '../system.js';
+import { system } from '@voidscript/core';
 import { Transform3D } from '../components/rendering/transform-3d.js';
 import { AudioListener } from '../components/audio/audio-listener.js';
 import { AudioSource } from '../components/audio/audio-source.js';

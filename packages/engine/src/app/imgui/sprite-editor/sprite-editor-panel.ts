@@ -13,15 +13,15 @@
  */
 
 import { ImGui, ImGuiImplWeb, ImTextureRef } from '@voidscript/imgui';
-import { AssetDatabase } from '../../../ecs/asset-database.js';
+import { AssetDatabase } from '../../../ecs/asset/asset-database.js';
 import {
   isTextureMetadata,
   isTiledSpriteDefinition,
   isRectSpriteDefinition,
   type RectSpriteDefinition,
   type SpriteDefinition,
-} from '../../../ecs/asset-metadata.js';
-import { RuntimeAssetManager } from '../../../ecs/runtime-asset-manager.js';
+} from '../../../ecs/asset/asset-metadata.js';
+import { RuntimeAssetManager } from '@voidscript/core';
 import * as THREE from 'three';
 
 import {
@@ -133,7 +133,7 @@ function loadTextureForDisplay(
   const runtimeAsset = RuntimeAssetManager.get().getOrCreate(
     guid,
     metadata,
-  ) as import('../../../ecs/runtime-asset.js').RuntimeAsset<THREE.Texture>;
+  ) as import('@voidscript/core').RuntimeAsset<THREE.Texture>;
 
   if (!runtimeAsset.isLoaded) {
     pendingLoads.add(guid);

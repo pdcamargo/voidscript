@@ -1,7 +1,5 @@
-import type { Entity } from '../../entity.js';
-import type { Command } from '../../command.js';
-import { globalComponentRegistry } from '../../component.js';
-import { Events } from '../../events.js';
+import type { Entity, Command } from '@voidscript/core';
+import { globalComponentRegistry, Events } from '@voidscript/core';
 
 /**
  * Filter mode for component requirements on trigger zones.

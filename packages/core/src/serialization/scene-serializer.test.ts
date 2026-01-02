@@ -12,17 +12,48 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
-import { Scene } from "../scene.js";
-import { Command } from "../command.js";
-import { component } from "../component.js";
+import { Scene } from "../ecs/scene.js";
+import { Command } from "../ecs/command.js";
+import { component } from "../ecs/component.js";
 import { SceneSerializer } from "./scene-serializer.js";
-import { Parent } from "../components/parent.js";
-import { Children } from "../components/children.js";
-import { RuntimeAsset } from "../runtime-asset.js";
-import { RuntimeAssetManager } from "../runtime-asset-manager.js";
-import type { AssetMetadata } from "../asset-metadata.js";
-import { AssetType, TextureFilter, TextureWrap } from "../asset-metadata.js";
+import { Parent } from "../ecs/components/parent.js";
+import { Children } from "../ecs/components/children.js";
+import { RuntimeAsset } from "../ecs/runtime-asset.js";
+import { RuntimeAssetManager } from "../ecs/runtime-asset-manager.js";
+import type { BaseAssetMetadata } from "../ecs/asset-types.js";
 import { SetSerializer } from "./custom-serializers.js";
+
+// Mock AssetType and filter enums for testing (actual definitions are in engine)
+const AssetType = {
+  Texture: 'texture',
+  Audio: 'audio',
+  Model3D: 'model3d',
+  Unknown: 'unknown',
+} as const;
+
+const TextureFilter = {
+  Nearest: 'nearest',
+  Linear: 'linear',
+} as const;
+
+const TextureWrap = {
+  Repeat: 'repeat',
+  Clamp: 'clamp',
+  ClampToEdge: 'clampToEdge',
+} as const;
+
+// Extended metadata type for test purposes
+interface AssetMetadata extends BaseAssetMetadata {
+  importedAt?: string;
+  modifiedAt?: string;
+  magFilter?: string;
+  minFilter?: string;
+  wrapS?: string;
+  wrapT?: string;
+  filtering?: string;
+  sRGB?: boolean;
+  generateMipmaps?: boolean;
+}
 import type {
   ComponentSerializer,
   SerializationContext,

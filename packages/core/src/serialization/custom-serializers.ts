@@ -3,9 +3,9 @@
  */
 
 import type { ComponentSerializer, SerializationContext, DeserializationContext } from "./types.js";
-import type { ComponentType } from "../component.js";
-import { Parent } from "../components/parent.js";
-import { Children } from "../components/children.js";
+import type { ComponentType } from "../ecs/component.js";
+import { Parent } from "../ecs/components/parent.js";
+import { Children } from "../ecs/components/children.js";
 
 /**
  * Default serializer for primitives and plain objects

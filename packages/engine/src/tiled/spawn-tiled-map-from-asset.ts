@@ -5,11 +5,11 @@
  * Separates asset loading from entity spawning for clean architecture.
  */
 
-import type { Command } from '../ecs/command.js';
-import type { RuntimeAsset } from '../ecs/runtime-asset.js';
-import type { Entity } from '../ecs/entity.js';
+import type { Command } from '@voidscript/core';
+import type { RuntimeAsset } from '@voidscript/core';
+import type { Entity } from '@voidscript/core';
 import { loadTiledMap } from './tiled-loader.js';
-import { isTiledMapMetadata } from '../ecs/asset-metadata.js';
+import { isTiledMapMetadata } from '../ecs/asset/asset-metadata.js';
 
 /**
  * Spawn a Tiled map entity from a RuntimeAsset<tiled.Map>

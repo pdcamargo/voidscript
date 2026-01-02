@@ -10,7 +10,7 @@
  * - Objects that should slide but not rotate
  */
 
-import { component } from '../../../ecs/component.js';
+import { component } from '@voidscript/core';
 import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 
 export interface LockedAxes2DData {

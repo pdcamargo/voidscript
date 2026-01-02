@@ -17,17 +17,17 @@
  * Runs in the startup phase after tiledMapLoaderSystem.
  */
 
-import { system } from '../../ecs/system.js';
-import type { Entity } from '../../ecs/entity.js';
-import type { Command } from '../../ecs/command.js';
+import { system } from '@voidscript/core';
+import type { Entity } from '@voidscript/core';
+import type { Command } from '@voidscript/core';
 import { TiledMap, type TiledMapData } from '../../ecs/components/tiled/tiled-map.js';
 import { TiledTileLayer, type TiledTileLayerData } from '../../ecs/components/tiled/tiled-tile-layer.js';
 import { TiledCollider } from '../../ecs/components/tiled/tiled-collider.js';
 import { Transform3D } from '../../ecs/components/rendering/transform-3d.js';
 import { LocalTransform3D } from '../../ecs/components/rendering/local-transform-3d.js';
-import { Parent } from '../../ecs/components/parent.js';
-import { Children } from '../../ecs/components/children.js';
-import { Name } from '../../ecs/components/name.js';
+import { Parent } from '@voidscript/core';
+import { Children } from '@voidscript/core';
+import { Name } from '@voidscript/core';
 import { RigidBody2D } from '../../physics/2d/components/rigidbody-2d.js';
 import { Collider2D } from '../../physics/2d/components/collider-2d.js';
 import { extractTileCollisions, mergeAdjacentCuboids } from '../tiled-collision-merger.js';

@@ -9,7 +9,7 @@
  * Scale: Scale factors (x, y, z) - default is (1, 1, 1)
  */
 
-import { component } from '../../component.js';
+import { component } from '@voidscript/core';
 import { Vector3 } from '../../../math/index.js';
 import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 

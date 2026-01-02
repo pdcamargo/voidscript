@@ -7,7 +7,7 @@
  * Runs AFTER physics3DCollisionEventSystem to process collision events.
  */
 
-import { system } from '../../system.js';
+import { system } from '@voidscript/core';
 import { isGameplayActive } from '../../../editor/system-conditions.js';
 import { physics3DCollisionEventSystem } from '../../../physics/3d/physics-3d-collision-event-system.js';
 import {

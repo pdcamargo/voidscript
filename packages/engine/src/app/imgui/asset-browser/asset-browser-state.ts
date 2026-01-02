@@ -5,16 +5,16 @@
  * asset selection, search/filter, thumbnails, and import dialog.
  */
 
-import type { AssetMetadata, GUID } from '../../../ecs/asset-metadata.js';
+import type { AssetMetadata, GUID } from '../../../ecs/asset/asset-metadata.js';
 import {
   AssetType,
   isTextureMetadata,
   TextureFilter,
   TextureWrap,
   ModelFormat,
-} from '../../../ecs/asset-metadata.js';
-import { AssetDatabase } from '../../../ecs/asset-database.js';
-import { RuntimeAssetManager } from '../../../ecs/runtime-asset-manager.js';
+} from '../../../ecs/asset/asset-metadata.js';
+import { AssetDatabase } from '../../../ecs/asset/asset-database.js';
+import { RuntimeAssetManager } from '@voidscript/core';
 import type { EditorPlatform } from '../../../editor/editor-platform.js';
 import { ImGuiImplWeb } from '@voidscript/imgui';
 import * as THREE from 'three';
@@ -549,7 +549,7 @@ export function getThumbnail(
   const runtimeAsset = RuntimeAssetManager.get().getOrCreate(
     guid,
     metadata,
-  ) as import('../../../ecs/runtime-asset.js').RuntimeAsset<THREE.Texture>;
+  ) as import('@voidscript/core').RuntimeAsset<THREE.Texture>;
 
   if (!runtimeAsset.isLoaded) {
     pendingThumbnails.add(guid);
@@ -828,7 +828,7 @@ function buildAssetConfig(
   assetType: AssetType,
   path: string,
   options: ImportOptions,
-): import('../../../ecs/asset-database.js').AssetConfig {
+): import('../../../ecs/asset/asset-database.js').AssetConfig {
   // Helper to convert string filter to enum
   const toTextureFilter = (filter: 'nearest' | 'linear'): TextureFilter =>
     filter === 'linear' ? TextureFilter.Linear : TextureFilter.Nearest;

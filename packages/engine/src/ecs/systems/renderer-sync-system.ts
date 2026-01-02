@@ -25,8 +25,8 @@ import * as THREE from 'three';
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 
-import { system } from '../system.js';
-import type { Entity } from '../entity.js';
+import { system } from '@voidscript/core';
+import type { Entity } from '@voidscript/core';
 import type { Renderer } from '../../app/renderer.js';
 
 import { Transform3D, type Transform3DData } from '../components/rendering/transform-3d.js';
@@ -44,8 +44,7 @@ import { GLTFModel, type GLTFModelData } from '../components/rendering/gltf-mode
 import { FBXModel, type FBXModelData } from '../components/rendering/fbx-model.js';
 import { Material3D, type Material3DData } from '../components/rendering/material-3d.js';
 import { RenderObject, type RenderObjectData } from '../components/rendering/render-object.js';
-import { Parent } from '../components/parent.js';
-import { Children } from '../components/children.js';
+import { Parent, Children } from '@voidscript/core';
 import { Vector3 } from '../../math/index.js';
 import { loadTexture } from '../../loaders/texture-loader.js';
 
@@ -956,7 +955,7 @@ export const render3DSyncSystem = system(({ commands }) => {
 });
 
 // Register Render3DManager as a resource (internal, not serializable)
-import { registerResource } from '../resource.js';
+import { registerResource } from '@voidscript/core';
 registerResource(Render3DManager, false, {
   path: 'rendering',
   displayName: '3D Render Manager',

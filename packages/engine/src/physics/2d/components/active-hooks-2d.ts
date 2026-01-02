@@ -41,7 +41,7 @@
  * ```
  */
 
-import { component } from '../../../ecs/component.js';
+import { component } from '@voidscript/core';
 import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 import { ActiveHooksFlags } from '../../collision/physics-hooks.js';
 

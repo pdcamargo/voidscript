@@ -43,8 +43,8 @@ import {
   requiredProperty,
   optionalProperty,
   hiddenProperty,
-} from '../bundle.js';
-import { registerBundle } from '../bundle-registry.js';
+} from '@voidscript/core';
+import { registerBundle } from '@voidscript/core';
 import { Transform3D } from '../components/rendering/transform-3d.js';
 import { RigidBody3D } from '../../physics/3d/components/rigidbody-3d.js';
 import {
@@ -53,7 +53,7 @@ import {
 } from '../../physics/3d/components/collider-3d.js';
 import { CharacterController3D } from '../../physics/3d/components/character-controller-3d.js';
 import { Ccd } from '../../physics/components/ccd.js';
-import { Name } from '../components/name.js';
+import { Name } from '@voidscript/core';
 import { Vector3 } from '../../math/index.js';
 import type { BodyType, ColliderShape3D } from '../../physics/types.js';
 import * as THREE from 'three';

@@ -23,12 +23,12 @@
  * ```
  */
 
-import { component } from "../../component.js";
-import type { Command } from "../../command.js";
-import type { Entity } from "../../entity.js";
+import { component } from "@voidscript/core";
+import type { Command } from "@voidscript/core";
+import type { Entity } from "@voidscript/core";
 import { ImGui } from "@voidscript/imgui";
 import { entityPicker } from "../../../app/imgui/entity-picker.js";
-import { Name } from "../name.js";
+import { Name } from "@voidscript/core";
 
 import type {
   EffectConfig,

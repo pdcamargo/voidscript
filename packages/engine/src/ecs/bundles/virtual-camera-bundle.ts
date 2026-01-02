@@ -43,8 +43,8 @@ import {
   componentConfig,
   requiredProperty,
   optionalProperty,
-} from '../bundle.js';
-import { registerBundle } from '../bundle-registry.js';
+} from '@voidscript/core';
+import { registerBundle } from '@voidscript/core';
 import { Transform3D } from '../components/rendering/transform-3d.js';
 import {
   VirtualCamera,
@@ -56,9 +56,9 @@ import {
   type FollowDeadZone,
   type FollowSoftZone,
 } from '../components/rendering/virtual-camera-follow.js';
-import { Name } from '../components/name.js';
+import { Name } from '@voidscript/core';
 import { Vector3 } from '../../math/index.js';
-import type { Entity } from '../entity.js';
+import type { Entity } from '@voidscript/core';
 
 export const VirtualCameraBundle = registerBundle('VirtualCamera', {
   transform: componentConfig(Transform3D, {

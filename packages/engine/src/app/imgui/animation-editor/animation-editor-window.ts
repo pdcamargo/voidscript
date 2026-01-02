@@ -13,12 +13,12 @@ import type * as THREE from 'three';
 import { AnimationClip, LoopMode } from '../../../animation/animation-clip.js';
 import { PropertyTrack } from '../../../animation/property-track.js';
 import { getEasingFunction } from '../../../animation/property-track.js';
-import type { Entity } from '../../../ecs/entity.js';
+import type { Entity } from '@voidscript/core';
 import type { EditorPlatform } from '../../../editor/editor-platform.js';
-import { AssetDatabase } from '../../../ecs/asset-database.js';
-import { AssetType } from '../../../ecs/asset-metadata.js';
-import { RuntimeAsset } from '../../../ecs/runtime-asset.js';
-import { RuntimeAssetManager } from '../../../ecs/runtime-asset-manager.js';
+import { AssetDatabase } from '../../../ecs/asset/asset-database.js';
+import { AssetType } from '../../../ecs/asset/asset-metadata.js';
+import { RuntimeAsset } from '@voidscript/core';
+import { RuntimeAssetManager } from '@voidscript/core';
 import { AnimationController } from '../../../ecs/components/animation/animation-controller.js';
 import { EditorLayout } from '../editor-layout.js';
 import { EDITOR_ICONS } from '../editor-icons.js';
@@ -70,8 +70,8 @@ import {
 // Main Window Rendering
 // ============================================================================
 
-import type { Scene } from '../../../ecs/scene.js';
-import type { Command } from '../../../ecs/command.js';
+import type { Scene } from '@voidscript/core';
+import type { Command } from '@voidscript/core';
 
 // Module-level state to pass context to async handlers
 let currentAssetsManifest: string | undefined;
@@ -948,7 +948,7 @@ function addAnimationToController(
   // Register with RuntimeAssetManager so lookups work correctly
   // Note: We use a workaround since getOrCreate would return an unloaded asset
   // We check if it's already registered first
-  if (!RuntimeAssetManager.get().has(assetGuid)) {
+  if (!RuntimeAssetManager.get().hasAsset(assetGuid)) {
     // Register our pre-loaded asset
     // RuntimeAssetManager doesn't have a direct "set" method for existing assets,
     // but we can use the internal map via getOrCreate then overwrite

@@ -1,4 +1,4 @@
-import { component } from '../../component.js';
+import { component } from '@voidscript/core';
 
 export interface RenderObjectData {
   /**

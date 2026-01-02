@@ -22,8 +22,8 @@
  */
 
 import * as THREE from 'three';
-import { system } from '../system.js';
-import type { Entity } from '../entity.js';
+import { system } from '@voidscript/core';
+import type { Entity } from '@voidscript/core';
 import { Transform3D, type Transform3DData } from '../components/rendering/transform-3d.js';
 import { Camera, type CameraData } from '../components/rendering/camera.js';
 import { CameraClearColor, type CameraClearColorData } from '../components/rendering/camera-clear-color.js';

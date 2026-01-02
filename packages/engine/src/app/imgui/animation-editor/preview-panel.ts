@@ -20,15 +20,15 @@ import {
   PREVIEW_PADDING,
   COLORS,
 } from './constants.js';
-import { AssetDatabase } from '../../../ecs/asset-database.js';
-import { RuntimeAssetManager } from '../../../ecs/runtime-asset-manager.js';
+import { AssetDatabase } from '../../../ecs/asset/asset-database.js';
+import { RuntimeAssetManager } from '@voidscript/core';
 import {
   AssetType,
   isTextureMetadata,
   isTiledSpriteDefinition,
   type TextureMetadata,
   type SpriteDefinition,
-} from '../../../ecs/asset-metadata.js';
+} from '../../../ecs/asset/asset-metadata.js';
 import type { Color, SpriteValue } from '../../../animation/interpolation.js';
 import type { Vector3Value } from './animation-editor-state.js';
 

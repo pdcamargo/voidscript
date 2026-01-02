@@ -9,7 +9,7 @@
  * and before cameraSyncSystem.
  */
 
-import { system } from "../system.js";
+import { system } from '@voidscript/core';
 import { Transform3D } from "../components/rendering/transform-3d.js";
 import { Camera, type CameraData } from "../components/rendering/camera.js";
 import { MainCamera } from "../components/rendering/main-camera.js";

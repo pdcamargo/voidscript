@@ -21,10 +21,7 @@
  * ```
  */
 
-import { Scene } from '../ecs/scene.js';
-import { Command } from '../ecs/command.js';
-import { Scheduler, type SystemPhase } from '../ecs/scheduler.js';
-import type { SystemWrapper } from '../ecs/system.js';
+import { Scene, Command, Scheduler, type SystemPhase, type SystemWrapper } from '@voidscript/core';
 import { Layer, LayerStack } from './layer.js';
 import { Window, type WindowConfig } from './window.js';
 import { Renderer, type RendererConfig } from './renderer.js';
@@ -71,13 +68,13 @@ import {
   tiledTilesetCollisionSystem,
   tiledObjectCollisionSystem,
 } from '../tiled/systems/index.js';
-import { AssetDatabase, type AssetsConfig } from '../ecs/asset-database.js';
-import { PrefabManager } from '../ecs/prefab-manager.js';
+import { AssetDatabase, type AssetsConfig } from '../ecs/asset/asset-database.js';
+import { PrefabManager } from '@voidscript/core';
 import { EditorCameraManager } from './editor-camera-manager.js';
 import { EditorManager } from '../editor/editor-manager.js';
 import { ConsoleLogger } from './console-logger.js';
 import { PostProcessingManager } from '../post-processing/managers/post-processing-manager.js';
-import { isInitializableResource } from '../ecs/resource.js';
+import { isInitializableResource } from '@voidscript/core';
 
 // Physics systems (2D and 3D)
 import {
@@ -145,7 +142,7 @@ import { setupPlayModeCleanup } from '../ecs/systems/play-mode-cleanup-system.js
 import { spriteAreaGeneratorSystem } from '../ecs/systems/sprite-area-generator-system.js';
 
 // Event system
-import { Events, type EventClass } from '../ecs/events.js';
+import { Events, type EventClass } from '@voidscript/core';
 
 // Editor and world loading
 import type { EditorPlatform } from '../editor/editor-platform.js';
@@ -155,9 +152,9 @@ import {
   type EditorConfig as EditorLayerConfig,
 } from '../editor/editor-layer.js';
 import type { MenuBarCallbacks } from './imgui/menu-bar.js';
-import type { SceneData } from '../ecs/serialization/schemas.js';
+import type { SceneData } from '@voidscript/core';
 import { SceneLoader } from './scene-loader.js';
-import { preloadAssets } from '../ecs/asset-preloader.js';
+import { preloadAssets } from '../ecs/asset/asset-preloader.js';
 
 // Editor icon font
 import { getMaterialIconsFontData } from './imgui/material-icons-font.js';

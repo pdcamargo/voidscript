@@ -29,9 +29,9 @@ import {
 } from './constants.js';
 import { getDefaultValueForProperty } from './animation-serializer.js';
 import { parsePropertyPath, buildPropertyPath } from '../../../animation/property-path.js';
-import type { Scene } from '../../../ecs/scene.js';
-import type { ComponentType } from '../../../ecs/component.js';
-import type { PropertySerializerConfig } from '../../../ecs/serialization/types.js';
+import type { Scene } from '@voidscript/core';
+import type { ComponentType } from '@voidscript/core';
+import type { PropertySerializerConfig } from '@voidscript/core';
 
 // ============================================================================
 // Module State for Add Track Picker

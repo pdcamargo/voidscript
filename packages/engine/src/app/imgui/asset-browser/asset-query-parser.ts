@@ -10,9 +10,9 @@
  * - `player T:texture` - Name contains "player" AND type is texture
  */
 
-import { AssetType } from '../../../ecs/asset-metadata.js';
-import { AssetDatabase } from '../../../ecs/asset-database.js';
-import type { GUID } from '../../../ecs/asset-metadata.js';
+import { AssetType } from '../../../ecs/asset/asset-metadata.js';
+import { AssetDatabase } from '../../../ecs/asset/asset-database.js';
+import type { GUID } from '../../../ecs/asset/asset-metadata.js';
 
 // ============================================================================
 // Types

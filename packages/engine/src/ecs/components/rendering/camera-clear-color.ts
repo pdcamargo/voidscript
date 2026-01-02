@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { component } from "../../component.js";
+import { component } from "@voidscript/core";
 import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 
 export interface CameraClearColorData {

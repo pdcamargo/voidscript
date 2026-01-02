@@ -8,8 +8,8 @@
  * It doesn't handle animation playback directly - it tells AnimationController what to play.
  */
 
-import { component } from '../../component.js';
-import type { RuntimeAsset } from '../../runtime-asset.js';
+import { component } from '@voidscript/core';
+import type { RuntimeAsset } from '@voidscript/core';
 import type {
   AnimationStateMachine,
   ParameterValue,

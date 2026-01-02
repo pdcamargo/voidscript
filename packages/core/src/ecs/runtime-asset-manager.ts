@@ -17,7 +17,7 @@
  */
 
 import { RuntimeAsset } from "./runtime-asset.js";
-import type { AssetMetadata, GUID } from "./asset-metadata.js";
+import type { BaseAssetMetadata, GUID } from "./asset-types.js";
 
 /**
  * RuntimeAssetManager - Manages RuntimeAsset instances with singleton pattern per GUID
@@ -102,7 +102,7 @@ export class RuntimeAssetManager {
    * const asset = manager.getOrCreate(guid, metadata);
    * ```
    */
-  getOrCreate(guid: GUID, metadata: AssetMetadata): RuntimeAsset {
+  getOrCreate(guid: GUID, metadata: BaseAssetMetadata): RuntimeAsset {
     const existing = this.assets.get(guid);
     if (existing) {
       return existing;
@@ -129,7 +129,7 @@ export class RuntimeAssetManager {
    * @param guid - Asset GUID
    * @returns true if asset exists
    */
-  has(guid: GUID): boolean {
+  hasAsset(guid: GUID): boolean {
     return this.assets.has(guid);
   }
 

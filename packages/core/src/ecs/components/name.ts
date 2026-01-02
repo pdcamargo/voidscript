@@ -5,7 +5,6 @@
  * If not present or empty, the entity label falls back to "Entity #ID (Components...)".
  */
 
-import { ImGui } from '@voidscript/imgui';
 import { component } from '../component.js';
 
 export interface NameData {

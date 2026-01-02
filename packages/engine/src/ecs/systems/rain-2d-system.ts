@@ -16,8 +16,8 @@
  */
 
 import * as THREE from 'three';
-import { system } from '../system.js';
-import type { Entity } from '../entity.js';
+import { system } from '@voidscript/core';
+import type { Entity } from '@voidscript/core';
 import type { Renderer } from '../../app/renderer.js';
 import { Application } from '../../app/application.js';
 import { Transform3D } from '../components/rendering/transform-3d.js';

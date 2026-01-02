@@ -20,19 +20,19 @@ import {
   getPreviewEntity,
 } from './animation-editor-state.js';
 import { Sprite2D } from '../../../ecs/components/rendering/sprite-2d.js';
-import { Scene } from '../../../ecs/scene.js';
+import { Scene } from '@voidscript/core';
 import type { Color, SpriteValue } from '../../../animation/interpolation.js';
 import { EASING_NAMES } from './constants.js';
 import { parsePropertyPath } from '../../../animation/property-path.js';
-import { AssetDatabase } from '../../../ecs/asset-database.js';
-import { RuntimeAssetManager } from '../../../ecs/runtime-asset-manager.js';
+import { AssetDatabase } from '../../../ecs/asset/asset-database.js';
+import { RuntimeAssetManager } from '@voidscript/core';
 import {
   AssetType,
   isTextureMetadata,
   type TextureMetadata,
   type SpriteDefinition,
   isTiledSpriteDefinition,
-} from '../../../ecs/asset-metadata.js';
+} from '../../../ecs/asset/asset-metadata.js';
 import type { KeyframeValue } from './animation-editor-state.js';
 
 // ============================================================================

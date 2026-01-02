@@ -28,7 +28,7 @@
  */
 
 import * as THREE from 'three';
-import type { Entity } from '../entity.js';
+import type { Entity } from '@voidscript/core';
 import type { AudioSourceData } from '../components/audio/audio-source.js';
 import type { PositionalAudioSourceData } from '../components/audio/positional-audio-source.js';
 import type { AudioListenerData } from '../components/audio/audio-listener.js';
@@ -512,7 +512,7 @@ export class AudioManager {
 }
 
 // Register AudioManager as a resource (internal, not serializable)
-import { registerResource } from '../resource.js';
+import { registerResource } from '@voidscript/core';
 registerResource(AudioManager, false, {
   path: 'audio',
   displayName: 'Audio Manager',

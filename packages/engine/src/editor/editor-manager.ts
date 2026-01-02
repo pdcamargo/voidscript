@@ -12,8 +12,8 @@
  * - Supports single-frame stepping in pause mode
  */
 
-import type { Scene } from '../ecs/scene.js';
-import type { Command } from '../ecs/command.js';
+import type { Scene } from '@voidscript/core';
+import type { Command } from '@voidscript/core';
 import type { EditorMode } from './editor-mode.js';
 import { SceneSnapshot } from './scene-snapshot.js';
 

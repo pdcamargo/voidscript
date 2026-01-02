@@ -5,7 +5,7 @@
  */
 
 import { ImGui } from '@voidscript/imgui';
-import type { Command } from '../../../ecs/command.js';
+import type { Command } from '@voidscript/core';
 import { EditorLayout } from '../editor-layout.js';
 import type {
   AnimationStateMachine,

@@ -5,9 +5,9 @@
  * Stores animation asset references and manages playback state.
  */
 
-import { component } from '../../component.js';
+import { component } from '@voidscript/core';
 import type { AnimationClip } from '../../../animation/animation-clip.js';
-import { isRuntimeAsset, type RuntimeAsset } from '../../runtime-asset.js';
+import { isRuntimeAsset, type RuntimeAsset } from '@voidscript/core';
 import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 import { openAssetPicker, renderAssetPickerModal } from '../../../app/imgui/asset-picker.js';
 import { tryGetEditorLayoutContext } from '../../../app/imgui/editor-layout-context.js';

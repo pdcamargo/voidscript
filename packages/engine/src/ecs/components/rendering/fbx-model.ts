@@ -7,8 +7,8 @@
  * IMPORTANT: This component MUST be used with Transform3D component.
  */
 
-import { component } from "../../component.js";
-import type { RuntimeAsset } from "../../runtime-asset.js";
+import { component } from "@voidscript/core";
+import type { RuntimeAsset } from "@voidscript/core";
 
 export interface FBXModelData {
   /**

@@ -5,7 +5,7 @@
  * based on PropertySerializerConfig metadata.
  */
 
-import type { PropertySerializerConfig } from '../ecs/serialization/types.js';
+import type { PropertySerializerConfig } from '@voidscript/core';
 import { Vector3 } from '../math/vector3.js';
 
 // ============================================================================

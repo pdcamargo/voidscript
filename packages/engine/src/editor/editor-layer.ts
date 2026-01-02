@@ -26,9 +26,9 @@ import type { EditorPlatform } from './editor-platform.js';
 import { EditorManager } from './editor-manager.js';
 import { EditorCameraManager } from '../app/editor-camera-manager.js';
 import { HelperManager } from '../app/helper-manager.js';
-import { SceneSerializer } from '../ecs/serialization/scene-serializer.js';
-import { isYamlFile } from '../ecs/serialization/yaml-utils.js';
-import { AssetDatabase } from '../ecs/asset-database.js';
+import { SceneSerializer } from '@voidscript/core';
+import { isYamlFile } from '@voidscript/core';
+import { AssetDatabase } from '../ecs/asset/asset-database.js';
 import { renderImGuiHierarchy } from '../app/imgui/hierarchy-viewer.js';
 import {
   renderImGuiInspector,
@@ -48,7 +48,7 @@ import { MainCamera } from '../ecs/components/rendering/main-camera.js';
 import { Camera } from '../ecs/components/rendering/camera.js';
 import { CameraClearColor } from '../ecs/components/rendering/camera-clear-color.js';
 import { Transform3D } from '../ecs/components/rendering/transform-3d.js';
-import { Name } from '../ecs/components/name.js';
+import { Name } from '@voidscript/core';
 import { Collider2D } from '../physics/2d/components/collider-2d.js';
 import { Collider3D } from '../physics/3d/components/collider-3d.js';
 import { SpriteAreaGenerator } from '../ecs/components/generators/sprite-area-generator.js';
@@ -56,7 +56,7 @@ import { Rain2D } from '../ecs/components/rendering/rain-2d.js';
 import { VirtualCamera } from '../ecs/components/rendering/virtual-camera.js';
 import { VirtualCameraBounds } from '../ecs/components/rendering/virtual-camera-bounds.js';
 import { VirtualCameraFollow } from '../ecs/components/rendering/virtual-camera-follow.js';
-import type { Entity } from '../ecs/entity.js';
+import type { Entity } from '@voidscript/core';
 import { Render3DManager } from '../ecs/systems/renderer-sync-system.js';
 import { UIManager } from '../ui/ui-manager.js';
 import { UIViewportBounds } from '../ui/ui-viewport-bounds.js';
@@ -95,7 +95,7 @@ import { SceneViewBounds } from './scene-view-bounds.js';
 import { TransformControlsManager } from './transform-controls-manager.js';
 import { TRANSFORM_MODE_SHORTCUTS } from './transform-mode-constants.js';
 import { LocalTransform3D } from '../ecs/components/rendering/local-transform-3d.js';
-import { Parent } from '../ecs/components/parent.js';
+import { Parent } from '@voidscript/core';
 
 // ============================================================================
 // Editor Configuration
@@ -1533,7 +1533,7 @@ export class EditorLayer extends Layer {
    * Get post-processing data from the first entity with PostProcessing component
    */
   private getPostProcessingData(
-    commands: import('../ecs/command.js').Command,
+    commands: import('@voidscript/core').Command,
   ): {
     entity: Entity | null;
     data: PostProcessingData | null;

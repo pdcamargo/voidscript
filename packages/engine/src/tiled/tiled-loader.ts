@@ -10,10 +10,10 @@
  * - getTileLayers() - Get all tile layers from a map
  */
 
-import type { Command } from '../ecs/command.js';
-import type { Entity } from '../ecs/entity.js';
-import type { EntityHandle } from '../ecs/command.js';
-import type { RuntimeAsset } from '../ecs/runtime-asset.js';
+import type { Command } from '@voidscript/core';
+import type { Entity } from '@voidscript/core';
+import type { EntityHandle } from '@voidscript/core';
+import type { RuntimeAsset } from '@voidscript/core';
 import { TiledMap, type ObjectSpawnerFactory } from '../ecs/components/tiled/tiled-map.js';
 import { TiledTileLayer } from '../ecs/components/tiled/tiled-tile-layer.js';
 import { TiledObjectLayer } from '../ecs/components/tiled/tiled-object-layer.js';

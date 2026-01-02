@@ -22,7 +22,7 @@ import {
   moveNode,
   type NodeEditorConfig,
 } from '../node-editor/index.js';
-import type { Entity } from '../../../ecs/entity.js';
+import type { Entity } from '@voidscript/core';
 
 // ============================================================================
 // Special Node IDs

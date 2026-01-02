@@ -31,7 +31,7 @@
 
 import RAPIER from '@dimforge/rapier3d';
 import * as THREE from 'three';
-import type { Entity } from '../../ecs/entity.js';
+import type { Entity } from '@voidscript/core';
 import type { ColliderShape3D } from '../types.js';
 import type { QueryFilter, PhysicsHooks3D } from '../collision/index.js';
 import { QueryFilterFlags, DEFAULT_QUERY_FILTER } from '../collision/index.js';
@@ -1050,7 +1050,7 @@ export class Physics3DContext {
 }
 
 // Register Physics3DContext as a resource (internal, not serializable)
-import { registerResource } from '../../ecs/resource.js';
+import { registerResource } from '@voidscript/core';
 registerResource(Physics3DContext, false, {
   path: 'physics',
   displayName: '3D Physics Context',

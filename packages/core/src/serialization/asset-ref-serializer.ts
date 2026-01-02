@@ -8,8 +8,8 @@ import type {
   SerializationContext,
   DeserializationContext,
 } from "./types.js";
-import type { ComponentType } from "../component.js";
-import { isAssetRef, type AssetRef } from "../asset-ref.js";
+import type { ComponentType } from "../ecs/component.js";
+import { isAssetRef, type AssetRef } from "../ecs/asset-types.js";
 
 /**
  * UUID v4 regex pattern for validating GUIDs

@@ -22,9 +22,9 @@
  * ```
  */
 
-import { component } from '../../component.js';
-import { RuntimeAsset } from '../../runtime-asset.js';
-import { AssetType } from '../../asset-metadata.js';
+import { component } from '@voidscript/core';
+import { RuntimeAsset } from '@voidscript/core';
+import { AssetType } from '../../asset/asset-metadata.js';
 import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 import type { ShaderAsset } from '../../../shader/shader-asset.js';
 import type { TranspiledUniform } from '../../../shader/vsl/transpiler.js';

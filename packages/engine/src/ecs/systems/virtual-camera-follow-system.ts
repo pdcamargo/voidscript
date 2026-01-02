@@ -12,7 +12,7 @@
  * - In Play Mode: Camera smoothly follows target with damping/interpolation
  */
 
-import { system } from "../system.js";
+import { system } from '@voidscript/core';
 import { Transform3D } from "../components/rendering/transform-3d.js";
 import {
   VirtualCamera,
@@ -217,7 +217,7 @@ function resolveBoundsFromEntity(
   commands: {
     tryGetComponent: <T>(
       entity: number,
-      type: import("../component.js").ComponentType<T>
+      type: import("@voidscript/core").ComponentType<T>
     ) => T | undefined;
   }
 ): ResolvedBounds | null {

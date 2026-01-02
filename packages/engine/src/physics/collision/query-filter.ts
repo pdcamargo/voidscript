@@ -5,7 +5,7 @@
  * Inspired by Bevy Rapier's QueryFilter with JavaScript naming conventions.
  */
 
-import type { Entity } from '../../ecs/entity.js';
+import type { Entity } from '@voidscript/core';
 
 /**
  * Flags for filtering query results by body type

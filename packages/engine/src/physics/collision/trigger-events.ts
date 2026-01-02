@@ -1,4 +1,4 @@
-import type { Entity } from '../../ecs/entity.js';
+import type { Entity } from '@voidscript/core';
 
 /**
  * Event fired when an entity enters a 2D trigger zone.

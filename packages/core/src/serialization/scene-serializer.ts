@@ -10,16 +10,16 @@
  * - Component registry tracking
  */
 
-import type { Scene } from '../scene.js';
-import type { Command } from '../command.js';
-import type { ComponentType } from '../component.js';
-import { globalComponentRegistry } from '../component.js';
-import { globalResourceRegistry } from '../resource.js';
-import type { ResourceSerializerConfig, ResourceType } from '../resource.js';
-import { Parent } from '../components/parent.js';
-import { PrefabInstance } from '../components/prefab-instance.js';
-import type { Entity } from '../entity.js';
-import { PrefabManager } from '../prefab-manager.js';
+import type { Scene } from '../ecs/scene.js';
+import type { Command } from '../ecs/command.js';
+import type { ComponentType } from '../ecs/component.js';
+import { globalComponentRegistry } from '../ecs/component.js';
+import { globalResourceRegistry } from '../ecs/resource.js';
+import type { ResourceSerializerConfig, ResourceType } from '../ecs/resource.js';
+import { Parent } from '../ecs/components/parent.js';
+import { PrefabInstance } from '../ecs/components/prefab-instance.js';
+import type { Entity } from '../ecs/entity.js';
+import { PrefabManager } from '../prefab/prefab-manager.js';
 import type {
   ComponentSerializer,
   SerializationContext,
@@ -41,10 +41,12 @@ import type {
 import { SceneSchema } from './schemas.js';
 import { DefaultSerializer } from './custom-serializers.js';
 import { jsonToYaml, yamlToJson } from './yaml-utils.js';
-import { isAssetRef } from '../asset-ref.js';
-import { isRuntimeAsset } from '../runtime-asset.js';
-import { RuntimeAssetManager } from '../runtime-asset-manager.js';
-import type { Application } from '../../app/application.js';
+import { isAssetRef } from '../ecs/asset-types.js';
+import { isRuntimeAsset } from '../ecs/runtime-asset.js';
+import { RuntimeAssetManager } from '../ecs/runtime-asset-manager.js';
+
+// Forward type declaration - Application is provided by @voidscript/engine
+type Application = any;
 
 /**
  * SceneSerializer - Orchestrates serialization/deserialization of ECS Scene

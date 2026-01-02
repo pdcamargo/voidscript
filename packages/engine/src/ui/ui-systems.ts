@@ -7,15 +7,15 @@
 
 import ThreeMeshUI from 'three-mesh-ui';
 import * as THREE from 'three';
-import { system } from '../ecs/system.js';
+import { system } from '@voidscript/core';
 import { UIManager } from './ui-manager.js';
 import { UICanvas, type UICanvasData } from './components/ui-canvas.js';
 import { UIBlock, type UIBlockData, uiBlockDataToOptions, getAnchorOffset, getPivotOffset } from './components/ui-block.js';
 import { UIText, type UITextData, uiTextDataToOptions } from './components/ui-text.js';
 import { UIButton, type UIButtonData, uiButtonDataToOptions } from './components/ui-button.js';
-import { Parent } from '../ecs/components/parent.js';
+import { Parent } from '@voidscript/core';
 import { Transform3D, type Transform3DData } from '../ecs/components/rendering/transform-3d.js';
-import type { Entity } from '../ecs/entity.js';
+import type { Entity } from '@voidscript/core';
 import { Application } from '../app/application.js';
 import { UIInteractionManager } from './ui-interaction.js';
 import { UIInteraction } from './components/ui-interaction.js';

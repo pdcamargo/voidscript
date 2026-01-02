@@ -20,7 +20,7 @@
  * - density: Mass per unit volume (mass = density × volume)
  */
 
-import { component } from '../../../ecs/component.js';
+import { component } from '@voidscript/core';
 import type { ColliderShape3D } from '../../types.js';
 import * as THREE from 'three';
 import { EditorLayout } from '../../../app/imgui/editor-layout.js';

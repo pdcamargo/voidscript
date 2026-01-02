@@ -38,7 +38,7 @@ import type { Command } from './command.js';
 import type {
   PropertySerializerConfig,
   SerializableKeys,
-} from './serialization/types.js';
+} from '../serialization/types.js';
 
 // Forward declaration to avoid circular dependency
 // Application type is used in defaultValue factory

@@ -8,7 +8,7 @@
  */
 
 import * as THREE from 'three';
-import { system } from '../../ecs/system.js';
+import { system } from '@voidscript/core';
 import { isGameplayActive } from '../../editor/system-conditions.js';
 import { Physics2DContext } from './physics-2d-context.js';
 import { physics2DSyncSystem } from './physics-2d-sync-system.js';

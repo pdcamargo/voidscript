@@ -27,10 +27,10 @@ import { PropertyTrack } from '../animation/property-track.js';
 import { InterpolationMode } from '../animation/interpolation.js';
 import { loadTexture, type TextureLoadOptions } from '../loaders/texture-loader.js';
 import { resolvePath } from './tiled-utils.js';
-import { AssetDatabase } from '../ecs/asset-database.js';
-import { RuntimeAssetManager } from '../ecs/runtime-asset-manager.js';
-import { RuntimeAsset } from '../ecs/runtime-asset.js';
-import { AssetType, TextureFilter, TextureWrap, type TextureMetadata } from '../ecs/asset-metadata.js';
+import { AssetDatabase } from '../ecs/asset/asset-database.js';
+import { RuntimeAssetManager } from '@voidscript/core';
+import { RuntimeAsset } from '@voidscript/core';
+import { AssetType, TextureFilter, TextureWrap, type TextureMetadata } from '../ecs/asset/asset-metadata.js';
 
 /**
  * Tiled Asset Registry Resource

@@ -11,7 +11,7 @@
  * - 1.0+: Heavy damping (quickly comes to rest)
  */
 
-import { component } from '../../ecs/component.js';
+import { component } from '@voidscript/core';
 import { EditorLayout } from '../../app/imgui/editor-layout.js';
 
 export interface DampingData {

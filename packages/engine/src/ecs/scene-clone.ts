@@ -10,10 +10,7 @@
  * - Undo/redo systems (preserve scene snapshots)
  */
 
-import { Scene } from "./scene.js";
-import { Command } from "./command.js";
-import { SceneSerializer } from "./serialization/scene-serializer.js";
-import type { DeserializeOptions } from "./serialization/types.js";
+import { Scene, Command, SceneSerializer, type DeserializeOptions } from "@voidscript/core";
 
 /**
  * Clone a Scene instance via serialization → deserialization

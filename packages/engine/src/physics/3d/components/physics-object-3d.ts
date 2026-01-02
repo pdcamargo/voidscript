@@ -16,7 +16,7 @@
  * - Automatically cleaned up when exiting play mode (world snapshot restoration)
  */
 
-import { component } from '../../../ecs/component.js';
+import { component } from '@voidscript/core';
 import * as THREE from 'three';
 
 export interface PhysicsObject3DData {

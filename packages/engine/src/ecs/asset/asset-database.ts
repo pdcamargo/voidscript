@@ -41,8 +41,8 @@ import type {
   VSLShaderType,
 } from './asset-metadata.js';
 import { AssetType, TextureFilter, TextureWrap, ModelFormat, isTextureMetadata } from './asset-metadata.js';
-import { RuntimeAssetManager } from './runtime-asset-manager.js';
-import type { Vector3 } from '../math/index.js';
+import { RuntimeAssetManager } from '@voidscript/core';
+import type { Vector3 } from '../../math/index.js';
 
 // ============================================================================
 // Asset Config Types (Discriminated Union)

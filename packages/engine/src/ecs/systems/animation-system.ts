@@ -11,7 +11,7 @@
  * - Or in editor preview mode (for animation preview in the editor)
  */
 
-import { system } from '../system.js';
+import { system } from '@voidscript/core';
 import {
   AnimationController,
   getCurrentClip,
@@ -31,8 +31,8 @@ import {
   type ValueHandlerContext,
 } from '../../animation/value-handlers.js';
 import { isColorLike, isVector3Like } from '../../animation/interpolation.js';
-import type { Entity } from '../entity.js';
-import type { Command } from '../command.js';
+import type { Entity } from '@voidscript/core';
+import type { Command } from '@voidscript/core';
 import {
   isGameplayActive,
   isAnimationPreviewActive,

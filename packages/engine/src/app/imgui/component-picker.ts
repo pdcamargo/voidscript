@@ -19,8 +19,8 @@
  */
 
 import { ImGui } from "@voidscript/imgui";
-import type { ComponentType } from "../../ecs/component.js";
-import { globalComponentRegistry } from "../../ecs/component.js";
+import type { ComponentType } from "@voidscript/core";
+import { globalComponentRegistry } from "@voidscript/core";
 
 // State for the component picker
 let isOpen = false;

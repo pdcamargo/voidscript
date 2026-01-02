@@ -8,12 +8,12 @@
  * This system only runs during play mode.
  */
 
-import { system } from '../ecs/system.js';
-import { Events } from '../ecs/events.js';
+import { system } from '@voidscript/core';
+import { Events } from '@voidscript/core';
 import { isGameplayActive } from '../editor/system-conditions.js';
 import { UIInteractionManager, type UIInteractionEvent } from './ui-interaction.js';
 import { UIInteraction, type UIInteractionData } from './components/ui-interaction.js';
-import type { Entity } from '../ecs/entity.js';
+import type { Entity } from '@voidscript/core';
 
 /**
  * Initialize the UI interaction event dispatching.

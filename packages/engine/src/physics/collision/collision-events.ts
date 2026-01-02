@@ -27,7 +27,7 @@
  * ```
  */
 
-import type { Entity } from '../../ecs/entity.js';
+import type { Entity } from '@voidscript/core';
 
 /**
  * Flags describing the collision event type

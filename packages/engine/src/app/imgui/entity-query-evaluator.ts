@@ -4,16 +4,16 @@
  * Evaluates parsed queries against entities to determine if they match.
  */
 
-import type { Entity } from '../../ecs/entity.js';
-import type { Scene } from '../../ecs/scene.js';
+import type { Entity } from '@voidscript/core';
+import type { Scene } from '@voidscript/core';
 import type {
   ParsedQuery,
   QueryFilter,
   QueryTerm,
   AndExpression,
 } from './entity-query-parser.js';
-import { globalComponentRegistry, type ComponentType } from '../../ecs/component.js';
-import { Name } from '../../ecs/components/name.js';
+import { globalComponentRegistry, type ComponentType } from '@voidscript/core';
+import { Name } from '@voidscript/core';
 
 /**
  * Cache for case-insensitive component name lookups

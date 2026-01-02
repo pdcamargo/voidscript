@@ -8,15 +8,16 @@ import type { Entity } from "./entity.js";
 import type { ComponentType } from "./component.js";
 import { Parent } from "./components/parent.js";
 import { Children } from "./components/children.js";
-import type { PrefabAsset, InstantiatePrefabOptions } from "./prefab-asset.js";
-import type { SavePrefabOptions } from "./prefab-asset.js";
-import { PrefabManager } from "./prefab-manager.js";
+import type { PrefabAsset, InstantiatePrefabOptions } from "../prefab/prefab-asset.js";
+import type { SavePrefabOptions } from "../prefab/prefab-asset.js";
+import { PrefabManager } from "../prefab/prefab-manager.js";
 import type { BundleType, BundleSpawnData } from "./bundle.js";
 import { resolveBundleComponents } from "./bundle.js";
 import { Events, EventWriter, EventReader, type EventClass } from "./events.js";
 
-// Type import to avoid circular dependency
-type Application = import("../app/application.js").Application;
+// Forward type declaration - Application is provided by @voidscript/engine
+// This allows core to reference Application without depending on engine
+type Application = any;
 
 /**
  * Entity handle with helper methods

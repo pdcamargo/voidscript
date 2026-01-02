@@ -16,14 +16,14 @@
 
 import { ImGui, ImGuiImplWeb, ImTextureRef } from '@voidscript/imgui';
 import * as THREE from 'three';
-import type { Entity } from '../../ecs/entity.js';
-import type { RuntimeAsset } from '../../ecs/runtime-asset.js';
+import type { Entity } from '@voidscript/core';
+import type { RuntimeAsset } from '@voidscript/core';
 import type {
   SpriteDefinition,
   TextureMetadata,
-} from '../../ecs/asset-metadata.js';
+} from '../../ecs/asset/asset-metadata.js';
 import { Vector3 } from '../../math/vector3.js';
-import { Name } from '../../ecs/components/name.js';
+import { Name } from '@voidscript/core';
 import {
   generateUniqueId,
   getContextRenderer,
@@ -41,15 +41,15 @@ import {
   openSpritePicker,
   renderSpritePickerModal,
 } from './sprite-picker.js';
-import { AssetDatabase } from '../../ecs/asset-database.js';
-import { RuntimeAssetManager } from '../../ecs/runtime-asset-manager.js';
+import { AssetDatabase } from '../../ecs/asset/asset-database.js';
+import { RuntimeAssetManager } from '@voidscript/core';
 import { entityPicker } from './entity-picker.js';
 import { renderEventNamePicker } from './event-name-picker.js';
 import { renderComponentNamePicker } from './component-name-picker.js';
 import { DefaultTextureGenerator } from '../../shader/default-texture-generator.js';
 import type { NoiseTextureParams } from '../../shader/vsl/ast.js';
-import type { Events } from '../../ecs/events.js';
-import type { ComponentType } from '../../ecs/component.js';
+import type { Events } from '@voidscript/core';
+import type { ComponentType } from '@voidscript/core';
 import { EDITOR_ICONS } from './editor-icons.js';
 import { EditorFonts, ICON_SMALL_SIZE, ICON_MEDIUM_SIZE, ICON_BIG_SIZE } from './editor-fonts.js';
 
@@ -144,7 +144,7 @@ export interface EntityFieldOptions extends BaseFieldOptions {
   /** Allow selecting "None" */
   allowNone?: boolean;
   /** Only show entities with these components */
-  requiredComponents?: import('../../ecs/component.js').ComponentType<unknown>[];
+  requiredComponents?: import('@voidscript/core').ComponentType<unknown>[];
 }
 
 export interface EnumFieldOptions extends BaseFieldOptions {

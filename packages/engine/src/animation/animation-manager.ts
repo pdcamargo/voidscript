@@ -110,7 +110,7 @@ export class AnimationManager {
 }
 
 // Register AnimationManager as a resource with serializable properties
-import { registerResource } from '../ecs/resource.js';
+import { registerResource } from '@voidscript/core';
 registerResource(AnimationManager, {
   globalSpeed: {
     serializable: true,

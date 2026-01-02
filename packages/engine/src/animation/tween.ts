@@ -712,7 +712,7 @@ export function repeat(t: number, length: number): number {
 }
 
 // Register TweenManager as a resource (internal, not serializable)
-import { registerResource } from '../ecs/resource.js';
+import { registerResource } from '@voidscript/core';
 registerResource(TweenManager, false, {
   path: 'animation',
   displayName: 'Tween Manager',

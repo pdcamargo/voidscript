@@ -14,7 +14,7 @@
 
 import * as THREE from 'three';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
-import type { Entity } from '../ecs/entity.js';
+import type { Entity } from '@voidscript/core';
 import type { Transform3DData } from '../ecs/components/rendering/transform-3d.js';
 import type { LocalTransform3DData } from '../ecs/components/rendering/local-transform-3d.js';
 import { HELPER_LAYER } from '../constants/layers.js';

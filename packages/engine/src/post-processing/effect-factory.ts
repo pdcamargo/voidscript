@@ -60,7 +60,7 @@ import type {
   RGBShiftConfig,
 } from "./types.js";
 import type { PostProcessingManager } from "./managers/post-processing-manager.js";
-import type { Command } from "../ecs/command.js";
+import type { Command } from "@voidscript/core";
 
 /**
  * Create a Three.js pass for the given effect configuration

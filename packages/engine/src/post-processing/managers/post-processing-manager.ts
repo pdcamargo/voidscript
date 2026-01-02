@@ -12,8 +12,7 @@ import type { Pass } from "three/examples/jsm/postprocessing/Pass.js";
 import type { Renderer } from "../../app/renderer.js";
 import type { EffectConfig, EffectType } from "../types.js";
 import { createPass, updatePass, disposePass } from "../effect-factory.js";
-import type { Entity } from "../../ecs/entity.js";
-import type { Command } from "../../ecs/command.js";
+import type { Entity, Command } from "@voidscript/core";
 import { Render3DManager } from "../../ecs/systems/renderer-sync-system.js";
 
 export class PostProcessingManager {

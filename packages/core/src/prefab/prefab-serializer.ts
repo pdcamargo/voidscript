@@ -8,16 +8,14 @@
  * - Component type dependency tracking
  */
 
-import type { Scene } from './scene.js';
-import type { Command } from './command.js';
-import type { PrefabAsset, PrefabData, SavePrefabOptions } from './prefab-asset.js';
-import type { PrefabMetadata } from './asset-metadata.js';
-import { AssetType } from './asset-metadata.js';
-import { SceneSerializer } from './serialization/scene-serializer.js';
-import { Children } from './components/children.js';
-import { PrefabInstance } from './components/prefab-instance.js';
-import { component } from './component.js';
-import { jsonToYaml, yamlToJson } from './serialization/yaml-utils.js';
+import type { Scene } from '../ecs/scene.js';
+import type { Command } from '../ecs/command.js';
+import type { PrefabAsset, PrefabData, SavePrefabOptions, PrefabMetadata } from './prefab-asset.js';
+import { SceneSerializer } from '../serialization/scene-serializer.js';
+import { Children } from '../ecs/components/children.js';
+import { PrefabInstance } from '../ecs/components/prefab-instance.js';
+import { component } from '../ecs/component.js';
+import { jsonToYaml, yamlToJson } from '../serialization/yaml-utils.js';
 
 /**
  * Generate a UUID v4
@@ -186,13 +184,10 @@ export class PrefabSerializer {
     const metadata: PrefabMetadata = {
       guid,
       path: options.path,
-      type: AssetType.Prefab,
+      type: 'prefab',
       entityCount: allEntities.size,
       componentTypes: Array.from(componentTypes),
       nestedPrefabs: Array.from(nestedPrefabs),
-      thumbnailPath: options.thumbnailPath,
-      importedAt: now,
-      modifiedAt: now,
     };
 
     const prefabData: PrefabData = {

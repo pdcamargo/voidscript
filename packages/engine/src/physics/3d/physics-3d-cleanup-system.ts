@@ -8,7 +8,7 @@
  * This means the entity was synced but the user removed the physics components.
  */
 
-import { system } from '../../ecs/system.js';
+import { system } from '@voidscript/core';
 import { isGameplayActive } from '../../editor/system-conditions.js';
 import { Physics3DContext } from './physics-3d-context.js';
 import { RigidBody3D } from './components/rigidbody-3d.js';

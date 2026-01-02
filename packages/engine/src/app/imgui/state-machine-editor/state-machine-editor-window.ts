@@ -7,9 +7,9 @@
 
 import { ImGui } from '@voidscript/imgui';
 import type { EditorPlatform } from '../../../editor/editor-platform.js';
-import type { Command } from '../../../ecs/command.js';
-import { AssetDatabase } from '../../../ecs/asset-database.js';
-import { AssetType } from '../../../ecs/asset-metadata.js';
+import type { Command } from '@voidscript/core';
+import { AssetDatabase } from '../../../ecs/asset/asset-database.js';
+import { AssetType } from '../../../ecs/asset/asset-metadata.js';
 import { AnimationStateMachineController } from '../../../ecs/components/animation/animation-state-machine-controller.js';
 import { EditorLayout } from '../editor-layout.js';
 import { EDITOR_ICONS } from '../editor-icons.js';
@@ -50,7 +50,7 @@ import {
   ANY_STATE_NODE_ID,
   EXIT_NODE_ID,
 } from './state-machine-editor-state.js';
-import type { Entity } from '../../../ecs/entity.js';
+import type { Entity } from '@voidscript/core';
 import {
   renderNodeEditor,
   renderNodeEditorToolbar,

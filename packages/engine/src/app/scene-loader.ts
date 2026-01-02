@@ -13,13 +13,13 @@
  * ```
  */
 
-import type { Scene } from '../ecs/scene.js';
-import type { Command } from '../ecs/command.js';
+import type { Scene } from '@voidscript/core';
+import type { Command } from '@voidscript/core';
 import type { EditorPlatform } from '../editor/editor-platform.js';
-import { SceneSerializer } from '../ecs/serialization/scene-serializer.js';
-import { isYamlFile } from '../ecs/serialization/yaml-utils.js';
-import type { SceneData } from '../ecs/serialization/schemas.js';
-import type { DeserializeResult, DeserializeOptions } from '../ecs/serialization/types.js';
+import { SceneSerializer } from '@voidscript/core';
+import { isYamlFile } from '@voidscript/core';
+import type { SceneData } from '@voidscript/core';
+import type { DeserializeResult, DeserializeOptions } from '@voidscript/core';
 
 /**
  * Configuration for scene loading

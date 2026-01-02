@@ -48,46 +48,46 @@ export type {
   SphericalHarmonics3Metadata,
 } from '@voidscript/core';
 
-// ECS core (excluding Application which is replaced by the enhanced version)
-export type { Entity, EntityMetadata } from './ecs/entity.js';
+// ECS core - re-export from @voidscript/core
+export type { Entity, EntityMetadata } from '@voidscript/core';
 export {
   EntityManager,
   INVALID_ENTITY,
   packEntity,
   entityId,
   entityGeneration,
-} from './ecs/entity.js';
-export type { ComponentType } from './ecs/component.js';
+} from '@voidscript/core';
+export type { ComponentType } from '@voidscript/core';
 export {
   ComponentRegistry,
   defineComponent,
   component,
   globalComponentRegistry,
-} from './ecs/component.js';
-export { Archetype, ArchetypeGraph } from './ecs/archetype.js';
-export { Scene, EntityBuilder } from './ecs/scene.js';
-export type { SceneEvent } from './ecs/scene.js';
-export { EventEmitter } from './ecs/event-emitter.js';
-export { Query } from './ecs/query.js';
+} from '@voidscript/core';
+export { Archetype, ArchetypeGraph } from '@voidscript/core';
+export { Scene, EntityBuilder } from '@voidscript/core';
+export type { SceneEvent } from '@voidscript/core';
+export { EventEmitter } from '@voidscript/core';
+export { Query } from '@voidscript/core';
 export {
   Command,
   EntityHandle,
   EntityCommandBuilder,
   EntityCommands,
-} from './ecs/command.js';
-export { Scheduler } from './ecs/scheduler.js';
-export type { SystemPhase } from './ecs/scheduler.js';
-export { SchedulerRunner } from './ecs/scheduler-runner.js';
-export { system } from './ecs/system.js';
+} from '@voidscript/core';
+export { Scheduler } from '@voidscript/core';
+export type { SystemPhase } from '@voidscript/core';
+export { SchedulerRunner } from '@voidscript/core';
+export { system } from '@voidscript/core';
 export type {
   SystemFunction,
   SystemArguments,
   SystemWrapper,
   SystemMetadata,
   SystemRunCondition,
-} from './ecs/system.js';
+} from '@voidscript/core';
 
-// Bundle system
+// Bundle system - re-export from @voidscript/core
 export type {
   BundleSchema,
   BundleType,
@@ -97,7 +97,7 @@ export type {
   RequiredPropertyConfig,
   OptionalPropertyConfig,
   HiddenPropertyConfig,
-} from './ecs/bundle.js';
+} from '@voidscript/core';
 export {
   bundle,
   componentConfig,
@@ -106,23 +106,19 @@ export {
   hiddenProperty,
   resolveComponentData,
   resolveBundleComponents,
-} from './ecs/bundle.js';
+} from '@voidscript/core';
 export {
   BundleRegistry,
   globalBundleRegistry,
   registerBundle,
-} from './ecs/bundle-registry.js';
+} from '@voidscript/core';
 export { Sprite2DBundle } from './ecs/bundles/index.js';
 
-// ECS Components
-export { Name } from './ecs/components/name.js';
-export type { NameData } from './ecs/components/name.js';
-export { Parent } from './ecs/components/parent.js';
-export { Children } from './ecs/components/children.js';
-export { PrefabInstance } from './ecs/components/prefab-instance.js';
-export type { PrefabInstanceData } from './ecs/components/prefab-instance.js';
+// ECS Components - hierarchy components from core
+export { Name, Parent, Children, PrefabInstance } from '@voidscript/core';
+export type { NameData, PrefabInstanceData } from '@voidscript/core';
 
-// ECS Serialization
+// ECS Serialization - re-export from @voidscript/core
 export {
   SceneSerializer,
   DefaultSerializer,
@@ -134,7 +130,7 @@ export {
   SerializedEntitySchema,
   SceneMetadataSchema,
   SceneSchema,
-} from './ecs/serialization/index.js';
+} from '@voidscript/core';
 export type {
   ComponentSerializer,
   SerializationContext,
@@ -148,35 +144,35 @@ export type {
   SerializedEntity,
   SceneMetadata,
   SceneData,
-} from './ecs/serialization/index.js';
+} from '@voidscript/core';
 
-// Prefab System
-export { PrefabManager } from './ecs/prefab-manager.js';
-export { PrefabSerializer } from './ecs/prefab-serializer.js';
+// Prefab System - re-export from @voidscript/core
+export { PrefabManager, PrefabSerializer } from '@voidscript/core';
 export type {
   PrefabAsset,
   PrefabData,
   InstantiatePrefabOptions,
   InstantiatePrefabResult,
   SavePrefabOptions,
-} from './ecs/prefab-asset.js';
+} from '@voidscript/core';
 
-// Asset System
-export { RuntimeAsset, isRuntimeAsset } from './ecs/runtime-asset.js';
-export { RuntimeAssetManager } from './ecs/runtime-asset-manager.js';
-export { AssetDatabase } from './ecs/asset-database.js';
-export { AssetLoaderRegistry } from './ecs/asset-loader-registry.js';
+// Asset System - RuntimeAsset and RuntimeAssetManager from core
+export { RuntimeAsset, isRuntimeAsset, RuntimeAssetManager } from '@voidscript/core';
+export { assetRef, isAssetRef } from '@voidscript/core';
+export type { AssetRef } from '@voidscript/core';
+
+// Asset System - Engine-specific (database, loaders, metadata)
+export { AssetDatabase } from './ecs/asset/asset-database.js';
+export { AssetLoaderRegistry } from './ecs/asset/asset-loader-registry.js';
 export {
   preloadAssets,
   preloadSceneAssets,
   findAllRuntimeAssets,
-} from './ecs/asset-preloader.js';
+} from './ecs/asset/asset-preloader.js';
 export type {
   AssetLoadProgress,
   PreloadAssetsOptions,
-} from './ecs/asset-preloader.js';
-export { assetRef, isAssetRef } from './ecs/asset-ref.js';
-export type { AssetRef } from './ecs/asset-ref.js';
+} from './ecs/asset/asset-preloader.js';
 export {
   AssetType,
   TextureFilter,
@@ -188,7 +184,7 @@ export {
   isUnknownAssetMetadata,
   isTiledSpriteDefinition,
   isRectSpriteDefinition,
-} from './ecs/asset-metadata.js';
+} from './ecs/asset/asset-metadata.js';
 export type {
   GUID,
   BaseAssetMetadata,
@@ -202,7 +198,7 @@ export type {
   TiledSpriteDefinition,
   RectSpriteDefinition,
   SpriteDefinition,
-} from './ecs/asset-metadata.js';
+} from './ecs/asset/asset-metadata.js';
 export type {
   AssetConfig,
   BaseAssetConfig,
@@ -210,20 +206,20 @@ export type {
   Model3DAssetConfig,
   AnimationAssetConfig,
   AssetsConfig,
-} from './ecs/asset-database.js';
+} from './ecs/asset/asset-database.js';
 
 // Asset Manifest (for standalone/JSON-based asset loading)
 export {
   AssetManifestLoader,
   loadManifest,
   createManifest,
-} from './ecs/asset-manifest.js';
+} from './ecs/asset/asset-manifest.js';
 export type {
   AssetManifest,
   ManifestAssetEntry,
   ManifestLoadOptions,
   ManifestLoadResult,
-} from './ecs/asset-manifest.js';
+} from './ecs/asset/asset-manifest.js';
 
 // Application module (Layer architecture, Input, Events, Renderer)
 // This exports the enhanced Application class with Layer support
@@ -864,20 +860,20 @@ export {
 } from './app/imgui/sprite-editor/index.js';
 export type { SpriteEditorState } from './app/imgui/sprite-editor/index.js';
 
-// Resource System
+// Resource System - re-export from @voidscript/core
 export {
   ResourceType,
   ResourceRegistry,
   globalResourceRegistry,
   registerResource,
   isInitializableResource,
-} from './ecs/resource.js';
+} from '@voidscript/core';
 export type {
   ResourceMetadata,
   ResourceSerializerConfig,
   ResourceEditorOptions,
   InitializableResource,
-} from './ecs/resource.js';
+} from '@voidscript/core';
 
 // Resource Viewer
 export {

@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import type { Entity } from '../ecs/entity.js';
+import type { Entity } from '@voidscript/core';
 import type { UIManager } from './ui-manager.js';
 import type { UIButtonData, UIButtonState } from './components/ui-button.js';
 import type { UIViewportBounds } from './ui-viewport-bounds.js';

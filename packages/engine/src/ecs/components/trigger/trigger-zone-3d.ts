@@ -53,8 +53,8 @@
  * ```
  */
 
-import { component } from '../../component.js';
-import { Events } from '../../events.js';
+import { component } from '@voidscript/core';
+import { Events } from '@voidscript/core';
 import { EditorLayout } from '../../../app/imgui/editor-layout.js';
 import type { TriggerFilterMode } from '../../systems/trigger/trigger-utils.js';
 

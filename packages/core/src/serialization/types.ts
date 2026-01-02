@@ -2,9 +2,9 @@
  * TypeScript types for ECS world serialization system
  */
 
-import type { Entity } from '../entity.js';
-import type { ComponentMetadata, ComponentType } from '../component.js';
-import { Command } from '../command.js';
+import type { Entity } from '../ecs/entity.js';
+import type { ComponentMetadata, ComponentType } from '../ecs/component.js';
+import { Command } from '../ecs/command.js';
 
 /**
  * Custom serializer interface for component types

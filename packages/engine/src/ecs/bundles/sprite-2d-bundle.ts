@@ -10,12 +10,12 @@ import {
   requiredProperty,
   optionalProperty,
   hiddenProperty,
-} from '../bundle.js';
-import { registerBundle } from '../bundle-registry.js';
+} from '@voidscript/core';
+import { registerBundle } from '@voidscript/core';
 import { Transform3D } from '../components/rendering/transform-3d.js';
 import { Sprite2D } from '../components/rendering/sprite-2d.js';
 import { Vector3 } from '../../math/index.js';
-import type { RuntimeAsset } from '../runtime-asset.js';
+import type { RuntimeAsset } from '@voidscript/core';
 
 /**
  * Sprite2D Bundle

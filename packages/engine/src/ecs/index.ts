@@ -1,6 +1,9 @@
 /**
  * VoidScript ECS - High-performance Entity Component System
  *
+ * Re-exports core ECS primitives from @voidscript/core and adds
+ * engine-specific extensions (assets, components, systems, bundles).
+ *
  * @example
  * ```ts
  * import { Scene, component } from '@voidscript/engine/ecs';
@@ -28,167 +31,99 @@
  * ```
  */
 
-// Entity system
-export type { Entity, EntityMetadata } from "./entity.js";
+// Re-export all core ECS primitives
+// Note: We omit BaseAssetMetadata, PrefabMetadata, SceneMetadata from core
+// because engine's asset/asset-metadata.ts has extended versions
 export {
-  EntityManager,
-  INVALID_ENTITY,
-  packEntity,
-  entityId,
-  entityGeneration,
-} from "./entity.js";
+  // Math
+  Vector2, Vector3, Vector4, Matrix2, Matrix3, Matrix4,
+  Euler, Quaternion, Box2, Box3, Sphere, Plane, Ray, Line3,
+  Triangle, Frustum, Cylindrical, Spherical, SphericalHarmonics3, MathUtils,
+  Color,
+  // ECS primitives
+  EntityManager, INVALID_ENTITY, packEntity, entityId, entityGeneration,
+  ComponentRegistry, defineComponent, component, globalComponentRegistry,
+  Archetype, ArchetypeGraph,
+  Scene, EntityBuilder,
+  EventEmitter,
+  Query,
+  Command, EntityHandle, EntityCommandBuilder, EntityCommands,
+  Scheduler, SchedulerRunner,
+  system,
+  // Bundle
+  bundle, componentConfig, requiredProperty, optionalProperty, hiddenProperty,
+  resolveComponentData, resolveBundleComponents,
+  BundleRegistry, globalBundleRegistry, registerBundle,
+  // Hierarchy components
+  Name, Parent, Children, PrefabInstance,
+  // Serialization
+  SceneSerializer, DefaultSerializer, SetSerializer, ParentSerializer, ChildrenSerializer,
+  ComponentRegistryEntrySchema, SerializedComponentSchema, SerializedEntitySchema,
+  SceneMetadataSchema, SceneSchema,
+  // Prefab
+  PrefabManager, PrefabSerializer,
+  // Runtime Asset
+  RuntimeAsset, isRuntimeAsset, RuntimeAssetManager,
+  assetRef, isAssetRef,
+  // Resource
+  ResourceType, ResourceRegistry, globalResourceRegistry, registerResource, isInitializableResource,
+  // Events
+  Events, EventWriter, EventReader,
+  // YAML
+  yamlToJson, jsonToYaml, isYamlFile,
+} from '@voidscript/core';
 
-// Component system
-export type { ComponentType } from "./component.js";
-export {
-  ComponentRegistry,
-  defineComponent,
-  component,
-  globalComponentRegistry,
-} from "./component.js";
-
-// Archetype system
-export { Archetype, ArchetypeGraph } from "./archetype.js";
-
-// Scene
-export { Scene, EntityBuilder } from "./scene.js";
-export type { SceneEvent } from "./scene.js";
-
-// Event system
-export { EventEmitter } from "./event-emitter.js";
-
-// Query system
-export { Query } from "./query.js";
-
-// Command system
-export { Command, EntityHandle, EntityCommandBuilder, EntityCommands } from "./command.js";
-
-// Event system
-export { Events, EventWriter, EventReader } from "./events.js";
-export type { EventClass, EventsApi } from "./events.js";
-
-// Bundle system
+// Re-export types from core
 export type {
-  BundleSchema,
-  BundleType,
-  BundleSpawnData,
-  ComponentConfig,
-  PropertyConfig,
-  RequiredPropertyConfig,
-  OptionalPropertyConfig,
-  HiddenPropertyConfig,
-} from "./bundle.js";
-export {
-  bundle,
-  componentConfig,
-  requiredProperty,
-  optionalProperty,
-  hiddenProperty,
-  resolveComponentData,
-  resolveBundleComponents,
-} from "./bundle.js";
-export { BundleRegistry, globalBundleRegistry, registerBundle } from "./bundle-registry.js";
-
-// Built-in bundles (import for side-effects to register them)
-import "./bundles/index.js";
-export {
-  Sprite2DBundle,
-  MainCameraBundle,
-  VirtualCameraBundle,
-  Character2DBundle,
-  Character3DBundle,
-} from "./bundles/index.js";
-
-// Application system
-export { Application } from "./application.js";
-export { Scheduler } from "./scheduler.js";
-export type { SystemPhase } from "./scheduler.js";
-export { SchedulerRunner } from "./scheduler-runner.js";
-export { system } from "./system.js";
-export type { SystemFunction, SystemArguments, SystemWrapper, SystemMetadata, SystemRunCondition } from "./system.js";
-
-// Components
-export { Name } from "./components/name.js";
-export type { NameData } from "./components/name.js";
-export { Parent } from "./components/parent.js";
-export { Children } from "./components/children.js";
-export { PrefabInstance } from "./components/prefab-instance.js";
-export type { PrefabInstanceData } from "./components/prefab-instance.js";
-
-// Serialization
-export {
-  SceneSerializer,
-  DefaultSerializer,
-  SetSerializer,
-  ParentSerializer,
-  ChildrenSerializer,
-  ComponentRegistryEntrySchema,
-  SerializedComponentSchema,
-  SerializedEntitySchema,
-  SceneMetadataSchema,
-  SceneSchema,
-} from "./serialization/index.js";
-export type {
-  ComponentSerializer,
-  SerializationContext,
-  DeserializationContext,
-  DeserializeMode,
-  DeserializeOptions,
-  DeserializeResult,
-  SerializationStats,
-  ComponentRegistryEntry,
-  SerializedComponent,
-  SerializedEntity,
-  SceneMetadata,
+  // Math types
+  Vector2Metadata, Vector3Metadata, Vector4Metadata,
+  Matrix2Metadata, Matrix3Metadata, Matrix4Metadata,
+  EulerMetadata, EulerOrder, QuaternionMetadata, ColorMetadata,
+  Box2Metadata, Box3Metadata, SphereMetadata, PlaneMetadata,
+  RayMetadata, Line3Metadata, TriangleMetadata, FrustumMetadata,
+  CylindricalMetadata, SphericalMetadata, SphericalHarmonics3Metadata,
+  // ECS types
+  Entity, EntityMetadata, ComponentType, SceneEvent,
+  SystemPhase, SystemFunction, SystemArguments, SystemWrapper, SystemMetadata, SystemRunCondition,
+  // Bundle types
+  BundleSchema, BundleType, BundleSpawnData, ComponentConfig, PropertyConfig,
+  RequiredPropertyConfig, OptionalPropertyConfig, HiddenPropertyConfig,
+  // Hierarchy types
+  NameData, PrefabInstanceData,
+  // Serialization types
+  ComponentSerializer, SerializationContext, DeserializationContext,
+  DeserializeMode, DeserializeOptions, DeserializeResult, SerializationStats,
+  ComponentRegistryEntry, SerializedComponent, SerializedEntity,
   SceneData,
-} from "./serialization/index.js";
+  // Prefab types
+  PrefabAsset, PrefabData, InstantiatePrefabOptions, InstantiatePrefabResult, SavePrefabOptions,
+  // Asset types (from core - minimal version)
+  AssetRef,
+  // Resource types
+  ResourceMetadata, ResourceSerializerConfig, ResourceEditorOptions, InitializableResource,
+} from '@voidscript/core';
 
-// Prefab System
-export { PrefabManager } from "./prefab-manager.js";
-export { PrefabSerializer } from "./prefab-serializer.js";
-export type {
-  PrefabAsset,
-  PrefabData,
-  InstantiatePrefabOptions,
-  InstantiatePrefabResult,
-  SavePrefabOptions,
-} from "./prefab-asset.js";
+// Engine-specific: Asset System (includes extended BaseAssetMetadata, PrefabMetadata, SceneMetadata)
+export * from './asset/index.js';
 
-// Asset System
-export { RuntimeAsset, isRuntimeAsset } from "./runtime-asset.js";
-export { RuntimeAssetManager } from "./runtime-asset-manager.js";
-export { assetRef, isAssetRef } from "./asset-ref.js";
-export type { AssetRef } from "./asset-ref.js";
+// Engine-specific: Application and Scene utilities
+export { Application } from './application.js';
+export { cloneSceneViaSnapshot, cloneWorldViaSnapshot } from './scene-clone.js';
 export {
-  AssetType,
-  TextureFilter,
-  TextureWrap,
-  isTextureMetadata,
-  isPrefabMetadata,
-  isAnimationMetadata,
-  isUnknownAssetMetadata,
-} from "./asset-metadata.js";
-export type {
-  GUID,
-  BaseAssetMetadata,
-  TextureMetadata,
-  PrefabMetadata,
-  AnimationMetadata,
-  UnknownAssetMetadata,
-  AssetMetadata,
-} from "./asset-metadata.js";
+  createSceneSnapshot,
+  getEntityFromSnapshot,
+  getRootEntitiesFromSnapshot,
+  getChildrenFromSnapshot,
+} from './scene-snapshot.js';
+export type { EntitySnapshot, SceneSnapshot } from './scene-snapshot.js';
+export { spawnBundleWithDefaults } from './bundle-utils.js';
 
-// Resource System
-export {
-  ResourceType,
-  ResourceRegistry,
-  globalResourceRegistry,
-  registerResource,
-  isInitializableResource,
-} from "./resource.js";
-export type {
-  ResourceMetadata,
-  ResourceSerializerConfig,
-  ResourceEditorOptions,
-  InitializableResource,
-} from "./resource.js";
+// Engine-specific: Components
+export * from './components/index.js';
+
+// Engine-specific: Systems
+export * from './systems/index.js';
+
+// Engine-specific: Bundles (import for side-effects to register them)
+import './bundles/index.js';
+export * from './bundles/index.js';

@@ -6,9 +6,9 @@
  * editor state.
  */
 
-import type { SystemRunCondition } from '../ecs/system.js';
+import type { SystemRunCondition } from '@voidscript/core';
 import { EditorManager } from './editor-manager.js';
-import type { Entity } from '../ecs/entity.js';
+import type { Entity } from '@voidscript/core';
 
 // ============================================================================
 // Animation Preview State
