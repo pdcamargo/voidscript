@@ -15,7 +15,7 @@
  * ```
  */
 
-import { ImGui, ImVec2Helpers } from '@voidscript/imgui';
+import { ImVec2Helpers } from '@voidscript/imgui';
 import { EditorLayout } from './editor-layout.js';
 import { EditorColors } from './editor-colors.js';
 import { EditorFonts } from './editor-fonts.js';
@@ -144,10 +144,10 @@ export class WindowControls {
       // Push small icon font for traffic lights (10px fits in 12px circle)
       EditorFonts.pushIconSmall();
 
-      // Calculate actual icon dimensions using CalcTextSize
-      const iconSize = ImGui.CalcTextSize(icon);
-      const iconWidth = iconSize.x;
-      const iconHeight = iconSize.y;
+      // Icon dimensions - Font Awesome icons at small size are roughly square
+      // Use fixed size since CalcTextSize has WASM binding issues
+      const iconWidth = 10; // Small icon font is 10px
+      const iconHeight = 10;
 
       // Center the icon within the circle
       const iconOffsetX = (diameter - iconWidth) / 2;

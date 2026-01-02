@@ -7,6 +7,10 @@
  */
 
 import type { EditorPanel } from './editor-panel.js';
+import type { Menu as TauriMenu } from '@tauri-apps/api/menu/menu';
+import type { Submenu as TauriSubmenu } from '@tauri-apps/api/menu/submenu';
+import type { MenuItem as TauriMenuItem } from '@tauri-apps/api/menu/menuItem';
+import type { PredefinedMenuItem as TauriPredefinedMenuItem } from '@tauri-apps/api/menu/predefinedMenuItem';
 
 /**
  * Configuration for a custom menu action
@@ -114,7 +118,7 @@ export class MenuManager {
       throw new Error('Menu action path cannot be empty');
     }
 
-    const label = parts[parts.length - 1];
+    const label = parts[parts.length - 1]!;
     const id = `action-${config.path.replace(/\//g, '-').toLowerCase()}`;
 
     const action: MenuAction = {
@@ -182,7 +186,7 @@ export class MenuManager {
       // Navigate/create the tree path
       let current = root;
       for (let i = 0; i < parts.length - 1; i++) {
-        const part = parts[i];
+        const part = parts[i]!;
         if (!current.children.has(part)) {
           current.children.set(part, {
             children: new Map(),
@@ -205,7 +209,7 @@ export class MenuManager {
       // Navigate/create the tree path
       let current = root;
       for (let i = 0; i < parts.length - 1; i++) {
-        const part = parts[i];
+        const part = parts[i]!;
         if (!current.children.has(part)) {
           current.children.set(part, {
             children: new Map(),
@@ -229,9 +233,17 @@ export class MenuManager {
    */
   async buildAndSetMenu(): Promise<void> {
     try {
-      const { Menu, Submenu, MenuItem, PredefinedMenuItem } = await import(
-        '@tauri-apps/api/menu'
-      );
+      const [
+        { Menu },
+        { Submenu },
+        { MenuItem },
+        { PredefinedMenuItem },
+      ] = await Promise.all([
+        import('@tauri-apps/api/menu/menu'),
+        import('@tauri-apps/api/menu/submenu'),
+        import('@tauri-apps/api/menu/menuItem'),
+        import('@tauri-apps/api/menu/predefinedMenuItem'),
+      ]);
 
       const tree = this.buildMenuTree();
       const topLevelItems: Awaited<ReturnType<typeof Submenu.new>>[] = [];

@@ -1,31 +1,40 @@
 /**
  * EditorApplication - Main application class for VoidScript Editor
  *
- * Supports two modes:
- * 1. Standalone (ImGui-only): Just panels and UI, no game engine
- * 2. Integrated: Wraps EngineApplication for full game editor with 30fps throttled UI
+ * Uses a layer-based architecture where different "screens" are layers:
+ * - ProjectHubLayer: Project selection and creation (when no project is open)
+ * - ProjectEditorLayer: Full editor with panels and engine integration
  *
- * In integrated mode, game logic runs at full fps while editor UI renders at 30fps.
+ * Only one layer is active at a time. The application handles:
+ * - WebGL context initialization
+ * - ImGui initialization
+ * - Layer switching
+ * - Render loop management
  */
 
-import { ImGui, ImGuiImplWeb, ImVec2Helpers } from '@voidscript/imgui';
+import { ImGui, ImGuiImplWeb } from '@voidscript/imgui';
+import type { EngineApplicationConfig } from '@voidscript/engine';
+import type { EditorApplicationLayer } from './layers/editor-application-layer.js';
+import { ProjectHubLayer } from './layers/project-hub-layer.js';
 import {
-  EngineApplication,
-  type EngineApplicationConfig,
-  EditorManager,
-  EditorCameraManager,
-} from '@voidscript/engine';
-import type { Scene } from '@voidscript/renderer';
-import type { EditorPanel } from './editor-panel.js';
-import type { EditorDialog } from './editor-dialog.js';
-import { MenuManager } from './menu-manager.js';
-import { PanelStateManager } from './panel-state-manager.js';
-import { EditorCamera } from './editor-camera.js';
+  ProjectEditorLayer,
+  type ProjectEditorLayerConfig,
+} from './layers/project-editor-layer.js';
 import { EditorFonts } from './editor-fonts.js';
-import { TitleBar } from './title-bar.js';
 import { initOSInfo } from './os-info.js';
 import { ThemeManager } from './theme/theme-manager.js';
-import { EditorPreferencesDialog } from './editor-preferences-dialog.js';
+import {
+  loadCurrentProject,
+  isValidProjectPath,
+} from './project/current-project-store.js';
+import { EditorFileSystem } from './editor-file-system.js';
+import { ProjectFolders } from './project/project-config.js';
+import type { EditorPanel } from './editor-panel.js';
+import type { MenuActionConfig } from './menu-manager.js';
+
+// ============================================================================
+// Types
+// ============================================================================
 
 /**
  * Font configuration for the editor
@@ -45,96 +54,88 @@ export interface EditorApplicationConfig {
   canvas: string | HTMLCanvasElement;
   /** Background clear color (default: dark gray) */
   clearColor?: { r: number; g: number; b: number; a: number };
-  /** Target FPS for editor UI rendering (default: 30) */
-  editorFPS?: number;
   /**
    * Font configuration for the editor.
    * Required for proper icon and text rendering.
    */
   fonts?: EditorFontConfig;
   /**
-   * Engine configuration for integrated mode.
-   * If provided, EditorApplication wraps EngineApplication.
-   * If omitted, runs in standalone mode (ImGui only).
+   * Default engine configuration for new projects.
+   * Used when opening a project to configure the game engine.
+   * @deprecated Use `engine` instead
+   */
+  defaultEngineConfig?: Omit<EngineApplicationConfig, 'window'>;
+  /**
+   * Engine configuration for the game engine.
+   * Alias for defaultEngineConfig with a shorter name.
    */
   engine?: Omit<EngineApplicationConfig, 'window'>;
+  /**
+   * Target FPS for editor UI rendering.
+   * @default 30
+   */
+  editorFPS?: number;
 }
 
 /**
- * Main application class that manages ImGui and editor panels.
+ * Pending layer switch request.
+ */
+type PendingLayerSwitch =
+  | { type: 'hub'; openCreateModal?: boolean }
+  | {
+      type: 'editor';
+      path: string;
+      config: { name: string; version: string; engineVersion: string };
+    };
+
+// ============================================================================
+// EditorApplication
+// ============================================================================
+
+/**
+ * Main application class that manages layers and the render loop.
  *
- * @example Standalone mode (ImGui only)
+ * @example
  * ```typescript
  * const app = new EditorApplication({
  *   canvas: 'render-canvas',
- * });
- *
- * app.registerPanel(new MyPanel());
- * await app.run();
- * ```
- *
- * @example Integrated mode (with game engine)
- * ```typescript
- * const app = new EditorApplication({
- *   canvas: 'render-canvas',
- *   editorFPS: 30,
- *   engine: {
- *     renderer: { clearColor: 0x1a1a2e },
+ *   fonts: {
+ *     mainFontUrl: '/fonts/main.ttf',
+ *     iconFontUrl: '/fonts/icons.otf',
  *   },
  * });
  *
- * app.registerPanel(new SceneViewPanel());
  * await app.run();
  * ```
  */
 export class EditorApplication {
   private canvas: HTMLCanvasElement;
   private gl: WebGL2RenderingContext;
-  private panels: EditorPanel[] = [];
-  private dialogs: EditorDialog[] = [];
   private isRunning = false;
-  private clearColor: { r: number; g: number; b: number; a: number };
+  // Note: clearColor is stored for future use but currently handled by layers
+  private _clearColor: { r: number; g: number; b: number; a: number };
   private animationFrameId: number | null = null;
-
-  /** Manager for native Tauri menu bar */
-  private readonly menuManager = new MenuManager();
-
-  /** Manager for panel state persistence */
-  private readonly panelStateManager = new PanelStateManager();
-
-  /** Track panel open states to detect changes */
-  private lastPanelStates = new Map<string, boolean>();
-
-  /** Custom title bar component */
-  private readonly titleBar = new TitleBar();
 
   /** Font configuration (optional, for custom fonts) */
   private fontConfig: EditorFontConfig | undefined;
 
-  // ============================================================================
-  // Integrated Mode (Engine)
-  // ============================================================================
+  /** Default engine configuration */
+  private defaultEngineConfig: Omit<EngineApplicationConfig, 'window'> | undefined;
 
-  /** Wrapped engine application (null in standalone mode) */
-  private engine: EngineApplication | null = null;
+  /** Current active layer */
+  private currentLayer: EditorApplicationLayer | null = null;
 
-  /** Editor state manager (null in standalone mode) */
-  private editorManager: EditorManager | null = null;
+  /** Pending layer switch (processed at start of next frame) */
+  private pendingLayerSwitch: PendingLayerSwitch | null = null;
 
-  /** Editor camera manager (null in standalone mode) */
-  private editorCameraManager: EditorCameraManager | null = null;
+  /** Pending panel registrations (applied when editor layer is created) */
+  private pendingPanels: EditorPanel[] = [];
 
-  /** Editor camera for scene view (null in standalone mode) */
-  private editorCamera: EditorCamera | null = null;
+  /** Pending menu action registrations */
+  private pendingMenuActions: MenuActionConfig[] = [];
 
-  /** Target interval between editor renders in ms */
-  private editorRenderInterval: number;
-
-  /** Last time editor UI was rendered */
-  private lastEditorRenderTime = 0;
-
-  /** Whether we're in integrated mode (have an engine) */
-  private readonly isIntegratedMode: boolean;
+  /** Pending app menu action registrations */
+  private pendingAppMenuActions: Array<Omit<MenuActionConfig, 'path'> & { label: string }> = [];
 
   /**
    * Create a new EditorApplication
@@ -143,9 +144,6 @@ export class EditorApplication {
    * @throws Error if canvas element not found or WebGL2 not supported
    */
   constructor(config: EditorApplicationConfig) {
-    this.isIntegratedMode = config.engine !== undefined;
-    this.editorRenderInterval = 1000 / (config.editorFPS ?? 30);
-
     // Get canvas element
     if (typeof config.canvas === 'string') {
       const element = document.getElementById(config.canvas);
@@ -157,136 +155,40 @@ export class EditorApplication {
       this.canvas = config.canvas;
     }
 
-    // Set clear color
-    this.clearColor = config.clearColor ?? { r: 0.1, g: 0.1, b: 0.1, a: 1.0 };
+    // Set clear color (stored for potential future use)
+    this._clearColor = config.clearColor ?? { r: 0.1, g: 0.1, b: 0.1, a: 1.0 };
 
     // Store font configuration
     this.fontConfig = config.fonts;
 
-    if (this.isIntegratedMode) {
-      // Integrated mode: create engine, share WebGL context
-      this.engine = new EngineApplication({
-        window: { canvas: this.canvas },
-        ...config.engine,
-      });
+    // Store default engine configuration (support both 'engine' and deprecated 'defaultEngineConfig')
+    this.defaultEngineConfig = config.engine ?? config.defaultEngineConfig;
 
-      // Get GL context from engine's renderer
-      this.gl = this.engine
-        .getRenderer()
-        .getThreeRenderer()
-        .getContext() as WebGL2RenderingContext;
-    } else {
-      // Standalone mode: create our own WebGL context
-      const gl = this.canvas.getContext('webgl2', {
-        antialias: true,
-        alpha: false,
-        preserveDrawingBuffer: true,
-      });
-      if (!gl) {
-        throw new Error('WebGL2 not supported');
-      }
-      this.gl = gl;
+    // Create WebGL context
+    const gl = this.canvas.getContext('webgl2', {
+      antialias: true,
+      alpha: false,
+      preserveDrawingBuffer: true,
+    });
+    if (!gl) {
+      throw new Error('WebGL2 not supported');
     }
+    this.gl = gl;
   }
 
+  // ============================================================================
+  // Public API
+  // ============================================================================
+
   /**
-   * Register a panel to be rendered each frame.
-   * If panel states have been loaded, applies the saved open state.
-   * Also registers the panel with the menu manager.
+   * Initialize and start the application.
    *
-   * @param panel - The panel instance to register
-   */
-  registerPanel(panel: EditorPanel): void {
-    this.panels.push(panel);
-
-    // Set application reference so panel can access engine, renderer, etc.
-    panel.setApplication(this);
-
-    // Register with menu manager for native menu integration
-    this.menuManager.registerPanel(panel);
-
-    // Apply saved state if available
-    if (this.panelStateManager.isLoaded()) {
-      panel.isOpen = this.panelStateManager.getOpenState(
-        panel.getId(),
-        panel.defaultOpen,
-      );
-    }
-  }
-
-  /**
-   * Unregister a panel
-   *
-   * @param panel - The panel instance to remove
-   * @returns true if the panel was found and removed
-   */
-  unregisterPanel(panel: EditorPanel): boolean {
-    const index = this.panels.indexOf(panel);
-    if (index !== -1) {
-      this.panels.splice(index, 1);
-      this.menuManager.unregisterPanel(panel);
-      return true;
-    }
-    return false;
-  }
-
-  /**
-   * Get all registered panels
-   */
-  getPanels(): readonly EditorPanel[] {
-    return this.panels;
-  }
-
-  /**
-   * Register a dialog to be rendered each frame.
-   * Also registers the dialog with the menu manager if it has a menuPath.
-   *
-   * @param dialog - The dialog instance to register
-   */
-  registerDialog(dialog: EditorDialog): void {
-    this.dialogs.push(dialog);
-
-    // Set application reference so dialog can access engine, renderer, etc.
-    dialog.setApplication(this);
-
-    // Register with menu manager for native menu integration (if menuPath is set)
-    if (dialog.menuPath) {
-      this.menuManager.registerMenuAction({
-        path: dialog.menuPath,
-        shortcut: dialog.shortcut,
-        action: () => dialog.open(),
-      });
-    }
-  }
-
-  /**
-   * Unregister a dialog
-   *
-   * @param dialog - The dialog instance to remove
-   * @returns true if the dialog was found and removed
-   */
-  unregisterDialog(dialog: EditorDialog): boolean {
-    const index = this.dialogs.indexOf(dialog);
-    if (index !== -1) {
-      this.dialogs.splice(index, 1);
-      return true;
-    }
-    return false;
-  }
-
-  /**
-   * Get all registered dialogs
-   */
-  getDialogs(): readonly EditorDialog[] {
-    return this.dialogs;
-  }
-
-  /**
-   * Initialize ImGui and start the render loop.
-   * This method returns a promise that resolves when the application stops.
-   *
-   * Also loads panel states from storage, builds the native menu bar,
-   * and registers global keyboard shortcuts.
+   * This method:
+   * 1. Initializes ImGui
+   * 2. Loads fonts and theme
+   * 3. Checks for a cached project
+   * 4. Starts the appropriate layer (hub or editor)
+   * 5. Runs the render loop
    */
   async run(): Promise<void> {
     if (this.isRunning) {
@@ -294,58 +196,16 @@ export class EditorApplication {
       return;
     }
 
-    // Initialize engine first (if integrated mode)
-    if (this.engine) {
-      await this.engine.initialize();
-
-      // Create editor managers
-      this.editorManager = new EditorManager(this.engine.getScene(), () =>
-        this.engine!.createCommands(),
-      );
-      this.engine.insertResource(this.editorManager);
-
-      this.editorCameraManager = new EditorCameraManager(
-        this.engine.getRenderer(),
-      );
-      this.engine.insertResource(this.editorCameraManager);
-
-      // Create editor camera for scene view
-      this.editorCamera = new EditorCamera({
-        position: { x: 5, y: 5, z: 5 },
-        lookAt: { x: 0, y: 0, z: 0 },
-      });
-    }
-
-    // Load panel states from storage
-    await this.panelStateManager.load();
-
-    // Apply saved states to already-registered panels
-    for (const panel of this.panels) {
-      panel.isOpen = this.panelStateManager.getOpenState(
-        panel.getId(),
-        panel.defaultOpen,
-      );
-    }
-
-    // Initialize theme manager (load persisted theme)
-    await ThemeManager.initialize();
-
-    // Register built-in dialogs
-    this.registerDialog(new EditorPreferencesDialog());
-
-    // Build and set native Tauri menu bar
-    await this.menuManager.buildAndSetMenu();
-
-    // Register global keyboard shortcuts
-    await this.menuManager.registerShortcuts();
-
     // Initialize OS detection
     await initOSInfo();
 
     // Initialize ImGui
     await this.initializeImGui();
 
-    // Apply theme to ImGui (must be after ImGui is initialized)
+    // Initialize theme manager (load persisted theme)
+    await ThemeManager.initialize();
+
+    // Apply theme to ImGui
     ThemeManager.applyToImGui();
 
     // Load fonts if configured
@@ -356,25 +216,46 @@ export class EditorApplication {
       );
     }
 
-    // Initialize title bar (sets up Tauri window controls)
-    await this.titleBar.initialize();
+    // Determine initial layer based on cached project
+    await this.determineInitialLayer();
 
     // Start the render loop
     this.isRunning = true;
-    this.lastEditorRenderTime = performance.now();
 
     return new Promise<void>((resolve) => {
-      const loop = (time: number) => {
+      const loop = async (time: number) => {
         if (!this.isRunning) {
           resolve();
           return;
         }
 
-        if (this.isIntegratedMode) {
-          this.combinedLoop(time);
-        } else {
-          this.standaloneLoop(time);
+        // Process any pending layer switch
+        await this.processPendingLayerSwitch();
+
+        // Handle canvas resize
+        this.handleResize();
+
+        // Clear the canvas
+        this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+        this.gl.clearColor(
+          this._clearColor.r,
+          this._clearColor.g,
+          this._clearColor.b,
+          this._clearColor.a,
+        );
+        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+
+        // Begin ImGui frame
+        ImGuiImplWeb.BeginRender();
+
+        // Update and render current layer
+        if (this.currentLayer) {
+          this.currentLayer.onUpdate(time / 1000);
+          this.currentLayer.onRender();
         }
+
+        // End ImGui frame and render
+        ImGuiImplWeb.EndRender();
 
         this.animationFrameId = requestAnimationFrame(loop);
       };
@@ -384,114 +265,205 @@ export class EditorApplication {
   }
 
   /**
-   * Stop the render loop.
-   * Also saves panel states and unregisters keyboard shortcuts.
+   * Stop the application and cleanup resources.
    */
   async stop(): Promise<void> {
     this.isRunning = false;
+
     if (this.animationFrameId !== null) {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
     }
 
-    // Stop engine if running
-    if (this.engine) {
-      this.engine.stop();
+    // Detach current layer
+    if (this.currentLayer) {
+      await this.currentLayer.onDetach();
+      this.currentLayer = null;
     }
-
-    // Save panel states
-    await this.panelStateManager.saveImmediate(this.panels);
-
-    // Unregister keyboard shortcuts
-    await this.menuManager.unregisterShortcuts();
   }
 
   /**
-   * Check if the application is currently running
+   * Check if the application is currently running.
    */
   isActive(): boolean {
     return this.isRunning;
   }
 
   /**
-   * Get the WebGL2 rendering context
+   * Get the WebGL2 rendering context.
    */
   getGL(): WebGL2RenderingContext {
     return this.gl;
   }
 
   /**
-   * Get the canvas element
+   * Get the canvas element.
    */
   getCanvas(): HTMLCanvasElement {
     return this.canvas;
   }
 
   /**
-   * Get the menu manager for advanced menu customization.
+   * Get the configured clear color.
    */
-  getMenuManager(): MenuManager {
-    return this.menuManager;
-  }
-
-  /**
-   * Get the panel state manager for advanced state control.
-   */
-  getPanelStateManager(): PanelStateManager {
-    return this.panelStateManager;
-  }
-
-  /**
-   * Save all panel states to storage.
-   * Uses debouncing to avoid excessive writes.
-   */
-  async savePanelStates(): Promise<void> {
-    await this.panelStateManager.save(this.panels);
+  getClearColor(): { r: number; g: number; b: number; a: number } {
+    return this._clearColor;
   }
 
   // ============================================================================
-  // Integrated Mode Accessors
+  // Layer Switching
   // ============================================================================
 
   /**
-   * Get the wrapped EngineApplication.
-   * Only available in integrated mode.
+   * Request a switch to the Project Hub layer.
+   * The switch happens at the start of the next frame.
    */
-  getEngine(): EngineApplication | null {
-    return this.engine;
+  switchToHub(): void {
+    this.pendingLayerSwitch = { type: 'hub' };
   }
 
   /**
-   * Get the EditorManager.
-   * Only available in integrated mode.
+   * Request a switch to the Project Hub layer with the "Create New Project" modal open.
+   * The switch happens at the start of the next frame.
    */
-  getEditorManager(): EditorManager | null {
-    return this.editorManager;
+  switchToHubWithCreateModal(): void {
+    this.pendingLayerSwitch = { type: 'hub', openCreateModal: true };
   }
 
   /**
-   * Get the EditorCameraManager.
-   * Only available in integrated mode.
+   * Request a switch to the Project Editor layer.
+   * The switch happens at the start of the next frame.
+   *
+   * @param path - Absolute path to the project folder
+   * @param config - Project configuration
    */
-  getEditorCameraManager(): EditorCameraManager | null {
-    return this.editorCameraManager;
+  switchToEditor(
+    path: string,
+    config: { name: string; version: string; engineVersion: string },
+  ): void {
+    this.pendingLayerSwitch = { type: 'editor', path, config };
   }
 
   /**
-   * Get the EditorCamera for scene view rendering.
-   * Only available in integrated mode.
+   * Get the currently active layer.
    */
-  getEditorCamera(): EditorCamera | null {
-    return this.editorCamera;
+  getCurrentLayer(): EditorApplicationLayer | null {
+    return this.currentLayer;
   }
 
   /**
-   * Get the shared scene from the engine's renderer.
-   * Both Scene View and Game View render this same scene.
-   * Only available in integrated mode.
+   * Get the current layer as ProjectEditorLayer (if active).
    */
-  getScene(): Scene | null {
-    return this.engine?.getRenderer().getScene() ?? null;
+  getEditorLayer(): ProjectEditorLayer | null {
+    if (this.currentLayer instanceof ProjectEditorLayer) {
+      return this.currentLayer;
+    }
+    return null;
+  }
+
+  /**
+   * Get the current layer as ProjectHubLayer (if active).
+   */
+  getHubLayer(): ProjectHubLayer | null {
+    if (this.currentLayer instanceof ProjectHubLayer) {
+      return this.currentLayer;
+    }
+    return null;
+  }
+
+  // ============================================================================
+  // Engine Accessors (Convenience API)
+  // ============================================================================
+
+  /**
+   * Get the game engine from the editor layer.
+   * Returns null if the editor layer is not active.
+   */
+  getEngine(): ReturnType<ProjectEditorLayer['getEngine']> {
+    return this.getEditorLayer()?.getEngine() ?? null;
+  }
+
+  /**
+   * Get the Three.js scene from the editor layer.
+   * Returns null if the editor layer is not active.
+   */
+  getScene(): ReturnType<ProjectEditorLayer['getScene']> {
+    return this.getEditorLayer()?.getScene() ?? null;
+  }
+
+  /**
+   * Get the editor camera from the editor layer.
+   * Returns null if the editor layer is not active.
+   */
+  getEditorCamera(): ReturnType<ProjectEditorLayer['getEditorCamera']> {
+    return this.getEditorLayer()?.getEditorCamera() ?? null;
+  }
+
+  /**
+   * Get the editor manager from the editor layer.
+   * Returns null if the editor layer is not active.
+   */
+  getEditorManager(): ReturnType<ProjectEditorLayer['getEditorManager']> {
+    return this.getEditorLayer()?.getEditorManager() ?? null;
+  }
+
+  /**
+   * Get the editor camera manager from the editor layer.
+   * Returns null if the editor layer is not active.
+   */
+  getEditorCameraManager(): ReturnType<ProjectEditorLayer['getEditorCameraManager']> {
+    return this.getEditorLayer()?.getEditorCameraManager() ?? null;
+  }
+
+  // ============================================================================
+  // Panel & Menu Registration (Convenience API)
+  // ============================================================================
+
+  /**
+   * Register a panel to be displayed in the editor.
+   * If called before the editor layer is active, the panel will be queued
+   * and registered when the editor layer becomes active.
+   *
+   * @param panel - The panel to register
+   */
+  registerPanel(panel: EditorPanel): void {
+    const editorLayer = this.getEditorLayer();
+    if (editorLayer) {
+      editorLayer.registerPanel(panel);
+    } else {
+      this.pendingPanels.push(panel);
+    }
+  }
+
+  /**
+   * Get a proxy menu manager for registering menu actions.
+   * Actions registered before the editor layer is active will be queued
+   * and applied when the editor layer becomes active.
+   *
+   * @returns A menu manager proxy object
+   */
+  getMenuManager(): {
+    registerMenuAction: (config: MenuActionConfig) => void;
+    registerAppMenuAction: (config: Omit<MenuActionConfig, 'path'> & { label: string }) => void;
+  } {
+    return {
+      registerMenuAction: (config: MenuActionConfig) => {
+        const editorLayer = this.getEditorLayer();
+        if (editorLayer) {
+          editorLayer.getMenuManager().registerMenuAction(config);
+        } else {
+          this.pendingMenuActions.push(config);
+        }
+      },
+      registerAppMenuAction: (config: Omit<MenuActionConfig, 'path'> & { label: string }) => {
+        const editorLayer = this.getEditorLayer();
+        if (editorLayer) {
+          editorLayer.getMenuManager().registerAppMenuAction(config);
+        } else {
+          this.pendingAppMenuActions.push(config);
+        }
+      },
+    };
   }
 
   // ============================================================================
@@ -499,10 +471,9 @@ export class EditorApplication {
   // ============================================================================
 
   /**
-   * Initialize ImGui with the WebGL context
+   * Initialize ImGui with the WebGL context.
    */
   private async initializeImGui(): Promise<void> {
-    // Initialize ImGui implementation (takes options object)
     await ImGuiImplWeb.Init({
       canvas: this.canvas,
     });
@@ -523,141 +494,146 @@ export class EditorApplication {
   }
 
   /**
-   * Standalone loop - just ImGui rendering
+   * Determine and set the initial layer based on cached project state.
    */
-  private standaloneLoop(_time: number): void {
-    // Handle canvas resize
-    this.handleResize();
+  private async determineInitialLayer(): Promise<void> {
+    try {
+      // Check for cached project
+      const currentProject = await loadCurrentProject();
 
-    // Clear the canvas
-    const { r, g, b, a } = this.clearColor;
-    this.gl.clearColor(r, g, b, a);
-    this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+      if (currentProject && (await isValidProjectPath(currentProject.projectPath))) {
+        // Load project config
+        const config = await this.loadProjectConfig(currentProject.projectPath);
 
-    // Start ImGui frame (BeginRender handles NewFrame internally)
-    ImGuiImplWeb.BeginRender();
-
-    // Render dockspace and panels
-    this.renderDockspace();
-
-    // Finalize ImGui rendering (EndRender handles Render + RenderDrawData)
-    ImGuiImplWeb.EndRender();
-  }
-
-  /**
-   * Combined loop - game at full fps, editor at 30fps
-   */
-  private combinedLoop(time: number): void {
-    if (!this.engine) return;
-
-    // Handle canvas resize
-    this.handleResize();
-
-    const shouldRenderEditor =
-      time - this.lastEditorRenderTime >= this.editorRenderInterval;
-
-    // Game logic runs at full FPS
-    this.engine.updateOnly();
-
-    // Editor UI at throttled fps
-    if (shouldRenderEditor) {
-      this.lastEditorRenderTime = time;
-      this.renderEditorUI();
+        if (config) {
+          // Valid cached project - go directly to editor
+          this.pendingLayerSwitch = {
+            type: 'editor',
+            path: currentProject.projectPath,
+            config,
+          };
+          await this.processPendingLayerSwitch();
+          return;
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load cached project:', error);
     }
+
+    // No valid cached project - show hub
+    this.pendingLayerSwitch = { type: 'hub' };
+    await this.processPendingLayerSwitch();
   }
 
   /**
-   * Render the editor UI (ImGui + panels)
+   * Load and parse a project's configuration file.
    */
-  private renderEditorUI(): void {
-    if (!this.engine) return;
-
-    // Reset WebGL state after Three.js
-    this.engine.getRenderer().resetState();
-
-    // Clear screen for editor
-    const { r, g, b, a } = this.clearColor;
-    this.gl.clearColor(r, g, b, a);
-    this.gl.clear(this.gl.COLOR_BUFFER_BIT);
-
-    // ImGui frame
-    ImGuiImplWeb.BeginRender();
-    this.renderDockspace();
-    ImGuiImplWeb.EndRender();
-  }
-
-  /**
-   * Render the root dockspace that fills the entire viewport
-   */
-  private renderDockspace(): void {
-    // Render title bar first (at top of screen)
-    this.titleBar.render();
-
-    // Use ImVec2Helpers instead of viewport.Pos/Size which are broken in jsimgui
-    const dockspacePos = ImVec2Helpers.GetMainViewportPos();
-    const dockspaceSize = ImVec2Helpers.GetMainViewportSize();
-    const viewportID = ImVec2Helpers.GetMainViewportID();
-
-    // Offset dockspace to account for title bar height
-    const titleBarHeight = this.titleBar.getHeight();
-    const adjustedPos = {
-      x: dockspacePos.x,
-      y: dockspacePos.y + titleBarHeight,
-    };
-    const adjustedSize = {
-      x: dockspaceSize.x,
-      y: dockspaceSize.y - titleBarHeight,
-    };
-
-    // Create fullscreen dockspace window (below title bar)
-    ImGui.SetNextWindowPos(adjustedPos, ImGui.Cond.Always);
-    ImGui.SetNextWindowSize(adjustedSize, ImGui.Cond.Always);
-    ImGui.SetNextWindowViewport(viewportID);
-
-    const windowFlags =
-      ImGui.WindowFlags.NoTitleBar |
-      ImGui.WindowFlags.NoCollapse |
-      ImGui.WindowFlags.NoResize |
-      ImGui.WindowFlags.NoMove |
-      ImGui.WindowFlags.NoBringToFrontOnFocus |
-      ImGui.WindowFlags.NoNavFocus |
-      ImGui.WindowFlags.NoBackground;
-
-    ImGui.PushStyleVar(ImGui.StyleVar.WindowRounding, 0.0);
-    ImGui.PushStyleVar(ImGui.StyleVar.WindowBorderSize, 0.0);
-    ImGui.PushStyleVarImVec2(ImGui.StyleVar.WindowPadding, { x: 0.0, y: 0.0 });
-
-    if (ImGui.Begin('##EditorDockspace', null, windowFlags)) {
-      ImGui.PopStyleVar(3);
-
-      // Create the dockspace
-      const dockspaceId = ImGui.GetID('EditorDockspace');
-      ImGui.DockSpace(
-        dockspaceId,
-        { x: 0, y: 0 },
-        ImGui.DockNodeFlags.PassthruCentralNode,
+  private async loadProjectConfig(
+    projectPath: string,
+  ): Promise<{ name: string; version: string; engineVersion: string } | null> {
+    try {
+      const configPath = await EditorFileSystem.joinPath(
+        projectPath,
+        ProjectFolders.ProjectFile,
       );
+      const result = await EditorFileSystem.readTextFromPath(configPath);
 
-      // Render all registered panels inside the dockspace
-      for (const panel of this.panels) {
-        panel.render();
+      if (!result.success || !result.data) {
+        return null;
       }
 
-      // Render all registered dialogs (modal popups)
-      for (const dialog of this.dialogs) {
-        dialog.render();
+      // Simple YAML parsing (in production, use a proper YAML parser)
+      const lines = result.data.split('\n');
+      const data = new Map<string, string>();
+
+      for (const line of lines) {
+        const match = line.match(/^(\w+):\s*"?([^"]+)"?\s*$/);
+        if (match && match[1] && match[2]) {
+          data.set(match[1], match[2]);
+        }
       }
 
-      // Check for panel state changes and auto-save
-      this.checkAndSavePanelStates();
-    } else {
-      ImGui.PopStyleVar(3);
+      const name = data.get('name');
+      const version = data.get('version');
+      const engineVersion = data.get('engineVersion');
+
+      if (!name || !version || !engineVersion) {
+        return null;
+      }
+
+      return { name, version, engineVersion };
+    } catch {
+      return null;
     }
-    ImGui.End();
   }
 
   /**
-   * Handle canvas resize to match display size
+   * Process any pending layer switch.
+   */
+  private async processPendingLayerSwitch(): Promise<void> {
+    if (!this.pendingLayerSwitch) return;
+
+    const switchRequest = this.pendingLayerSwitch;
+    this.pendingLayerSwitch = null;
+
+    // Detach current layer
+    if (this.currentLayer) {
+      await this.currentLayer.onDetach();
+      this.currentLayer = null;
+    }
+
+    // Create and attach new layer
+    if (switchRequest.type === 'hub') {
+      const hubLayer = new ProjectHubLayer(this);
+      this.currentLayer = hubLayer;
+
+      // If requested, open the create modal after attach
+      if (switchRequest.openCreateModal) {
+        // Schedule modal open for after onAttach completes
+        queueMicrotask(() => hubLayer.openCreateModal());
+      }
+    } else {
+      const layerConfig: ProjectEditorLayerConfig = {
+        projectPath: switchRequest.path,
+        projectConfig: switchRequest.config,
+        engineConfig: this.defaultEngineConfig,
+      };
+      const editorLayer = new ProjectEditorLayer(this, layerConfig);
+      this.currentLayer = editorLayer;
+
+      // Apply pending registrations to the editor layer
+      this.applyPendingRegistrations(editorLayer);
+    }
+
+    await this.currentLayer.onAttach();
+  }
+
+  /**
+   * Apply any pending panel and menu registrations to the editor layer.
+   */
+  private applyPendingRegistrations(editorLayer: ProjectEditorLayer): void {
+    // Register pending panels
+    for (const panel of this.pendingPanels) {
+      editorLayer.registerPanel(panel);
+    }
+    this.pendingPanels = [];
+
+    // Register pending menu actions
+    const menuManager = editorLayer.getMenuManager();
+    for (const action of this.pendingMenuActions) {
+      menuManager.registerMenuAction(action);
+    }
+    this.pendingMenuActions = [];
+
+    // Register pending app menu actions
+    for (const action of this.pendingAppMenuActions) {
+      menuManager.registerAppMenuAction(action);
+    }
+    this.pendingAppMenuActions = [];
+  }
+
+  /**
+   * Handle canvas resize to match display size.
    */
   private handleResize(): void {
     const displayWidth = this.canvas.clientWidth;
@@ -670,34 +646,6 @@ export class EditorApplication {
       this.canvas.width = displayWidth;
       this.canvas.height = displayHeight;
       this.gl.viewport(0, 0, displayWidth, displayHeight);
-
-      // Notify engine of resize if in integrated mode
-      if (this.engine) {
-        this.engine.getRenderer().onResize(displayWidth, displayHeight);
-      }
-    }
-  }
-
-  /**
-   * Check if any panel states have changed and trigger save if needed.
-   */
-  private checkAndSavePanelStates(): void {
-    let hasChanges = false;
-
-    for (const panel of this.panels) {
-      const panelId = panel.getId();
-      const currentState = panel.isOpen;
-      const lastState = this.lastPanelStates.get(panelId);
-
-      if (lastState !== currentState) {
-        hasChanges = true;
-        this.lastPanelStates.set(panelId, currentState);
-      }
-    }
-
-    if (hasChanges) {
-      // Trigger debounced save
-      void this.panelStateManager.save(this.panels);
     }
   }
 }

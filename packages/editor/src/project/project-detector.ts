@@ -235,3 +235,94 @@ export function createInMemoryProjectStorage(): ProjectStorage {
     },
   };
 }
+
+// ============================================================================
+// Tauri-based Storage Implementation (Desktop-only)
+// ============================================================================
+
+/**
+ * Create a ProjectStorage backed by Tauri filesystem.
+ * Stores data as JSON files in the app data directory.
+ *
+ * This is the primary storage implementation for the desktop editor.
+ * Uses Tauri's plugin-fs for file operations.
+ */
+export function createTauriProjectStorage(): ProjectStorage {
+  // Cache for storing data in memory to reduce filesystem reads
+  const cache = new Map<string, string>();
+
+  return {
+    async get(key: string): Promise<string | null> {
+      // Check cache first
+      if (cache.has(key)) {
+        return cache.get(key) ?? null;
+      }
+
+      try {
+        const { appDataDir, join } = await import('@tauri-apps/api/path');
+        const { readTextFile, exists } = await import('@tauri-apps/plugin-fs');
+
+        const appData = await appDataDir();
+        const filePath = await join(appData, `${key}.json`);
+
+        if (!(await exists(filePath))) {
+          return null;
+        }
+
+        const content = await readTextFile(filePath);
+        cache.set(key, content);
+        return content;
+      } catch (error) {
+        console.error(`Failed to read storage key "${key}":`, error);
+        return null;
+      }
+    },
+
+    async set(key: string, value: string): Promise<void> {
+      try {
+        const { appDataDir, join } = await import('@tauri-apps/api/path');
+        const { writeTextFile, mkdir, exists } = await import(
+          '@tauri-apps/plugin-fs'
+        );
+
+        const appData = await appDataDir();
+
+        // Ensure app data directory exists
+        if (!(await exists(appData))) {
+          await mkdir(appData, { recursive: true });
+        }
+
+        const filePath = await join(appData, `${key}.json`);
+        await writeTextFile(filePath, value);
+
+        // Update cache then clear it to force re-read on next get
+        // This ensures other storage instances get fresh data
+        cache.set(key, value);
+        cache.delete(key);
+      } catch (error) {
+        console.error(`Failed to write storage key "${key}":`, error);
+        throw error;
+      }
+    },
+
+    async remove(key: string): Promise<void> {
+      try {
+        const { appDataDir, join } = await import('@tauri-apps/api/path');
+        const { remove, exists } = await import('@tauri-apps/plugin-fs');
+
+        const appData = await appDataDir();
+        const filePath = await join(appData, `${key}.json`);
+
+        if (await exists(filePath)) {
+          await remove(filePath);
+        }
+
+        // Remove from cache
+        cache.delete(key);
+      } catch (error) {
+        console.error(`Failed to remove storage key "${key}":`, error);
+        throw error;
+      }
+    },
+  };
+}

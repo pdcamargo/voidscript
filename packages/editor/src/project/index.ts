@@ -43,7 +43,35 @@ export {
   createDetectedProject,
   createLocalStorageProjectStorage,
   createInMemoryProjectStorage,
+  createTauriProjectStorage,
 } from './project-detector.js';
+
+// Current project persistence
+export {
+  type CurrentProjectData,
+  CURRENT_PROJECT_FILE,
+  loadCurrentProject,
+  saveCurrentProject,
+  clearCurrentProject,
+  isValidProjectPath,
+} from './current-project-store.js';
+
+// Project templates
+export {
+  type TemplateFile,
+  type TemplateFolder,
+  type ProjectTemplate,
+  ProjectTemplateRegistry,
+  EMPTY_PROJECT_TEMPLATE,
+  createDefaultTemplateRegistry,
+} from './project-templates.js';
+
+// Project creation
+export {
+  type CreateProjectOptions,
+  type CreateProjectResult,
+  ProjectCreator,
+} from './project-creator.js';
 
 // Settings schemas
 export {

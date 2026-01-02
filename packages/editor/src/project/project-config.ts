@@ -75,6 +75,9 @@ export const ProjectFolders = {
   Settings: 'settings',
   Dist: 'dist',
 
+  // Source subfolders
+  Scenes: 'src/scenes',
+
   // Settings subfolders
   EngineSettings: 'settings/engine',
   EditorSettings: 'settings/editor',

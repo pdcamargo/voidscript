@@ -110,3 +110,6 @@ export { ImGui, ImGuiImplWeb, ImTextureRef, ImVec2Helpers } from '@voidscript/im
 
 // Project utilities
 export * from './project/index.js';
+
+// Layer system
+export * from './layers/index.js';

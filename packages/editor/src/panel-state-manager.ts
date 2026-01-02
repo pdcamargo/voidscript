@@ -127,7 +127,7 @@ export class PanelStateManager {
    */
   getOpenState(panelId: string, defaultOpen: boolean): boolean {
     if (panelId in this.states) {
-      return this.states[panelId];
+      return this.states[panelId] ?? defaultOpen;
     }
     return defaultOpen;
   }
