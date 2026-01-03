@@ -116,3 +116,6 @@ export * from './layers/index.js';
 
 // Scene management
 export * from './scene/index.js';
+
+// Serialization system (SerializedObject/SerializedProperty)
+export * from './serialization/index.js';

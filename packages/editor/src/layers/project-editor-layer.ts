@@ -37,6 +37,7 @@ import {
   type EditorSceneState,
 } from '../scene/editor-scene-manager.js';
 import { setProjectName, setCurrentSceneFileName } from '../project-info.js';
+import { UndoRedoManager } from '../serialization/index.js';
 
 // ============================================================================
 // Types
@@ -189,6 +190,46 @@ export class ProjectEditorLayer extends EditorApplicationLayer {
         void clearCurrentProject().then(() => {
           this.app.switchToHubWithCreateModal();
         });
+      },
+    });
+
+    // Edit menu - Undo/Redo
+    this.menuManager.registerMenuAction({
+      path: 'Edit/Undo',
+      shortcut: 'CmdOrCtrl+Z',
+      action: () => {
+        const undoRedo = UndoRedoManager.instance;
+        if (undoRedo.canUndo) {
+          undoRedo.undo();
+        }
+      },
+    });
+
+    this.menuManager.registerMenuAction({
+      path: 'Edit/Redo',
+      shortcut: 'CmdOrCtrl+Shift+Z',
+      action: () => {
+        const undoRedo = UndoRedoManager.instance;
+        if (undoRedo.canRedo) {
+          undoRedo.redo();
+        }
+      },
+    });
+
+    // Scene menu - Debug options
+    this.menuManager.registerMenuAction({
+      path: 'Scene/Log Current Serialized Scene',
+      action: () => {
+        const serializedScene = this.sceneManager?.getSerializedScene();
+        if (serializedScene) {
+          console.log('SerializedScene:', serializedScene);
+          console.log('SceneData:', JSON.stringify(serializedScene.getSceneData(), null, 2));
+          console.log('isDirty:', serializedScene.isDirty);
+          console.log('isSavedToDisk:', serializedScene.isSavedToDisk);
+          console.log('relativePath:', serializedScene.relativePath);
+        } else {
+          console.log('No SerializedScene available');
+        }
       },
     });
 

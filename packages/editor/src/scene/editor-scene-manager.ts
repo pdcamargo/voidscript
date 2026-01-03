@@ -17,6 +17,7 @@ import type { EngineApplication } from '@voidscript/engine';
 import { SceneSnapshot, AssetDatabase } from '@voidscript/engine';
 import { EditorFileSystem } from '../editor-file-system.js';
 import { updateLastOpenedScene } from '../project/current-project-store.js';
+import { SerializedScene, UndoRedoManager } from '../serialization/index.js';
 
 // ============================================================================
 // Types
@@ -86,6 +87,9 @@ export class EditorSceneManager {
     displayName: 'Untitled',
   };
 
+  /** SerializedScene for property-level editing and undo/redo */
+  private serializedScene: SerializedScene | null = null;
+
   constructor(engine: EngineApplication, config: EditorSceneManagerConfig) {
     this.engine = engine;
     this.config = config;
@@ -105,9 +109,24 @@ export class EditorSceneManager {
 
   /**
    * Check if the scene has unsaved changes
+   *
+   * Uses SerializedScene if available for accurate property-level dirty tracking.
    */
   isDirty(): boolean {
+    // Use SerializedScene for accurate dirty tracking when available
+    if (this.serializedScene) {
+      return !this.serializedScene.isSavedToDisk;
+    }
     return this.state.isDirty;
+  }
+
+  /**
+   * Get the SerializedScene for property-level editing and undo/redo
+   *
+   * Returns null if no scene is open or the scene hasn't been wrapped yet.
+   */
+  getSerializedScene(): SerializedScene | null {
+    return this.serializedScene;
   }
 
   /**
@@ -158,6 +177,27 @@ export class EditorSceneManager {
 
     // Clear all entities
     scene.clear();
+
+    // Clear undo/redo history for the new scene
+    UndoRedoManager.instance.clear();
+
+    // Create SerializedScene from the empty runtime state
+    // Serialize after clearing to get proper version and componentRegistry
+    const emptySceneData = this.serialize();
+    this.serializedScene = new SerializedScene({
+      sceneData: emptySceneData,
+      relativePath: null,
+      onDirtyStateChanged: (isDirty, isSavedToDisk) => {
+        this.state.isDirty = !isSavedToDisk;
+        this.notifyStateChange();
+      },
+    });
+
+    // Bind to runtime for live preview
+    this.serializedScene.bindToRuntime({
+      scene,
+      createCommands: () => this.engine.createCommands(),
+    });
 
     // Reset state
     this.state = {
@@ -226,6 +266,32 @@ export class EditorSceneManager {
       return { success: false, error: result.error ?? 'Failed to deserialize scene' };
     }
 
+    // Clear undo/redo history for the new scene
+    UndoRedoManager.instance.clear();
+
+    // Serialize the current runtime state to get SceneData for SerializedScene
+    // This ensures we have the canonical representation after deserialization
+    const sceneData = this.serialize();
+
+    // Compute relative path for SerializedScene
+    const relativePath = await this.toRelativePath(absolutePath);
+
+    // Create SerializedScene for property-level editing
+    this.serializedScene = new SerializedScene({
+      sceneData,
+      relativePath,
+      onDirtyStateChanged: (isDirty, isSavedToDisk) => {
+        this.state.isDirty = !isSavedToDisk;
+        this.notifyStateChange();
+      },
+    });
+
+    // Bind to runtime for live preview
+    this.serializedScene.bindToRuntime({
+      scene,
+      createCommands: () => this.engine.createCommands(),
+    });
+
     // Update state
     this.state = {
       currentScenePath: absolutePath,
@@ -233,8 +299,7 @@ export class EditorSceneManager {
       displayName: this.extractFilename(absolutePath),
     };
 
-    // Persist the last opened scene (relative to project root)
-    const relativePath = await this.toRelativePath(absolutePath);
+    // Persist the last opened scene
     await updateLastOpenedScene(relativePath);
 
     this.notifyStateChange();
@@ -364,6 +429,11 @@ export class EditorSceneManager {
           success: false,
           error: writeResult.error ?? 'Failed to write scene file',
         };
+      }
+
+      // Mark SerializedScene as saved (updates disk state)
+      if (this.serializedScene) {
+        this.serializedScene.markAsSaved();
       }
 
       // Mark clean
