@@ -20,6 +20,8 @@ export interface CurrentProjectData {
   projectPath: string;
   /** ISO 8601 timestamp of when this was last modified */
   lastModified: string;
+  /** Relative path to the last opened scene file (null = new/unsaved scene) */
+  lastOpenedScene?: string | null;
 }
 
 // ============================================================================
@@ -118,4 +120,42 @@ export async function isValidProjectPath(projectPath: string): Promise<boolean> 
     console.error('Error checking project path validity:', error);
     return false;
   }
+}
+
+/**
+ * Update the last opened scene for the current project.
+ * This persists the scene path so it can be restored when reopening the project.
+ *
+ * @param scenePath - Relative path to the scene file (from project root), or null for unsaved scene
+ */
+export async function updateLastOpenedScene(
+  scenePath: string | null,
+): Promise<void> {
+  const current = await loadCurrentProject();
+  if (!current) {
+    console.warn('Cannot update last opened scene: no current project');
+    return;
+  }
+
+  const data: CurrentProjectData = {
+    ...current,
+    lastOpenedScene: scenePath,
+    lastModified: new Date().toISOString(),
+  };
+
+  const result = await EditorFileSystem.writeJson(CURRENT_PROJECT_FILE, data);
+
+  if (!result.success) {
+    console.error('Failed to update last opened scene:', result.error);
+  }
+}
+
+/**
+ * Get the last opened scene path for the current project.
+ *
+ * @returns Relative path to the last opened scene, or null if none
+ */
+export async function getLastOpenedScene(): Promise<string | null> {
+  const current = await loadCurrentProject();
+  return current?.lastOpenedScene ?? null;
 }

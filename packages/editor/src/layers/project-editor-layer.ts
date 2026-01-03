@@ -26,7 +26,17 @@ import { PanelStateManager } from '../panel-state-manager.js';
 import { EditorCamera } from '../editor-camera.js';
 import { TitleBar } from '../title-bar.js';
 import { EditorPreferencesDialog } from '../editor-preferences-dialog.js';
-import { clearCurrentProject } from '../project/current-project-store.js';
+import {
+  clearCurrentProject,
+  loadCurrentProject,
+  type CurrentProjectData,
+} from '../project/current-project-store.js';
+import { EditorFileSystem } from '../editor-file-system.js';
+import {
+  EditorSceneManager,
+  type EditorSceneState,
+} from '../scene/editor-scene-manager.js';
+import { setProjectName, setCurrentSceneFileName } from '../project-info.js';
 
 // ============================================================================
 // Types
@@ -43,6 +53,8 @@ export interface ProjectEditorLayerConfig {
     name: string;
     version: string;
     engineVersion: string;
+    /** Path to the default scene to load (relative to project root) */
+    defaultScene?: string;
   };
   /** Engine configuration (renderer, assets, etc.) */
   engineConfig?: Omit<EngineApplicationConfig, 'window'>;
@@ -81,6 +93,9 @@ export class ProjectEditorLayer extends EditorApplicationLayer {
   private editorCameraManager: EditorCameraManager | null = null;
   private editorCamera: EditorCamera | null = null;
 
+  // Scene management
+  private sceneManager: EditorSceneManager | null = null;
+
   // Editor state
   private lastPanelStates = new Map<string, boolean>();
 
@@ -99,6 +114,9 @@ export class ProjectEditorLayer extends EditorApplicationLayer {
   override async onAttach(): Promise<void> {
     const canvas = this.app.getCanvas();
     const gl = this.app.getGL();
+
+    // Set project name for title bar
+    setProjectName(this.config.projectConfig.name);
 
     // Create engine if config provided
     if (this.config.engineConfig) {
@@ -125,6 +143,27 @@ export class ProjectEditorLayer extends EditorApplicationLayer {
         position: { x: 5, y: 5, z: 5 },
         lookAt: { x: 0, y: 0, z: 0 },
       });
+
+      // Initialize scene manager
+      this.sceneManager = new EditorSceneManager(this.engine, {
+        projectPath: this.config.projectPath,
+        onStateChange: (state) => this.onSceneStateChange(state),
+      });
+
+      // Load initial scene with priority:
+      // 1. lastOpenedScene from project cache
+      // 2. defaultScene from project config
+      // 3. New empty scene
+      const initialScenePath = await this.determineInitialScene();
+      if (initialScenePath) {
+        const result = await this.sceneManager.openScene(initialScenePath);
+        if (!result.success) {
+          // Fallback to new scene
+          await this.sceneManager.newScene();
+        }
+      } else {
+        await this.sceneManager.newScene();
+      }
     }
 
     // Load panel states from storage
@@ -180,6 +219,7 @@ export class ProjectEditorLayer extends EditorApplicationLayer {
     this.editorManager = null;
     this.editorCameraManager = null;
     this.editorCamera = null;
+    this.sceneManager = null;
     this.panels = [];
     this.dialogs = [];
   }
@@ -377,9 +417,62 @@ export class ProjectEditorLayer extends EditorApplicationLayer {
     await this.panelStateManager.save(this.panels);
   }
 
+  /**
+   * Get the scene manager for scene state control.
+   */
+  getSceneManager(): EditorSceneManager | null {
+    return this.sceneManager;
+  }
+
   // ============================================================================
   // Private Methods
   // ============================================================================
+
+  /**
+   * Determine the initial scene to load based on priority:
+   * 1. lastOpenedScene from project cache (if exists and valid)
+   * 2. defaultScene from project config (if exists and valid)
+   * 3. null (create empty scene)
+   */
+  private async determineInitialScene(): Promise<string | null> {
+    const { projectPath, projectConfig } = this.config;
+
+    // 1. Check lastOpenedScene from project cache
+    const currentProject = await loadCurrentProject();
+    if (currentProject?.lastOpenedScene) {
+      const absolutePath = await EditorFileSystem.joinPath(
+        projectPath,
+        currentProject.lastOpenedScene,
+      );
+      if (await EditorFileSystem.existsAtPath(absolutePath)) {
+        return absolutePath;
+      }
+    }
+
+    // 2. Check defaultScene from project config
+    if (projectConfig.defaultScene) {
+      const absolutePath = await EditorFileSystem.joinPath(
+        projectPath,
+        projectConfig.defaultScene,
+      );
+      if (await EditorFileSystem.existsAtPath(absolutePath)) {
+        return absolutePath;
+      }
+    }
+
+    // 3. No scene to load - will create empty scene
+    return null;
+  }
+
+  /**
+   * Called when scene state changes (dirty, path, etc.)
+   */
+  private onSceneStateChange(state: EditorSceneState): void {
+    // Update title bar with scene name and dirty indicator
+    const { displayName, isDirty } = state;
+    const sceneIndicator = isDirty ? `${displayName}*` : displayName;
+    setCurrentSceneFileName(sceneIndicator);
+  }
 
   /**
    * Render the editor UI (ImGui + panels)

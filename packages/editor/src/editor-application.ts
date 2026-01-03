@@ -85,7 +85,7 @@ type PendingLayerSwitch =
   | {
       type: 'editor';
       path: string;
-      config: { name: string; version: string; engineVersion: string };
+      config: { name: string; version: string; engineVersion: string; defaultScene?: string };
     };
 
 // ============================================================================
@@ -339,7 +339,7 @@ export class EditorApplication {
    */
   switchToEditor(
     path: string,
-    config: { name: string; version: string; engineVersion: string },
+    config: { name: string; version: string; engineVersion: string; defaultScene?: string },
   ): void {
     this.pendingLayerSwitch = { type: 'editor', path, config };
   }
@@ -530,7 +530,12 @@ export class EditorApplication {
    */
   private async loadProjectConfig(
     projectPath: string,
-  ): Promise<{ name: string; version: string; engineVersion: string } | null> {
+  ): Promise<{
+    name: string;
+    version: string;
+    engineVersion: string;
+    defaultScene?: string;
+  } | null> {
     try {
       const configPath = await EditorFileSystem.joinPath(
         projectPath,
@@ -556,12 +561,13 @@ export class EditorApplication {
       const name = data.get('name');
       const version = data.get('version');
       const engineVersion = data.get('engineVersion');
+      const defaultScene = data.get('defaultScene');
 
       if (!name || !version || !engineVersion) {
         return null;
       }
 
-      return { name, version, engineVersion };
+      return { name, version, engineVersion, defaultScene };
     } catch {
       return null;
     }

@@ -113,3 +113,6 @@ export * from './project/index.js';
 
 // Layer system
 export * from './layers/index.js';
+
+// Scene management
+export * from './scene/index.js';

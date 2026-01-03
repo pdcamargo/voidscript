@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@voidscript/core": "workspace:*",
     "@voidscript/engine": "workspace:*",
     "@voidscript/imgui": "workspace:*",
     "@voidscript/renderer": "workspace:*"

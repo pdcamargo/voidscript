@@ -54,6 +54,8 @@ export {
   saveCurrentProject,
   clearCurrentProject,
   isValidProjectPath,
+  updateLastOpenedScene,
+  getLastOpenedScene,
 } from './current-project-store.js';
 
 // Project templates
