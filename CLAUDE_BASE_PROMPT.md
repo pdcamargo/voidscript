@@ -29,6 +29,11 @@ Trigger logic
 Open dialogs
 
 Open panels
+
+Serialize scene and scene properties with SerializedObject and SerializedProperty
+
+Undo and Redo support with UndoRedoManager
+
 …all with very low friction
 
 Assume all of the above is in place when reasoning about the next steps.
